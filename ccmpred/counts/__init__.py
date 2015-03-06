@@ -4,9 +4,9 @@ import ctypes
 import os.path
 
 array_2d_char = npct.ndpointer(dtype=np.dtype('uint8'), ndim=2, flags='CONTIGUOUS')
-array_1d_float = npct.ndpointer(dtype=np.dtype('float32'), ndim=1, flags='CONTIGUOUS')
-array_2d_float = npct.ndpointer(dtype=np.dtype('float32'), ndim=2, flags='CONTIGUOUS')
-array_4d_float = npct.ndpointer(dtype=np.dtype('float32'), ndim=4, flags='CONTIGUOUS')
+array_1d_float = npct.ndpointer(dtype=np.dtype('float64'), ndim=1, flags='CONTIGUOUS')
+array_2d_float = npct.ndpointer(dtype=np.dtype('float64'), ndim=2, flags='CONTIGUOUS')
+array_4d_float = npct.ndpointer(dtype=np.dtype('float64'), ndim=4, flags='CONTIGUOUS')
 
 libmsac = npct.load_library('libmsacounts', os.path.dirname(__file__))
 
@@ -24,9 +24,9 @@ def pair_counts(msa, weights=None):
     nrow, ncol = msa.shape
 
     if weights is None:
-        weights = np.ones((nrow, ), dtype='float32')
+        weights = np.ones((nrow, ), dtype='float64')
 
-    counts = np.zeros((ncol, ncol, 21, 21), dtype=np.dtype('float32'))
+    counts = np.zeros((ncol, ncol, 21, 21), dtype=np.dtype('float64'))
     libmsac.msa_count_pairs(counts, msa, weights, *msa.shape)
 
     return counts
@@ -36,9 +36,9 @@ def single_counts(msa, weights=None):
     nrow, ncol = msa.shape
 
     if weights is None:
-        weights = np.ones((nrow, ), dtype='float32')
+        weights = np.ones((nrow, ), dtype='float64')
 
-    counts = np.empty((ncol, 21), dtype=np.dtype('float32'))
+    counts = np.empty((ncol, 21), dtype=np.dtype('float64'))
     libmsac.msa_count_single(counts, msa, weights, *msa.shape)
 
     return counts

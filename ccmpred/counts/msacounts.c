@@ -4,13 +4,13 @@
 #include <stdint.h>
 #include <ctype.h>
 
-#include "msacounts.h"
+#define N_ALPHA 21
 
-void msa_count_single(float *counts, uint8_t *msa, float *weights, uint32_t nrow, uint32_t ncol) {
+void msa_count_single(double *counts, uint8_t *msa, double *weights, uint32_t nrow, uint32_t ncol) {
 	int n, i;
 	unsigned char a;
 
-	memset(counts, 0, sizeof(float) * ncol * N_ALPHA);
+	memset(counts, 0, sizeof(double) * ncol * N_ALPHA);
 
 	for(n = 0; n < nrow; n++) {
 		for(i = 0; i < ncol; i++) {
@@ -20,12 +20,12 @@ void msa_count_single(float *counts, uint8_t *msa, float *weights, uint32_t nrow
 	}
 }
 
-void msa_count_pairs(float *counts, uint8_t *msa, float *weights, uint32_t nrow, uint32_t ncol) {
+void msa_count_pairs(double *counts, uint8_t *msa, double *weights, uint32_t nrow, uint32_t ncol) {
 
 	int n, i, j;
 	unsigned char a, b;
 	
-	memset(counts, 0, sizeof(float) * ncol * ncol * N_ALPHA * N_ALPHA);
+	memset(counts, 0, sizeof(double) * ncol * ncol * N_ALPHA * N_ALPHA);
 
 	for(n = 0; n < nrow; n++) {
 		for(i = 0; i < ncol; i++) {

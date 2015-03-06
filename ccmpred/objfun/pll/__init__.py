@@ -28,14 +28,14 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
         self.v_centering = calculate_centering(msa, self.weights)
 
         # memory allocation for intermediate variables
-        self.g = np.empty((self.nsingle_padded + self.ncol * self.ncol * 21 * 32,), dtype=np.dtype('float32'))
-        self.g2 = np.empty((self.ncol * self.ncol * 21 * 32,), dtype=np.dtype('float32'))
+        self.g = np.empty((self.nsingle_padded + self.ncol * self.ncol * 21 * 32,), dtype=np.dtype('float64'))
+        self.g2 = np.empty((self.ncol * self.ncol * 21 * 32,), dtype=np.dtype('float64'))
 
     @classmethod
     def init_from_default(cls, msa, lambda_single=1, lambda_pair=lambda msa: msa.shape[1] * 0.2, clustering_threshold=0.8):
         res = cls(msa, lambda_single, lambda_pair, clustering_threshold)
 
-        x = np.zeros((res.nvar, ), dtype=np.dtype('float32'))
+        x = np.zeros((res.nvar, ), dtype=np.dtype('float64'))
         x[:res.nsingle] = res.v_centering
 
         return x, res
@@ -46,7 +46,7 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
 
 def calculate_weights(msa, cutoff=0.8):
     if cutoff >= 1:
-        return np.ones((msa.shape[0],), dtype="float32")
+        return np.ones((msa.shape[0],), dtype="float64")
 
     ncol = msa.shape[1]
 
@@ -56,7 +56,7 @@ def calculate_weights(msa, cutoff=0.8):
     # calculate number of cluster members at identity cutoff
     n_cluster = np.sum(ids > cutoff * ncol, axis=0)
 
-    return (1 / n_cluster.astype("float32"))
+    return (1 / n_cluster.astype("float64"))
 
 
 def calculate_centering(msa, weights, tau=0.1):

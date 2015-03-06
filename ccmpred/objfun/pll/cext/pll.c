@@ -8,41 +8,41 @@
 
 #include "pll.h"
 
-float evaluate_pll(
-	const float *x,
-	float *g,
-	float *g2,
-	float *v_centering,
-	float *weights,
+double evaluate_pll(
+	const double *x,
+	double *g,
+	double *g2,
+	double *v_centering,
+	double *weights,
 	unsigned char *msa,
 	const uint32_t ncol,
 	const uint32_t nrow,
-	float lambda_single,
-	float lambda_pair
+	double lambda_single,
+	double lambda_pair
 ) {
 	int i, j, k, s, v, a, b;
 	uint32_t nsingle = ncol * (N_ALPHA - 1);
 	uint32_t nsingle_padded = nsingle + N_ALPHA_PAD - (nsingle % N_ALPHA_PAD);
 	uint64_t nvar_padded = nsingle_padded + ncol * ncol * N_ALPHA * N_ALPHA_PAD;
 
-	const float *x1 = x;
-	const float *x2 = &x[nsingle_padded];
+	const double *x1 = x;
+	const double *x2 = &x[nsingle_padded];
 
-	float *g1 = g;
-	float *g2l = &g[nsingle_padded];
+	double *g1 = g;
+	double *g2l = &g[nsingle_padded];
 
 	// set fx and gradient to 0 initially
-	float fx = 0.0;
+	double fx = 0.0;
 
-	memset(g, 0, sizeof(float) * nvar_padded);
-	memset(g2, 0, sizeof(float) * (nvar_padded - nsingle_padded));
+	memset(g, 0, sizeof(double) * nvar_padded);
+	memset(g2, 0, sizeof(double) * (nvar_padded - nsingle_padded));
 
 	for(i = 0; i < nrow; i++) {
-		float weight = weights[i];
+		double weight = weights[i];
 
-		float precomp[N_ALPHA * ncol] __attribute__ ((aligned (32)));	// aka PC(a,s)
-		float precomp_sum[ncol] __attribute__ ((aligned (32)));
-		float precomp_norm[N_ALPHA * ncol] __attribute__ ((aligned (32)));	// aka PCN(a,s)
+		double precomp[N_ALPHA * ncol] __attribute__ ((aligned (32)));	// aka PC(a,s)
+		double precomp_sum[ncol] __attribute__ ((aligned (32)));
+		double precomp_norm[N_ALPHA * ncol] __attribute__ ((aligned (32)));	// aka PCN(a,s)
 
 		// compute PC(a,s) = V_s(a) + sum(k \in V_s) w_{sk}(a, X^i_k)
 		for(a = 0; a < N_ALPHA-1; a++) {
@@ -67,7 +67,7 @@ float evaluate_pll(
 		}
 
 		// compute precomp_sum(s) = log( sum(a=1..21) exp(PC(a,s)) )
-		memset(precomp_sum, 0, sizeof(float) * ncol);
+		memset(precomp_sum, 0, sizeof(double) * ncol);
 		for(a = 0; a < N_ALPHA - 1; a++) {
 			for(s = 0; s < ncol; s++) {
 				precomp_sum[s] += expf(PC(a,s));
@@ -160,10 +160,10 @@ float evaluate_pll(
 	}
 
 	// regularization
-	float reg = 0.0; // 0.0
+	double reg = 0.0; // 0.0
 	for(v = 0; v < nsingle; v++) {
 
-		float xdelta = x[v] - v_centering[v];
+		double xdelta = x[v] - v_centering[v];
 
 		reg += lambda_single * xdelta * xdelta;
 		g[v] += 2 * lambda_single * xdelta; // F2 is 2.0
