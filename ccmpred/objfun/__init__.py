@@ -20,7 +20,7 @@ class ObjectiveFunction(object):
         raise NotImplemented()
 
     def begin_progress(self):
-        print("    iter  ls           fx          |x|          |g|     step")
+        print("    iter  ls           fx          |x|          |g|        step")
 
     def progress(self, x, g, fx, n_iter, n_ls, step):
         xnorm = np.sum(x * x)
