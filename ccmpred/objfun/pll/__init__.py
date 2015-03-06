@@ -74,4 +74,4 @@ def calculate_centering(msa, weights, tau=0.1):
     aafrac_logsum = np.sum(np.log(aafrac_pseudo), axis=1)
 
     v_center = np.log(aafrac_pseudo) - aafrac_logsum[:, np.newaxis] / 20
-    return v_center.reshape((ncol * 20,))
+    return v_center.T.reshape((ncol * 20,))
