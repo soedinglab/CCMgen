@@ -32,7 +32,7 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
         self.g2 = np.empty((self.ncol * self.ncol * 21 * 32,), dtype=np.dtype('float64'))
 
     @classmethod
-    def init_from_default(cls, msa, lambda_single=1, lambda_pair=lambda msa: msa.shape[1] * 0.2, clustering_threshold=0.8):
+    def init_from_default(cls, msa, lambda_single=10, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, clustering_threshold=0.8):
         res = cls(msa, lambda_single, lambda_pair, clustering_threshold)
 
         x = np.zeros((res.nvar, ), dtype=np.dtype('float64'))
