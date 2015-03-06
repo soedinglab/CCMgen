@@ -13,7 +13,7 @@ def linesearch(x0, fx, g, objfun, s, alpha, ftol=1e-4, max_linesearch=5, alpha_m
     while True:
         if n_linesearch >= max_linesearch:
             print("MAX_LINESEARCH")
-            return -1, fx, alpha, None, x
+            return -1, fx, alpha, g, x
 
         n_linesearch += 1
 
