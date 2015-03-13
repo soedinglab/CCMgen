@@ -7,7 +7,7 @@ import ccmpred.objfun.pll.cext
 
 class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
 
-    def __init__(self, msa, lambda_single, lambda_pair, clustering_threshold):
+    def __init__(self, msa, weights, lambda_single, lambda_pair):
 
         if hasattr(lambda_single, '__call__'):
             lambda_single = lambda_single(msa)
@@ -24,7 +24,7 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
         self.nsingle_padded = self.nsingle + 32 - (self.nsingle % 32)
         self.nvar = self.nsingle_padded + self.ncol * self.ncol * 21 * 32
 
-        self.weights = calculate_weights(msa, clustering_threshold)
+        self.weights = weights
         self.v_centering = calculate_centering(msa, self.weights)
 
         # memory allocation for intermediate variables
@@ -32,8 +32,9 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
         self.g2 = np.empty((self.ncol * self.ncol * 21 * 32,), dtype=np.dtype('float64'))
 
     @classmethod
-    def init_from_default(cls, msa, lambda_single=10, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, clustering_threshold=0.8):
-        res = cls(msa, lambda_single, lambda_pair, clustering_threshold)
+    def init_from_default(cls, msa, weights, lambda_single=10, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2):
+
+        res = cls(msa, weights, lambda_single, lambda_pair)
 
         x = np.zeros((res.nvar, ), dtype=np.dtype('float64'))
         x[:res.nsingle] = res.v_centering
@@ -44,19 +45,6 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
         return ccmpred.objfun.pll.cext.evaluate(x, self.g, self.g2, self.v_centering, self.weights, self.msa, self.lambda_single, self.lambda_pair)
 
 
-def calculate_weights(msa, cutoff=0.8):
-    if cutoff >= 1:
-        return np.ones((msa.shape[0],), dtype="float64")
-
-    ncol = msa.shape[1]
-
-    # calculate pairwise sequence identity between all alignments
-    ids = np.sum(msa[:, np.newaxis, :] == msa[np.newaxis, :, :], axis=2)
-
-    # calculate number of cluster members at identity cutoff
-    n_cluster = np.sum(ids > cutoff * ncol, axis=0)
-
-    return (1 / n_cluster.astype("float64"))
 
 
 def calculate_centering(msa, weights, tau=0.1):

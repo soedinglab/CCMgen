@@ -7,7 +7,7 @@ import ccmpred.objfun.cd.cext
 
 class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
 
-    def __init__(self, msa, lambda_single, lambda_pair, clustering_threshold, n_samples):
+    def __init__(self, msa, weights, lambda_single, lambda_pair, n_samples):
 
         if hasattr(lambda_single, '__call__'):
             lambda_single = lambda_single(msa)
@@ -16,6 +16,7 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
             lambda_pair = lambda_pair(msa)
 
         self.msa = msa
+        self.weights = weights
         self.lambda_single = lambda_single
         self.lambda_pair = lambda_pair
 
@@ -52,10 +53,23 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         # TODO centered regularization?
 
     @classmethod
-    def init_from_default(cls, msa, lambda_single=10, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, clustering_threshold=0.8, n_samples=1000):
-        res = cls(msa, lambda_single, lambda_pair, clustering_threshold, n_samples)
-
+    def init_from_default(cls, msa, weights, lambda_single=10, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, n_samples=1000):
+        res = cls(msa, weights, lambda_single, lambda_pair, n_samples)
         x = np.zeros((res.nvar, ), dtype=np.dtype('float64'))
+
+        return x, res
+
+    @classmethod
+    def init_from_raw(cls, msa, weights, raw, lambda_single=10, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, n_samples=1000):
+        res = cls(msa, weights, lambda_single, lambda_pair, n_samples)
+
+        if msa.shape[1] != raw.ncol:
+            raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
+
+        x_single = raw.x_single.reshape((-1,))
+        x_pair = raw.x_pair.reshape((-1),)
+
+        x = np.hstack((x_single, x_pair))
 
         return x, res
 
