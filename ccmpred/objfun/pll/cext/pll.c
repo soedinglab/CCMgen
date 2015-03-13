@@ -36,92 +36,70 @@ double evaluate_pll(
 	memset(g, 0, sizeof(double) * nvar_padded);
 	memset(g2, 0, sizeof(double) * (nvar_padded - nsingle_padded));
 
-	for(int n = 0; n < nrow; n++) {
+	double *precomp_norm = malloc(sizeof(double) * N_ALPHA * nrow * ncol);
+
+	for(int nj = 0; nj < nrow * ncol; nj++) {
+		int n = nj / ncol;
+		int j = nj % ncol;
 		double weight = weights[n];
-
-		double precomp[N_ALPHA * ncol];
-		double precomp_sum[ncol];
-		double precomp_norm[N_ALPHA * ncol];
-
-		// compute PC(a,j) = V_j(a) + sum(i \in V_j) w_{ji}(a, X^n_i)
-		for(int j = 0; j < ncol; j++) {
-			for(int a = 0; a < N_ALPHA-1; a++) {
-				PC(a,j) = V(j,a);
-			}
-		}
-		
-
-		for(int j = 0; j < ncol; j++) {
-			for(int a = 0; a < N_ALPHA - 1; a++) {
-				for(int i = 0; i < ncol; i++) {
-					unsigned char xni = X(n,i);
-					PC(a, j) += W(a, j, xni, i);
-				}
-
-			}
-		}
-
-		for(int j = 0; j < ncol; j++) {
-			PC(N_ALPHA - 1, j) = 0;
-		}
-
-		// compute precomp_sum(s) = log( sum(a=1..21) exp(PC(a,s)) )
-		memset(precomp_sum, 0, sizeof(double) * ncol);
-		for(int j = 0; j < ncol; j++) {
-			for(int a = 0; a < N_ALPHA - 1; a++) {
-				precomp_sum[j] += expf(PC(a,j));
-			}
-
-			precomp_sum[j] = logf(precomp_sum[j]);
-		}
-
-		for(int j = 0; j < ncol; j++) {
-			for(int a = 0; a < N_ALPHA - 1; a++) {
-				PCN(a,j) = expf(PC(a, j) - precomp_sum[j]);
-			}
-			PCN(N_ALPHA - 1, j) = 0.0;
-		}
-
-		// actually compute fx and gradient
-		for(int j = 0; j < ncol; j++) {
-
-			unsigned char xnj = X(n,j);
-
-			fx += weight * (-PC( xnj, j ) + precomp_sum[j]);
-
-			if(xnj < N_ALPHA - 1) {
-				G1(j, xnj) -= weight;
-			} else {
-				for(int a = 0; a < N_ALPHA; a++) {
-					PCN(a, j) = 0;
-				}
-
-			}
-
-
-			for(int a = 0; a < N_ALPHA - 1; a++) {
-				G1(j, a) += weight * PCN(a, j);
-			}
-
-		}
-
-		for(int j = 0; j < ncol; j++) {
-
-			unsigned char xnj = X(n,j);
+		double precomp[N_ALPHA];
+		double precomp_sum = 0;
+		for(int a = 0; a < N_ALPHA - 1; a++) {
+			precomp[a] = V(j, a);
 
 			for(int i = 0; i < ncol; i++) {
-				unsigned char xni = X(n,i);
-				G2(xnj, j, xni, i) -= weight;
+				unsigned char xni = X(n, i);
+				precomp[a] += W(a, j, xni, i);
 			}
 
+			precomp_sum += expf(precomp[a]);
+		}
+		precomp[N_ALPHA - 1] = 0;
+		precomp_sum = logf(precomp_sum);
+
+		for(int a = 0; a < N_ALPHA - 1; a++) {
+			precomp_norm[(n * ncol + j) * N_ALPHA + a] = expf(precomp[a] - precomp_sum);
+		}
+		precomp_norm[(n * ncol + j) * N_ALPHA + N_ALPHA - 1] = 0;
+
+		unsigned char xnj = X(n,j);
+
+		fx += weight * (-precomp[xnj] + precomp_sum);
+
+		if(xnj < N_ALPHA - 1) {
+			G1(j, xnj) -= weight;
+
 			for(int a = 0; a < N_ALPHA - 1; a++) {
-				for(int i = 0; i < ncol; i++) {
-					G2(xnj, j, a, i) += weight * PCN(a, i);
-				}
+				G1(j, a) += weight * precomp_norm[(n * ncol + j) * N_ALPHA + a];
+			}
+		} else {
+			for(int a = 0; a < N_ALPHA; a++) {
+				precomp_norm[(n * ncol + j) * N_ALPHA + a] = 0;
 			}
 		}
 
-	} // n
+		for(int i = 0; i < ncol; i++) {
+			unsigned char xni = X(n,i);
+			G2(xnj, j, xni, i) -= weight;
+		}
+
+	} // nj
+
+	for(int nj = 0; nj < nrow * ncol; nj++) {
+
+		int n = nj / ncol;
+		int j = nj % ncol;
+		double weight = weights[n];
+		unsigned char xnj = X(n,j);
+
+		for(int a = 0; a < N_ALPHA - 1; a++) {
+			for(int i = 0; i < ncol; i++) {
+				// TODO TODO TODO
+				G2(xnj, j, a, i) += weight * precomp_norm[(n * ncol + i) * N_ALPHA + a];
+			}
+		}
+
+	} // nj
 
 
 
@@ -170,6 +148,8 @@ double evaluate_pll(
 	}
 
 	fx += reg;
+
+	free(precomp_norm);
 
 	return fx;
 }
