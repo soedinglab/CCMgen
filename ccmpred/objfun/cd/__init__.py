@@ -53,14 +53,14 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         # TODO centered regularization?
 
     @classmethod
-    def init_from_default(cls, msa, weights, lambda_single=10, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, n_samples=10000):
+    def init_from_default(cls, msa, weights, lambda_single=10, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, n_samples=1000):
         res = cls(msa, weights, lambda_single, lambda_pair, n_samples)
         x = np.zeros((res.nvar, ), dtype=np.dtype('float64'))
 
         return x, res
 
     @classmethod
-    def init_from_raw(cls, msa, weights, raw, lambda_single=10, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, n_samples=10000):
+    def init_from_raw(cls, msa, weights, raw, lambda_single=10, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, n_samples=1000):
         res = cls(msa, weights, lambda_single, lambda_pair, n_samples)
 
         if msa.shape[1] != raw.ncol:
