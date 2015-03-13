@@ -36,8 +36,8 @@ double evaluate_pll(
 	memset(g, 0, sizeof(double) * nvar_padded);
 	memset(g2, 0, sizeof(double) * (nvar_padded - nsingle_padded));
 
-	for(int i = 0; i < nrow; i++) {
-		double weight = weights[i];
+	for(int n = 0; n < nrow; n++) {
+		double weight = weights[n];
 
 		double precomp[N_ALPHA * ncol] __attribute__ ((aligned (32)));	// aka PC(a,s)
 		double precomp_sum[ncol] __attribute__ ((aligned (32)));
@@ -45,97 +45,97 @@ double evaluate_pll(
 
 		// compute PC(a,s) = V_s(a) + sum(k \in V_s) w_{sk}(a, X^i_k)
 		for(int a = 0; a < N_ALPHA-1; a++) {
-			for(int s = 0; s < ncol; s++) {
-				PC(a,s) = V(s,a);
+			for(int j = 0; j < ncol; j++) {
+				PC(a,j) = V(j,a);
 			}
 		}
 		
-		for(int k = 0; k < ncol; k++) {
-			unsigned char xik = X(i,k);
+		for(int j = 0; j < ncol; j++) {
+			unsigned char xnj = X(n,j);
 
 			for(int a = 0; a < N_ALPHA - 1; a++) {
-				for(int j = 0; j < ncol; j++) {
-					PC(a, j) += W(xik, k, a, j);
+				for(int i = 0; i < ncol; i++) {
+					PC(a, i) += W(xnj, j, a, i);
 				}
 
 			}
 		}
 
-		for(int s = 0; s < ncol; s++) {
-			PC(N_ALPHA - 1, s) = 0;
+		for(int j = 0; j < ncol; j++) {
+			PC(N_ALPHA - 1, j) = 0;
 		}
 
 		// compute precomp_sum(s) = log( sum(a=1..21) exp(PC(a,s)) )
 		memset(precomp_sum, 0, sizeof(double) * ncol);
 		for(int a = 0; a < N_ALPHA - 1; a++) {
-			for(int s = 0; s < ncol; s++) {
-				precomp_sum[s] += expf(PC(a,s));
+			for(int j = 0; j < ncol; j++) {
+				precomp_sum[j] += expf(PC(a,j));
 			}
 		}
 
-		for(int s = 0; s < ncol; s++) {
-			precomp_sum[s] = logf(precomp_sum[s]);
+		for(int j = 0; j < ncol; j++) {
+			precomp_sum[j] = logf(precomp_sum[j]);
 		}
 
 		for(int a = 0; a < N_ALPHA - 1; a++) {
-			for(int s = 0; s < ncol; s++) {
-				PCN(a,s) = expf(PC(a, s) - precomp_sum[s]);
+			for(int j = 0; j < ncol; j++) {
+				PCN(a,j) = expf(PC(a, j) - precomp_sum[j]);
 			}
 		}
 
-		for(int s = 0; s < ncol; s++) {
-			PCN(N_ALPHA - 1, s) = 0.0;
+		for(int j = 0; j < ncol; j++) {
+			PCN(N_ALPHA - 1, j) = 0.0;
 		}
 
 		// actually compute fx and gradient
-		for(int k = 0; k < ncol; k++) {
+		for(int j = 0; j < ncol; j++) {
 
-			unsigned char xik = X(i,k);
+			unsigned char xnj = X(n,j);
 
-			fx += weight * (-PC( xik, k ) + precomp_sum[k]);
+			fx += weight * (-PC( xnj, j ) + precomp_sum[j]);
 
-			if(xik < N_ALPHA - 1) {
-				G1(k, xik) -= weight;
+			if(xnj < N_ALPHA - 1) {
+				G1(j, xnj) -= weight;
 			} else {
 				for(int a = 0; a < N_ALPHA; a++) {
-					PCN(a, k) = 0;
+					PCN(a, j) = 0;
 				}
 
 			}
 
 
 			for(int a = 0; a < N_ALPHA - 1; a++) {
-				G1(k, a) += weight * PCN(a, k);
+				G1(j, a) += weight * PCN(a, j);
 			}
 
 		}
 
-		for(int k = 0; k < ncol; k++) {
+		for(int j = 0; j < ncol; j++) {
 
-			unsigned char xik = X(i,k);
+			unsigned char xnj = X(n,j);
 
-			for(int j = 0; j < ncol; j++) {
-				unsigned char xij = X(i,j);
-				G2(xik, k, xij, j) -= weight;
+			for(int i = 0; i < ncol; i++) {
+				unsigned char xni = X(n,i);
+				G2(xnj, j, xni, i) -= weight;
 			}
 
 			for(int a = 0; a < N_ALPHA - 1; a++) {
-				for(int j = 0; j < ncol; j++) {
-					G2(xik, k, a, j) += weight * PCN(a, j);
+				for(int i = 0; i < ncol; i++) {
+					G2(xnj, j, a, i) += weight * PCN(a, i);
 				}
 			}
 		}
 
-	} // i
+	} // n
 
 
 
 	// add transposed onto un-transposed
 	for(int b = 0; b < N_ALPHA; b++) {
-		for(int k = 0; k < ncol; k++) {
+		for(int j = 0; j < ncol; j++) {
 			for(int a = 0; a < N_ALPHA; a++) {
-				for(int j = 0; j < ncol; j++) {
-					G2L(b, k, a, j) = G2(b, k, a, j) + G2(a, j, b, k);
+				for(int i = 0; i < ncol; i++) {
+					G2L(b, j, a, i) = G2(b, j, a, i) + G2(a, i, b, j);
 				}
 			}
 		}
@@ -143,18 +143,18 @@ double evaluate_pll(
 
 	// set gradients to zero for self-edges
 	for(int b = 0; b < N_ALPHA; b++) {
-		for(int k = 0; k < ncol; k++) {
+		for(int j = 0; j < ncol; j++) {
 			for(int a = 0; a < N_ALPHA; a++) {
-				G2L(b, k, a, k) = 0;
+				G2L(b, j, a, j) = 0;
 			}
 		}
 	}
 
-	for(int k = 0; k < ncol; k++) {
-		for(int j = 0; j < ncol; j++) {
+	for(int j = 0; j < ncol; j++) {
+		for(int i = 0; i < ncol; i++) {
 			for(int a = 0; a < N_ALPHA; a++) {
-				G2L(a, k, N_ALPHA - 1, j) = 0;
-				G2L(N_ALPHA - 1, k, a, j) = 0;
+				G2L(a, j, N_ALPHA - 1, i) = 0;
+				G2L(N_ALPHA - 1, j, a, i) = 0;
 			}
 		}
 	}
