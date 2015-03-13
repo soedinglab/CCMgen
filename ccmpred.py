@@ -9,7 +9,7 @@ import ccmpred.objfun.cd as cd
 import ccmpred.algorithm.gradient_descent as gd
 import ccmpred.algorithm.conjugate_gradients as cg
 
-msa = aln.read_msa_psicov("data/1atzA.aln")
+msa = aln.read_msa_psicov("/home/seemayer/Projects/CCMpredNew/data/1atzA.aln")
 weights = cw.weights_simple(msa)
 
 # x0, of = pll.PseudoLikelihood.init_from_default(msa, weights)

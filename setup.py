@@ -1,5 +1,5 @@
+import numpy.distutils.intelccompiler
 from setuptools import setup, Extension, find_packages
-
 
 setup(
     name="CCMpred",
@@ -23,15 +23,17 @@ setup(
                 'ccmpred/objfun/cd/cext/cd.c',
                 'ccmpred/objfun/cd/cext/cdutil.c'
             ],
-            extra_compile_args=['-fopenmp'],
-            extra_link_args=['-fopenmp'],
+            extra_compile_args=['-g -fopenmp'],
+            extra_link_args=['-g -fopenmp'],
         ),
         Extension(
             'ccmpred.counts.libmsacounts',
             include_dirs=[],
             library_dirs=[],
             libraries=[],
-            sources=['ccmpred/counts/msacounts.c']
+            sources=['ccmpred/counts/msacounts.c'],
+            extra_compile_args=['-g -fopenmp'],
+            extra_link_args=['-g -fopenmp'],
         )
     ],
     scripts=['ccmpred.py']
