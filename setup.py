@@ -12,7 +12,9 @@ setup(
             include_dirs=[],
             library_dirs=[],
             libraries=[],
-            sources=['ccmpred/objfun/pll/cext/pll.c']
+            sources=['ccmpred/objfun/pll/cext/pll.c'],
+            extra_compile_args=['-g -fopenmp -std=c11'],
+            extra_link_args=['-g -fopenmp'],
         ),
         Extension(
             'ccmpred.objfun.cd.cext.libcd',
