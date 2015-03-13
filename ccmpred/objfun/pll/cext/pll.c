@@ -39,23 +39,23 @@ double evaluate_pll(
 	for(int n = 0; n < nrow; n++) {
 		double weight = weights[n];
 
-		double precomp[N_ALPHA * ncol] __attribute__ ((aligned (32)));	// aka PC(a,s)
-		double precomp_sum[ncol] __attribute__ ((aligned (32)));
-		double precomp_norm[N_ALPHA * ncol] __attribute__ ((aligned (32)));	// aka PCN(a,s)
+		double precomp[N_ALPHA * ncol];
+		double precomp_sum[ncol];
+		double precomp_norm[N_ALPHA * ncol];
 
-		// compute PC(a,s) = V_s(a) + sum(k \in V_s) w_{sk}(a, X^i_k)
-		for(int a = 0; a < N_ALPHA-1; a++) {
-			for(int j = 0; j < ncol; j++) {
+		// compute PC(a,j) = V_j(a) + sum(i \in V_j) w_{ji}(a, X^n_i)
+		for(int j = 0; j < ncol; j++) {
+			for(int a = 0; a < N_ALPHA-1; a++) {
 				PC(a,j) = V(j,a);
 			}
 		}
 		
-		for(int j = 0; j < ncol; j++) {
-			unsigned char xnj = X(n,j);
 
+		for(int j = 0; j < ncol; j++) {
 			for(int a = 0; a < N_ALPHA - 1; a++) {
 				for(int i = 0; i < ncol; i++) {
-					PC(a, i) += W(xnj, j, a, i);
+					unsigned char xni = X(n,i);
+					PC(a, j) += W(a, j, xni, i);
 				}
 
 			}
@@ -67,23 +67,18 @@ double evaluate_pll(
 
 		// compute precomp_sum(s) = log( sum(a=1..21) exp(PC(a,s)) )
 		memset(precomp_sum, 0, sizeof(double) * ncol);
-		for(int a = 0; a < N_ALPHA - 1; a++) {
-			for(int j = 0; j < ncol; j++) {
+		for(int j = 0; j < ncol; j++) {
+			for(int a = 0; a < N_ALPHA - 1; a++) {
 				precomp_sum[j] += expf(PC(a,j));
 			}
-		}
 
-		for(int j = 0; j < ncol; j++) {
 			precomp_sum[j] = logf(precomp_sum[j]);
 		}
 
-		for(int a = 0; a < N_ALPHA - 1; a++) {
-			for(int j = 0; j < ncol; j++) {
+		for(int j = 0; j < ncol; j++) {
+			for(int a = 0; a < N_ALPHA - 1; a++) {
 				PCN(a,j) = expf(PC(a, j) - precomp_sum[j]);
 			}
-		}
-
-		for(int j = 0; j < ncol; j++) {
 			PCN(N_ALPHA - 1, j) = 0.0;
 		}
 
