@@ -12,8 +12,8 @@ import ccmpred.algorithm.conjugate_gradients as cg
 msa = aln.read_msa_psicov("/home/seemayer/Projects/CCMpredNew/data/1atzA.aln")
 weights = cw.weights_simple(msa)
 
-# x0, of = pll.PseudoLikelihood.init_from_default(msa, weights)
-x0, of = cd.ContrastiveDivergence.init_from_default(msa, weights)
+x0, of = pll.PseudoLikelihood.init_from_default(msa, weights)
+#x0, of = cd.ContrastiveDivergence.init_from_default(msa, weights)
 
 # fx, x = cg.minimize(of, x0, 100)
 fx, x = gd.minimize(of, x0, 100, step=lambda i: 1e-3 / (1 + i / 25))
