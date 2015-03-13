@@ -23,7 +23,7 @@ setup(
                 'ccmpred/objfun/cd/cext/cd.c',
                 'ccmpred/objfun/cd/cext/cdutil.c'
             ],
-            extra_compile_args=['-g -fopenmp'],
+            extra_compile_args=['-g -fopenmp -std=c11'],
             extra_link_args=['-g -fopenmp'],
         ),
         Extension(
@@ -32,7 +32,7 @@ setup(
             library_dirs=[],
             libraries=[],
             sources=['ccmpred/counts/msacounts.c'],
-            extra_compile_args=['-g -fopenmp'],
+            extra_compile_args=['-g -fopenmp -std=c11'],
             extra_link_args=['-g -fopenmp'],
         )
     ],

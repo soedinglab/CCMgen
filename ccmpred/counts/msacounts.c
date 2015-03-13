@@ -21,40 +21,23 @@ void msa_count_single(double *counts, uint8_t *msa, double *weights, uint32_t nr
 	}
 }
 
+
 void msa_count_pairs(double *counts, uint8_t *msa, double *weights, uint32_t nrow, uint32_t ncol) {
 	memset(counts, 0, sizeof(double) * ncol * ncol * N_ALPHA * N_ALPHA);
 
 	#pragma omp parallel
-	{
-		int n, i, j;
-		unsigned char a, b;
-		double *counts_priv = (double *)malloc(sizeof(double) * ncol * ncol * N_ALPHA * N_ALPHA);
-		memset(counts_priv, 0, sizeof(double) * ncol * ncol * N_ALPHA * N_ALPHA);
+	#pragma omp for nowait
+	for(int ij = 0; ij < ncol * ncol; ij++) {
+		int i = ij / ncol;
+		int j = ij % ncol;
+		for(int n = 0; n < nrow; n++) {
 
-		#pragma omp for nowait
-		for(n = 0; n < nrow; n++) {
-			for(i = 0; i < ncol; i++) {
-				a = msa[n * ncol + i];
-				for(j = 0; j < ncol; j++) {
-					b = msa[n * ncol + j];
-
-					counts_priv[((i * ncol + j) * N_ALPHA + a) * N_ALPHA + b] += weights[n];
-				}
-			}
+			unsigned char a = msa[n * ncol + i];
+			unsigned char b = msa[n * ncol + j];
+			counts[((i * ncol + j) * N_ALPHA + a) * N_ALPHA + b] += weights[n];
 		}
-
-		#pragma omp critical
-		{
-			for(n = 0; n < ncol * ncol * N_ALPHA * N_ALPHA; n++) {
-				counts[n] += counts_priv[n];
-			}
-		}
-
-		free(counts_priv);
 	}
-
 }
-
 
 void msa_char_to_index(uint8_t *msa, uint32_t nrow, uint32_t ncol) {
 
