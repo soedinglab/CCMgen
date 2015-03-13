@@ -70,15 +70,20 @@ void sample_sequences(
 	const int n_samples,
 	const int ncol
 ) {
-	int k, i;
-	flt *pcondcurr = fl_malloc(N_ALPHA);
-	for (k = 0; k < n_samples; k++) {
-		i = pick_random_uniform(ncol - 1);
+	#pragma omp parallel
+	{
+		int k, i;
+		flt *pcondcurr = fl_malloc(N_ALPHA);
 
-		compute_conditional_probs(i, pcondcurr, x, seq, ncol);
-		seq[i] = pick_random_weighted(pcondcurr, N_ALPHA - 1);
+		#pragma omp for
+		for (k = 0; k < n_samples; k++) {
+			i = pick_random_uniform(ncol - 1);
+
+			compute_conditional_probs(i, pcondcurr, x, seq, ncol);
+			seq[i] = pick_random_weighted(pcondcurr, N_ALPHA - 1);
+		}
+		fl_free(pcondcurr);
 	}
-	fl_free(pcondcurr);
 }
 
 
