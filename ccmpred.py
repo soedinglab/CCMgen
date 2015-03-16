@@ -40,8 +40,6 @@ def main():
 
     alnfile, matfile = args
 
-    print(opt)
-
     msa = aln.read_msa_psicov(alnfile)
     weights = ccmpred.weighting.weights_simple(msa)
 
