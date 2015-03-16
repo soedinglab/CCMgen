@@ -59,9 +59,9 @@ double evaluate_pll(
 		precomp_sum = logf(precomp_sum);
 
 		for(int a = 0; a < N_ALPHA - 1; a++) {
-			precomp_norm[(n * ncol + j) * N_ALPHA + a] = expf(precomp[a] - precomp_sum);
+			precomp_norm[(n * N_ALPHA + a) * ncol + j] = expf(precomp[a] - precomp_sum);
 		}
-		precomp_norm[(n * ncol + j) * N_ALPHA + N_ALPHA - 1] = 0;
+		precomp_norm[(n * N_ALPHA + N_ALPHA - 1) * ncol + j] = 0;
 
 		unsigned char xnj = X(n,j);
 
@@ -69,6 +69,7 @@ double evaluate_pll(
 
 	} // nj
 
+	#pragma omp parallel for
 	for(int nj = 0; nj < nrow * ncol; nj++) {
 		int n = nj / ncol;
 		int j = nj % ncol;
@@ -76,24 +77,28 @@ double evaluate_pll(
 		double weight = weights[n];
 
 		if(xnj < N_ALPHA - 1) {
+			#pragma omp atomic
 			G1(j, xnj) -= weight;
 
 			for(int a = 0; a < N_ALPHA - 1; a++) {
-				G1(j, a) += weight * precomp_norm[(n * ncol + j) * N_ALPHA + a];
+				#pragma omp atomic
+				G1(j, a) += weight * precomp_norm[(n * N_ALPHA + a) * ncol + j];
 			}
 		} else {
 			for(int a = 0; a < N_ALPHA; a++) {
-				precomp_norm[(n * ncol + j) * N_ALPHA + a] = 0;
+				precomp_norm[(n * N_ALPHA + a) * ncol + j] = 0;
 			}
 		}
 
 		for(int i = 0; i < ncol; i++) {
 			unsigned char xni = X(n,i);
+			#pragma omp atomic
 			G2(xnj, j, xni, i) -= weight;
 		}
 
 	} // nj
 
+	#pragma omp parallel for
 	for(int nj = 0; nj < nrow * ncol; nj++) {
 
 		int n = nj / ncol;
@@ -101,15 +106,12 @@ double evaluate_pll(
 		double weight = weights[n];
 		unsigned char xnj = X(n,j);
 
-		for(int a = 0; a < N_ALPHA - 1; a++) {
-			for(int i = 0; i < ncol; i++) {
-				G2(xnj, j, a, i) += weight * precomp_norm[(n * ncol + i) * N_ALPHA + a];
-			}
+		for(int ai = 0; ai < (N_ALPHA - 1) * ncol; ai++) {
+				#pragma omp atomic
+				g2[((xnj * ncol + j) * N_ALPHA_PAD * ncol + ai)] += weight * precomp_norm[(n * N_ALPHA * ncol) + ai];
 		}
 
 	} // nj
-
-
 
 	// add transposed onto un-transposed
 	for(int b = 0; b < N_ALPHA; b++) {
