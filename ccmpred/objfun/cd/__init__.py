@@ -73,6 +73,12 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
 
         return x, res
 
+    def finalize(self, x):
+        x_single = x[:self.nsingle].reshape((self.ncol, 20))
+        x_pair = x[self.nsingle:].reshape((self.ncol, self.ncol, 21, 21))
+
+        return x_single, x_pair
+
     def evaluate(self, x):
 
         self.msa_sampled = ccmpred.objfun.cd.cext.sample_sequences(self.msa_sampled, x)

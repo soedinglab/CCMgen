@@ -41,10 +41,14 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
 
         return x, res
 
+    def finalize(self, x):
+        x_single = x[:self.nsingle].reshape((self.ncol, 20))
+        x_pair = np.transpose(x[self.nsingle:].reshape((self.ncol, 21, self.ncol, 21)), (3, 1, 2, 0))
+
+        return x_single, x_pair
+
     def evaluate(self, x):
         return ccmpred.objfun.pll.cext.evaluate(x, self.g, self.g2, self.v_centering, self.weights, self.msa, self.lambda_single, self.lambda_pair)
-
-
 
 
 def calculate_centering(msa, weights, tau=0.1):

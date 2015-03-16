@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 import optparse
+import numpy as np
 
-import ccmpred.weighting as cw
+import ccmpred.weighting
+import ccmpred.scoring
 import ccmpred.io.alignment as aln
 
 import ccmpred.objfun.pll as pll
@@ -36,13 +38,20 @@ def main():
     print(opt)
 
     msa = aln.read_msa_psicov(alnfile)
-    weights = cw.weights_simple(msa)
+    weights = ccmpred.weighting.weights_simple(msa)
 
-    x0, of = OBJECTIVE_FUNCTIONS[opt.objfun].init_from_default(msa, weights)
+    objfun = OBJECTIVE_FUNCTIONS[opt.objfun]
+    x0, f = objfun.init_from_default(msa, weights)
 
-    fx, x = ALGORITHMS[opt.algorithm](of, x0, opt)
+    fx, x = ALGORITHMS[opt.algorithm](f, x0, opt)
 
     print("Finished with fx = {fx}".format(fx=fx))
+
+    x_single, x_pair = f.finalize(x)
+
+    mat = ccmpred.scoring.frobenius_score(x_pair)
+
+    np.savetxt(matfile, mat)
 
 
 if __name__ == '__main__':
