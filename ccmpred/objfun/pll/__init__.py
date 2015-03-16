@@ -1,5 +1,6 @@
 import numpy as np
 
+import ccmpred.raw
 import ccmpred.counts
 import ccmpred.objfun
 import ccmpred.objfun.pll.cext
@@ -45,7 +46,7 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
         x_single = x[:self.nsingle].reshape((self.ncol, 20))
         x_pair = np.transpose(x[self.nsingle_padded:].reshape((21, self.ncol, 32, self.ncol))[:, :, :21, :], (3, 1, 2, 0))
 
-        return x_single, x_pair
+        return ccmpred.raw.CCMRaw(self.ncol, x_single, x_pair, {})
 
     def evaluate(self, x):
         return ccmpred.objfun.pll.cext.evaluate(x, self.g, self.g2, self.v_centering, self.weights, self.msa, self.lambda_single, self.lambda_pair)

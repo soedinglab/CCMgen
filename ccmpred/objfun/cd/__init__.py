@@ -1,5 +1,6 @@
 import numpy as np
 
+import ccmpred.raw
 import ccmpred.counts
 import ccmpred.objfun
 import ccmpred.objfun.cd.cext
@@ -66,10 +67,10 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         if msa.shape[1] != raw.ncol:
             raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
 
-        x_single = raw.x_single.reshape((-1,))
-        x_pair = raw.x_pair.reshape((-1),)
+        x_single = raw.x_single
+        x_pair = np.transpose(raw.x_pair, (0, 2, 1, 3))
 
-        x = np.hstack((x_single, x_pair))
+        x = np.hstack((x_single.reshape((-1,)), x_pair.reshape((-1),)))
 
         return x, res
 
@@ -77,7 +78,7 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         x_single = x[:self.nsingle].reshape((self.ncol, 20))
         x_pair = np.transpose(x[self.nsingle:].reshape((self.ncol, 21, self.ncol, 21)), (0, 2, 1, 3))
 
-        return x_single, x_pair
+        return ccmpred.raw.CCMRaw(self.ncol, x_single, x_pair, {})
 
     def evaluate(self, x):
 
@@ -95,8 +96,8 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
 
         # regularization
         x_single = x[:self.nsingle].reshape((self.ncol, 20))
-        x_pair = x[self.nsingle:].reshape((21, self.ncol, 21, self.ncol))
-        x_pair = np.transpose(x_pair, (3, 1, 2, 0))
+        x_pair = x[self.nsingle:].reshape((self.ncol, 21, self.ncol, 21))
+        x_pair = np.transpose(x_pair, (0, 2, 1, 3))
 
         g_single[:, :20] += 2 * self.lambda_single * x_single
         g_pair += 2 * self.lambda_pair * x_pair
@@ -107,6 +108,6 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         g_pair[:, :, 20, :] = 0
 
         # reorder dimensions for gradient
-        g_pair = np.transpose(g_pair, (3, 1, 2, 0))
+        g_pair = np.transpose(g_pair, (0, 2, 1, 3))
 
         return -1, np.hstack((g_single[:, :20].reshape(-1), g_pair.reshape(-1)))
