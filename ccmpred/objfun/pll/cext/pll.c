@@ -38,6 +38,7 @@ double evaluate_pll(
 
 	double *precomp_norm = malloc(sizeof(double) * N_ALPHA * nrow * ncol);
 
+	#pragma omp parallel for reduction(+:fx)
 	for(int nj = 0; nj < nrow * ncol; nj++) {
 		int n = nj / ncol;
 		int j = nj % ncol;
@@ -65,6 +66,14 @@ double evaluate_pll(
 		unsigned char xnj = X(n,j);
 
 		fx += weight * (-precomp[xnj] + precomp_sum);
+
+	} // nj
+
+	for(int nj = 0; nj < nrow * ncol; nj++) {
+		int n = nj / ncol;
+		int j = nj % ncol;
+		unsigned char xnj = X(n,j);
+		double weight = weights[n];
 
 		if(xnj < N_ALPHA - 1) {
 			G1(j, xnj) -= weight;
@@ -94,7 +103,6 @@ double evaluate_pll(
 
 		for(int a = 0; a < N_ALPHA - 1; a++) {
 			for(int i = 0; i < ncol; i++) {
-				// TODO TODO TODO
 				G2(xnj, j, a, i) += weight * precomp_norm[(n * ncol + i) * N_ALPHA + a];
 			}
 		}
