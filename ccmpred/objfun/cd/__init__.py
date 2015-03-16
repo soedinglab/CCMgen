@@ -75,7 +75,7 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
 
     def finalize(self, x):
         x_single = x[:self.nsingle].reshape((self.ncol, 20))
-        x_pair = x[self.nsingle:].reshape((self.ncol, self.ncol, 21, 21))
+        x_pair = np.transpose(x[self.nsingle:].reshape((self.ncol, 21, self.ncol, 21)), (0, 2, 1, 3))
 
         return x_single, x_pair
 
