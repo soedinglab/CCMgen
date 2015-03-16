@@ -43,7 +43,7 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
 
     def finalize(self, x):
         x_single = x[:self.nsingle].reshape((self.ncol, 20))
-        x_pair = np.transpose(x[self.nsingle:].reshape((self.ncol, 21, self.ncol, 21)), (3, 1, 2, 0))
+        x_pair = np.transpose(x[self.nsingle_padded:].reshape((21, self.ncol, 32, self.ncol))[:, :, :21, :], (3, 1, 2, 0))
 
         return x_single, x_pair
 
