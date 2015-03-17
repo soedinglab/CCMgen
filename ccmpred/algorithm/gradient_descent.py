@@ -19,5 +19,4 @@ def minimize(objfun, x, maxiter, alpha0=None, alpha_decay=10):
 
         x -= alpha * g
 
-
     return fx, x
