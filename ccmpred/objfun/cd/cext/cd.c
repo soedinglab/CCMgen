@@ -79,8 +79,8 @@ void sample_sequences(
 		for (k = 0; k < n_samples; k++) {
 			i = pick_random_uniform(ncol - 1);
 
-			compute_conditional_probs(i, pcondcurr, x, seq, ncol);
-			seq[i] = pick_random_weighted(pcondcurr, N_ALPHA - 1);
+			compute_conditional_probs(i, pcondcurr, x, &seq[k * ncol], ncol);
+			seq[k * ncol + i] = pick_random_weighted(pcondcurr, N_ALPHA - 1);
 		}
 		fl_free(pcondcurr);
 	}
