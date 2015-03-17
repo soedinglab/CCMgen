@@ -86,3 +86,14 @@ void msa_char_to_index(uint8_t *msa, uint32_t nrow, uint32_t ncol) {
 
 }
 
+
+void msa_index_to_char(uint8_t *msa, uint32_t nrow, uint32_t ncol) {
+	uint8_t char_indices[] = {'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', '-' };
+	int n, i;
+
+	for(n = 0; n < nrow; n++) {
+		for(i = 0; i < ncol; i++) {
+			msa[n * ncol + i] = char_indices[msa[n * ncol + i]];
+		}
+	}
+}

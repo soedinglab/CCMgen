@@ -19,6 +19,9 @@ libmsac.msa_count_pairs.argtypes = [array_4d_float, array_2d_char, array_1d_floa
 libmsac.msa_char_to_index.restype = None
 libmsac.msa_char_to_index.argtypes = [array_2d_char, ctypes.c_uint32, ctypes.c_uint32]
 
+libmsac.msa_index_to_char.restype = None
+libmsac.msa_index_to_char.argtypes = [array_2d_char, ctypes.c_uint32, ctypes.c_uint32]
+
 
 def pair_counts(msa, weights=None):
     nrow, ncol = msa.shape
@@ -60,5 +63,14 @@ def index_msa(msa, in_place=False):
         msa = msa.copy()
 
     libmsac.msa_char_to_index(msa, *msa.shape)
+
+    return msa
+
+
+def char_msa(msa, in_place=False):
+    if not in_place:
+        msa = msa.copy()
+
+    libmsac.msa_index_to_char(msa, *msa.shape)
 
     return msa
