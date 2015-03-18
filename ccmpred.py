@@ -19,7 +19,7 @@ OBJECTIVE_FUNCTIONS = {
 }
 
 ALGORITHMS = {
-    "gradient_descent": lambda of, x0, opt: ccmpred.algorithm.gradient_descent.minimize(of, x0, opt.numiter, alpha0=1e-3, alpha_decay=50),
+    "gradient_descent": lambda of, x0, opt: ccmpred.algorithm.gradient_descent.minimize(of, x0, opt.numiter, alpha0=1e-4, alpha_decay=100),
     "conjugate_gradients": lambda of, x0, opt: ccmpred.algorithm.conjugate_gradients.minimize(of, x0, opt.numiter),
 }
 
