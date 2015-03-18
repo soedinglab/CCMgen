@@ -91,8 +91,8 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         sample_counts_single *= self.nrow_nogaps_single[:, np.newaxis] / self.n_samples
         sample_counts_pair *= self.nrow_nogaps_pair[:, :, np.newaxis, np.newaxis] / self.n_samples
 
-        g_single = -self.msa_counts_single + sample_counts_single
-        g_pair = -self.msa_counts_pair + sample_counts_pair
+        g_single = sample_counts_single - self.msa_counts_single
+        g_pair = sample_counts_pair - self.msa_counts_pair
 
         # regularization
         x_single = x[:self.nsingle].reshape((self.ncol, 20))
@@ -106,6 +106,9 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         g_single[:, 20] = 0
         g_pair[:, :, :, 20] = 0
         g_pair[:, :, 20, :] = 0
+
+        for i in range(self.ncol):
+            g_pair[i, i, :, :] = 0
 
         # reorder dimensions for gradient
         g_pair = np.transpose(g_pair, (0, 2, 1, 3))
