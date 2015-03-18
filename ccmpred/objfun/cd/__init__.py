@@ -47,11 +47,8 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         self.msa_sampled = np.empty((n_samples, msa.shape[1]), dtype="uint8")
         self.msa_sampled[:] = msa[np.random.choice(range(msa.shape[0]), size=self.n_samples, replace=True), :]
 
-        colfreqs = self.msa_counts_single[:, :20]
-        colfreqs /= np.sum(colfreqs, axis=1)[:, np.newaxis]
-
         # remove gaps from sample alignment
-        self.msa_sampled = ccmpred.objfun.cd.cext.remove_gaps(self.msa_sampled, colfreqs.reshape(-1))
+        self.msa_sampled = ccmpred.objfun.cd.cext.remove_gaps(self.msa_sampled, self.msa_counts_single[:, :20].reshape(-1))
 
         # TODO weight sequences?
         # TODO centered regularization?
