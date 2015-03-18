@@ -57,7 +57,6 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         self.centering_x_single = np.zeros((self.ncol, 20), dtype=np.dtype('float64'))
 
         # TODO weight sequences?
-        # TODO centered regularization?
 
     @classmethod
     def init_from_default(cls, msa, weights, lambda_single=1e4, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, n_samples=1000):
