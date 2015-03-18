@@ -53,18 +53,23 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         # remove gaps from sample alignment
         self.msa_sampled = ccmpred.objfun.cd.cext.remove_gaps(self.msa_sampled, colfreqs.reshape(-1))
 
+        # centering should be re-initialized with init_* functions
+        self.centering_x_single = np.zeros((self.ncol, 20), dtype=np.dtype('float64'))
+
         # TODO weight sequences?
         # TODO centered regularization?
 
     @classmethod
-    def init_from_default(cls, msa, weights, lambda_single=10, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, n_samples=1000):
+    def init_from_default(cls, msa, weights, lambda_single=1e4, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, n_samples=1000):
         res = cls(msa, weights, lambda_single, lambda_pair, n_samples)
         x = np.zeros((res.nvar, ), dtype=np.dtype('float64'))
+
+        res.centering_x_single[:] = x[:res.nsingle].reshape((res.ncol, 20))
 
         return x, res
 
     @classmethod
-    def init_from_raw(cls, msa, weights, raw, lambda_single=10, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, n_samples=1000):
+    def init_from_raw(cls, msa, weights, raw, lambda_single=1e4, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, n_samples=1000):
         res = cls(msa, weights, lambda_single, lambda_pair, n_samples)
 
         if msa.shape[1] != raw.ncol:
@@ -72,6 +77,8 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
 
         x_single = raw.x_single
         x_pair = np.transpose(raw.x_pair, (0, 2, 1, 3))
+
+        res.centering_x_single[:] = x_single
 
         x = np.hstack((x_single.reshape((-1,)), x_pair.reshape((-1),)))
 
@@ -98,7 +105,7 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         g_pair = sample_counts_pair - self.msa_counts_pair
 
         # regularization
-        x_single = x[:self.nsingle].reshape((self.ncol, 20))
+        x_single = x[:self.nsingle].reshape((self.ncol, 20)) - self.centering_x_single
         x_pair = x[self.nsingle:].reshape((self.ncol, 21, self.ncol, 21))
         x_pair = np.transpose(x_pair, (0, 2, 1, 3))
 
