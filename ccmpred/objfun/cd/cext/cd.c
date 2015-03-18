@@ -102,20 +102,12 @@ void remove_gaps(
 	int nrow,
 	int ncol
 ) {
-	int i, j, a;
+	int i, j;
 	for(i = 0; i < nrow; i++) {
 		for (j = 0; j < ncol; j++) {
 			if (seq[i * ncol + j] != GAP) continue;
 
-			flt max = -1.0;
-			int max_aa = -1;
-			for (a = 0; a < N_ALPHA - 1; a++) {
-				if (H1(j, a) > max) {
-					max = H1(j, a);
-					max_aa = a;
-				}
-			}
-			seq[i * ncol + j] = max_aa;
+			seq[i * ncol + j] = pick_random_weighted((flt *)&H1(j, 0), N_ALPHA - 1);
 		}
 	}
 }
