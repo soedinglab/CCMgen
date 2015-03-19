@@ -43,29 +43,26 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         self.msa_counts_pair[:, :, :, 20] = 0
         self.msa_counts_pair[:, :, 20, :] = 0
 
-        # pick an initial sample alignment
-        self.msa_sampled = np.empty((n_samples, msa.shape[1]), dtype="uint8")
-        self.msa_sampled[:] = msa[np.random.choice(range(msa.shape[0]), size=self.n_samples, replace=True), :]
+        # init sample alignment
+        self.msa_sampled = self.init_sample_alignment()
 
-        colfreqs = self.msa_counts_single[:, :20]
-        colfreqs /= np.sum(colfreqs, axis=1)[:, np.newaxis]
-
-        # remove gaps from sample alignment
-        self.msa_sampled = ccmpred.objfun.cd.cext.remove_gaps(self.msa_sampled, colfreqs.reshape(-1))
-
-        # centering should be re-initialized with init_* functions
+        # allocate centering - should be filled with init_* functions
         self.centering_x_single = np.zeros((self.ncol, 20), dtype=np.dtype('float64'))
 
         # TODO weight sequences?
 
-    @classmethod
-    def init_from_default(cls, msa, weights, lambda_single=1e4, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, n_samples=1000):
-        res = cls(msa, weights, lambda_single, lambda_pair, n_samples)
-        x = np.zeros((res.nvar, ), dtype=np.dtype('float64'))
+    def init_sample_alignment(self):
 
-        res.centering_x_single[:] = x[:res.nsingle].reshape((res.ncol, 20))
+        msa_sampled = np.empty((self.n_samples, self.msa.shape[1]), dtype="uint8")
 
-        return x, res
+        # make initial sample alignment from real alignment
+        msa_sampled[:] = self.msa[np.random.choice(range(self.msa.shape[0]), size=self.n_samples, replace=True), :]
+
+        # remove gaps from sample alignment
+        colfreqs = self.msa_counts_single[:, :20]
+        colfreqs /= np.sum(colfreqs, axis=1)[:, np.newaxis]
+
+        return ccmpred.objfun.cd.cext.remove_gaps(msa_sampled, colfreqs.reshape(-1))
 
     @classmethod
     def init_from_raw(cls, msa, weights, raw, lambda_single=1e4, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, n_samples=1000):
@@ -76,10 +73,9 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
 
         x_single = raw.x_single
         x_pair = np.transpose(raw.x_pair, (0, 2, 1, 3))
+        x = np.hstack((x_single.reshape((-1,)), x_pair.reshape((-1),)))
 
         res.centering_x_single[:] = x_single
-
-        x = np.hstack((x_single.reshape((-1,)), x_pair.reshape((-1),)))
 
         return x, res
 
@@ -89,9 +85,12 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
 
         return ccmpred.raw.CCMRaw(self.ncol, x_single, x_pair, {})
 
+    def sample_sequences(self, x):
+        return ccmpred.objfun.cd.cext.sample_sequences(self.msa_sampled, x)
+
     def evaluate(self, x):
 
-        self.msa_sampled = ccmpred.objfun.cd.cext.sample_sequences(self.msa_sampled, x)
+        self.msa_sampled = self.sample_sequences(x)
 
         sample_counts_single = ccmpred.counts.single_counts(self.msa_sampled)
         sample_counts_pair = ccmpred.counts.pair_counts(self.msa_sampled)
