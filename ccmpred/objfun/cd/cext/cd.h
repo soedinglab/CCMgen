@@ -27,4 +27,12 @@ typedef double flt;
 
 #define MSA_INDEX(n,i) (n) * ncol + (i)
 
+void compute_conditional_probs(
+	const int i,
+	flt *const cond_probs,
+	const flt *const x,
+	const unsigned char *const last_seq,
+	const int ncol
+);
+
 #endif
