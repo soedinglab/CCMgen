@@ -25,7 +25,9 @@ def replacement_consensus(option, opt, value, parser):
 def replacement_col_freqs(option, opt, value, parser):
 
     def inner(msa):
-        counts = ccmpred.counts.single_counts(msa)[:, :20]
+        counts = ccmpred.counts.single_counts(msa)
+        counts[:, 20] = 0
+
         counts /= np.sum(counts, axis=1)[:, np.newaxis]
 
         return ccmpred.gaps.remove_gaps_probs(msa, counts)
@@ -54,7 +56,8 @@ def main():
     msa = ccmpred.io.alignment.read_msa(msa_in_file, opt.msa_in_format)
     msa_nogaps = opt.replacement(msa)
 
-    print("\n".join([", ".join("{:2d}".format(cell) for cell in row) for row in msa_nogaps]))
+    with open(msa_out_file, "w") as f:
+        ccmpred.io.alignment.write_msa_psicov(f, msa_nogaps)
 
 
 if __name__ == '__main__':

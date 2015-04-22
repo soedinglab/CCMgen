@@ -38,3 +38,10 @@ def read_msa_psicov(f, return_indices=True):
         ccmpred.counts.index_msa(msa, in_place=True)
 
     return msa
+
+
+def write_msa_psicov(f, msa, is_indices=True):
+    if is_indices:
+        msa = ccmpred.counts.char_msa(msa)
+
+    f.write("\n".join(["".join(chr(cell) for cell in row) for row in msa]))
