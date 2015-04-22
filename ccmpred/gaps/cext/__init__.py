@@ -34,7 +34,7 @@ def compute_consensus(msa, ignore_gaps=True):
     if ignore_gaps:
         counts = counts[:, :20]
 
-    return np.argmax(counts, axis=1)
+    return np.argmax(counts, axis=1).astype('uint8')
 
 
 def remove_gaps_probs(msa, probs):
@@ -49,3 +49,5 @@ def remove_gaps_consensus(msa, consensus=None):
 
     assert(consensus.shape[0] == msa.shape[1])
     libgaps.remove_gaps_consensus(msa, consensus, *msa.shape)
+
+    return msa
