@@ -42,6 +42,21 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
 
         return x, res
 
+    @classmethod
+    def init_from_raw(cls, msa, weights, raw, lambda_single=10, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2):
+        res = cls(msa, weights, lambda_single, lambda_pair)
+
+        if msa.shape[1] != raw.ncol:
+            raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
+
+        x_single = raw.x_single
+        x_pair = np.transpose(raw.x_pair, (3, 1, 2, 0))
+        x = np.hstack((x_single.reshape((-1,)), x_pair.reshape((-1),)))
+
+        res.centering_x_single[:] = x_single
+
+        return x, res
+
     def finalize(self, x):
         x_single = x[:self.nsingle].reshape((self.ncol, 20))
         x_pair = np.transpose(x[self.nsingle_padded:].reshape((21, self.ncol, 32, self.ncol))[:, :, :21, :], (3, 1, 2, 0))
