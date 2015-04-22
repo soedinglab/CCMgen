@@ -86,28 +86,3 @@ void sample_sequences(
 	}
 }
 
-
-/**
- * substitute gaps in the sequence with the consensus aa at its 
- * position in the msa 
- * 
- * @param[in] h The MSA single counts
- * @param[inout] seq The MSA to clean
- * @param[in] ncol The number of columns
- * @param[in] nrow The number of rows
- */
-void remove_gaps(
-	const flt *const h,
-	unsigned char *const seq,
-	int nrow,
-	int ncol
-) {
-	int i, j;
-	for(i = 0; i < nrow; i++) {
-		for (j = 0; j < ncol; j++) {
-			if (seq[i * ncol + j] != GAP) continue;
-
-			seq[i * ncol + j] = pick_random_weighted((flt *)&H1(j, 0), N_ALPHA - 1);
-		}
-	}
-}

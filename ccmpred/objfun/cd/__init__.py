@@ -62,7 +62,7 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         colfreqs = self.msa_counts_single[:, :20]
         colfreqs /= np.sum(colfreqs, axis=1)[:, np.newaxis]
 
-        return ccmpred.objfun.cd.cext.remove_gaps(msa_sampled, colfreqs.reshape(-1))
+        return ccmpred.gaps.remove_gaps_probs(msa_sampled, colfreqs)
 
     @classmethod
     def init_from_raw(cls, msa, weights, raw, lambda_single=1e4, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, n_samples=1000):

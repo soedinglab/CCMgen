@@ -49,6 +49,15 @@ setup(
             sources=['ccmpred/counts/msacounts.c'],
             extra_compile_args=['-g -fopenmp -std=c99'],
             extra_link_args=['-g -fopenmp'],
+        ),
+        Extension(
+            'ccmpred.gaps.cext.libgaps',
+            include_dirs=[],
+            library_dirs=[],
+            libraries=[],
+            sources=['ccmpred/gaps/cext/gaps.c'],
+            extra_compile_args=['-g -std=c99'],
+            extra_link_args=['-g'],
         )
     ],
     scripts=['ccmpred.py']

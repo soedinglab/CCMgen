@@ -16,20 +16,9 @@ libcd.sample_sequences.argtypes = [
     ctypes.c_uint32,    # ncol
 ]
 
-libcd.remove_gaps.restype = None
-libcd.remove_gaps.argtypes = [
-    array_1d_float,    # *x
-    array_2d_char,     # *msa
-    ctypes.c_uint32,    # nrow
-    ctypes.c_uint32,    # ncol
-]
-
 
 def sample_sequences(msa, x):
     libcd.sample_sequences(msa, x, *msa.shape)
     return msa
 
 
-def remove_gaps(msa, single_counts):
-    libcd.remove_gaps(single_counts, msa, *msa.shape)
-    return msa
