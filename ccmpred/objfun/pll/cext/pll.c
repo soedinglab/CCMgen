@@ -38,17 +38,17 @@ double evaluate_pll(
 
 	double *precomp_norm = malloc(sizeof(double) * N_ALPHA * nrow * ncol);
 
-	#pragma omp parallel for reduction(+:fx)
-	for(int nj = 0; nj < nrow * ncol; nj++) {
-		int n = nj / ncol;
-		int j = nj % ncol;
+	//#pragma omp parallel for reduction(+:fx)
+	for(uint32_t nj = 0; nj < nrow * ncol; nj++) {
+		uint32_t n = nj / ncol;
+		uint32_t j = nj % ncol;
 		double weight = weights[n];
 		double precomp[N_ALPHA];
 		double precomp_sum = 0;
 		for(int a = 0; a < N_ALPHA - 1; a++) {
 			precomp[a] = V(j, a);
 
-			for(int i = 0; i < ncol; i++) {
+			for(uint32_t i = 0; i < ncol; i++) {
 				unsigned char xni = X(n, i);
 				precomp[a] += W(a, j, xni, i);
 			}
@@ -70,9 +70,9 @@ double evaluate_pll(
 	} // nj
 
 	#pragma omp parallel for
-	for(int nj = 0; nj < nrow * ncol; nj++) {
-		int n = nj / ncol;
-		int j = nj % ncol;
+	for(uint32_t nj = 0; nj < nrow * ncol; nj++) {
+		uint32_t n = nj / ncol;
+		uint32_t j = nj % ncol;
 		unsigned char xnj = X(n,j);
 		double weight = weights[n];
 
@@ -80,17 +80,17 @@ double evaluate_pll(
 			#pragma omp atomic
 			G1(j, xnj) -= weight;
 
-			for(int a = 0; a < N_ALPHA - 1; a++) {
+			for(uint32_t a = 0; a < N_ALPHA - 1; a++) {
 				#pragma omp atomic
 				G1(j, a) += weight * precomp_norm[(n * N_ALPHA + a) * ncol + j];
 			}
 		} else {
-			for(int a = 0; a < N_ALPHA; a++) {
+			for(uint32_t a = 0; a < N_ALPHA; a++) {
 				precomp_norm[(n * N_ALPHA + a) * ncol + j] = 0;
 			}
 		}
 
-		for(int i = 0; i < ncol; i++) {
+		for(uint32_t i = 0; i < ncol; i++) {
 			unsigned char xni = X(n,i);
 			#pragma omp atomic
 			G2(xnj, j, xni, i) -= weight;
@@ -99,14 +99,14 @@ double evaluate_pll(
 	} // nj
 
 	#pragma omp parallel for
-	for(int nj = 0; nj < nrow * ncol; nj++) {
+	for(uint32_t nj = 0; nj < nrow * ncol; nj++) {
 
-		int n = nj / ncol;
-		int j = nj % ncol;
+		uint32_t n = nj / ncol;
+		uint32_t j = nj % ncol;
 		double weight = weights[n];
 		unsigned char xnj = X(n,j);
 
-		for(int ai = 0; ai < (N_ALPHA - 1) * ncol; ai++) {
+		for(uint32_t ai = 0; ai < (N_ALPHA - 1) * ncol; ai++) {
 				#pragma omp atomic
 				g2[((xnj * ncol + j) * N_ALPHA_PAD * ncol + ai)] += weight * precomp_norm[(n * N_ALPHA * ncol) + ai];
 		}
