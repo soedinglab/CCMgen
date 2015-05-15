@@ -20,6 +20,17 @@ ALGORITHMS = {
 }
 
 
+def cb_treecd(option, opt, value, parser):
+    import Bio.Phylo
+    treefile, seq0file = value
+
+    tree = Bio.Phylo.read(treefile, "newick")
+    seq0 = aln.read_msa(seq0file, parser.values.aln_format)[0]
+
+    parser.values.objfun_args = [tree, seq0]
+    parser.values.objfun = treecd.TreeContrastiveDivergence
+
+
 def main():
     parser = optparse.OptionParser(usage="%prog [options] alnfile matfile")
     parser.add_option("--algorithm", dest="algorithm", default="gradient_descent", choices=list(ALGORITHMS.keys()), help="Specify the algorithm ({0}) for optimization [default: \"%default\"]".format(", ".join(ALGORITHMS.keys())))
@@ -28,10 +39,12 @@ def main():
     parser.add_option("-i", "--init-from-raw", dest="initrawfile", default=None, help="Init potentials from raw file")
     parser.add_option("-r", "--write-raw", dest="outrawfile", default=None, help="Write potentials to raw file")
     parser.add_option("-b", "--write-msgpack", dest="outmsgpackfile", default=None, help="Write potentials to MessagePack file")
+    parser.add_option("--aln-format", dest="aln_format", default="psicov", help="File format for MSAs [default: \"psicov\"]")
 
     grp_of = parser.add_option_group("Objective Functions")
     grp_of.add_option("--ofn-pll", dest="objfun", action="store_const", const=pll.PseudoLikelihood, default=pll.PseudoLikelihood, help="Use pseudo-log-likelihood (default)")
     grp_of.add_option("--ofn-pcd", dest="objfun", action="store_const", const=cd.ContrastiveDivergence, help="Use Persistent Contrastive Divergence")
+    grp_of.add_option("--ofn-tree-cd", action="callback", metavar="TREEFILE ANCESTORFILE", callback=cb_treecd, nargs=2, type=str, help="Use Tree-controlled Contrastive Divergence, loading tree data from TREEFILE and ancestral sequence data from ANCESTORFILE")
 
     grp_al = parser.add_option_group("Algorithms")
     grp_al.add_option("--alg-gd", dest="algorithm", action="store_const", const=ALGORITHMS['gradient_descent'], default=ALGORITHMS['gradient_descent'], help='Use gradient descent (default)')
@@ -43,7 +56,7 @@ def main():
 
     alnfile, matfile = args
 
-    msa = aln.read_msa_psicov(alnfile)
+    msa = aln.read_msa(alnfile, opt.aln_format)
     weights = ccmpred.weighting.weights_simple(msa)
 
     if not hasattr(opt, "objfun_args"):

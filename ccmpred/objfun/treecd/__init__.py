@@ -9,23 +9,26 @@ import ccmpred.objfun.treecd.cext
 
 class TreeContrastiveDivergence(ccmpred.objfun.cd.ContrastiveDivergence):
 
-    def __init__(self, msa, tree, seq0, weights, lambda_single, lambda_pair, n_samples):
-        super(TreeContrastiveDivergence).__init__(self, msa, weights, lambda_single, lambda_pair, len(tree.get_leaves()))
+    def __init__(self, msa, tree, seq0, weights, lambda_single, lambda_pair):
+        super(TreeContrastiveDivergence, self).__init__(msa, weights, lambda_single, lambda_pair, len(tree.get_terminals()))
 
         self.tree = tree
-        self.seq0 = 0
+        self.seq0 = seq0
 
         tree_bfs = [c for c in bfs_iterator(tree.clade)]
 
-        self.n_children = np.array([len(c.clades) for c in tree_bfs], dtype=int)
+        self.n_children = np.array([len(c.clades) for c in tree_bfs], dtype='uint32')
         self.branch_lengths = np.array([c.branch_length for c in tree_bfs], dtype=np.dtype('float64'))
 
+        self.mutation_rate = 0.1
+        self.n_vertices = len(tree_bfs)
+
     def init_sample_alignment(self):
-        return np.zeros((self.n_samples, self.msa.shape[1]), dtype="uint8")
+        return np.empty_like(self.msa, dtype="uint8")
 
     @classmethod
-    def init_from_raw(cls, msa, tree, seq0, weights, raw, lambda_single=1e4, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, n_samples=1000):
-        res = cls(msa, tree, seq0, weights, lambda_single, lambda_pair, n_samples)
+    def init_from_raw(cls, msa, weights, raw, tree, seq0, lambda_single=1e4, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2):
+        res = cls(msa, tree, seq0, weights, lambda_single, lambda_pair)
 
         if msa.shape[1] != raw.ncol:
             raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
@@ -39,8 +42,7 @@ class TreeContrastiveDivergence(ccmpred.objfun.cd.ContrastiveDivergence):
         return x, res
 
     def sample_sequences(self, x):
-        # TODO TODO
-        return ccmpred.objfun.cd.cext.sample_sequences(self.msa_sampled, x)
+        return ccmpred.objfun.treecd.cext.mutate_along_tree(self.msa_sampled, self.n_children, self.branch_lengths, x, self.n_vertices, self.seq0, self.mutation_rate)
 
 
 def bfs_iterator(clade):
