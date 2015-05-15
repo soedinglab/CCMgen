@@ -50,10 +50,16 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
             raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
 
         x_single = raw.x_single
-        x_pair = np.transpose(raw.x_pair, (3, 1, 2, 0))
-        x = np.hstack((x_single.reshape((-1,)), x_pair.reshape((-1),)))
 
-        res.centering_x_single[:] = x_single
+        x_pair = np.zeros((21, res.ncol, 32, res.ncol))
+        x_pair[:, :, :21, :] = np.transpose(raw.x_pair, (3, 1, 2, 0))
+
+        x = np.zeros((res.nvar, ), dtype=np.dtype('float64'))
+
+        x[:res.nsingle] = x_single.reshape(-1)
+        x[res.nsingle_padded:] = x_pair.reshape(-1)
+
+        res.v_centering[:] = x_single.reshape(-1)
 
         return x, res
 
