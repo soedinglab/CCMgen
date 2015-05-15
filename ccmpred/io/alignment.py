@@ -15,7 +15,7 @@ def read_msa_biopython(f, format, return_indices=True):
 
     records = list(aio.read(f, format))
 
-    msa = [r.seq.tostring() for r in records]
+    msa = [str(r.seq) for r in records]
     msa = np.array([[ord(c) for c in x.strip()] for x in msa], dtype=np.uint8)
 
     if return_indices:
