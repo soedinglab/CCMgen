@@ -32,6 +32,10 @@ def read_msa_psicov(f, return_indices=True):
     else:
         msa = f
 
+    for i, line in enumerate(msa):
+        if ">" in line:
+            raise Exception("Line number {0} contains a '>' - please set the correct alignment format!:\n{1}".format(i + 1, line))
+
     msa = np.array([[ord(c) for c in x.strip()] for x in msa], dtype=np.uint8)
 
     if return_indices:
