@@ -9,14 +9,10 @@ import ccmpred.io.alignment as aln
 
 import ccmpred.objfun.pll as pll
 import ccmpred.objfun.cd as cd
+import ccmpred.objfun.treecd as treecd
 
 import ccmpred.algorithm.gradient_descent
 import ccmpred.algorithm.conjugate_gradients
-
-OBJECTIVE_FUNCTIONS = {
-    "pll": pll.PseudoLikelihood,
-    "pcd": cd.ContrastiveDivergence,
-}
 
 ALGORITHMS = {
     "gradient_descent": lambda of, x0, opt: ccmpred.algorithm.gradient_descent.minimize(of, x0, opt.numiter, alpha0=1e-4, alpha_decay=100),
@@ -26,13 +22,20 @@ ALGORITHMS = {
 
 def main():
     parser = optparse.OptionParser(usage="%prog [options] alnfile matfile")
-    parser.add_option("--objective-function", dest="objfun", default="pcd", choices=list(OBJECTIVE_FUNCTIONS.keys()), help="Specify the objective function ({0}) to optimize [default: \"%default\"]".format(", ".join(OBJECTIVE_FUNCTIONS.keys())))
     parser.add_option("--algorithm", dest="algorithm", default="gradient_descent", choices=list(ALGORITHMS.keys()), help="Specify the algorithm ({0}) for optimization [default: \"%default\"]".format(", ".join(ALGORITHMS.keys())))
     parser.add_option("-n", "--num-iterations", dest="numiter", default=100, type=int, help="Specify the number of iterations [default: %default]")
 
     parser.add_option("-i", "--init-from-raw", dest="initrawfile", default=None, help="Init potentials from raw file")
     parser.add_option("-r", "--write-raw", dest="outrawfile", default=None, help="Write potentials to raw file")
     parser.add_option("-b", "--write-msgpack", dest="outmsgpackfile", default=None, help="Write potentials to MessagePack file")
+
+    grp_of = parser.add_option_group("Objective Functions")
+    grp_of.add_option("--ofn-pll", dest="objfun", action="store_const", const=pll.PseudoLikelihood, default=pll.PseudoLikelihood, help="Use pseudo-log-likelihood (default)")
+    grp_of.add_option("--ofn-pcd", dest="objfun", action="store_const", const=cd.ContrastiveDivergence, help="Use Persistent Contrastive Divergence")
+
+    grp_al = parser.add_option_group("Algorithms")
+    grp_al.add_option("--alg-gd", dest="algorithm", action="store_const", const=ALGORITHMS['gradient_descent'], default=ALGORITHMS['gradient_descent'], help='Use gradient descent (default)')
+    grp_al.add_option("--alg-cg", dest="algorithm", action="store_const", const=ALGORITHMS['conjugate_gradients'], help='Use conjugate gradients')
 
     opt, args = parser.parse_args()
     if len(args) != 2:
@@ -43,16 +46,20 @@ def main():
     msa = aln.read_msa_psicov(alnfile)
     weights = ccmpred.weighting.weights_simple(msa)
 
-    objfun = OBJECTIVE_FUNCTIONS[opt.objfun]
+    if not hasattr(opt, "objfun_args"):
+        opt.objfun_args = []
+
+    if not hasattr(opt, "objfun_kwargs"):
+        opt.objfun_kwargs = {}
 
     if opt.initrawfile:
         raw = ccmpred.raw.parse(opt.initrawfile)
-        x0, f = objfun.init_from_raw(msa, weights, raw)
+        x0, f = opt.objfun.init_from_raw(msa, weights, raw, *opt.objfun_args, **opt.objfun_kwargs)
 
     else:
-        x0, f = objfun.init_from_default(msa, weights)
+        x0, f = opt.objfun.init_from_default(msa, weights, *opt.objfun_args, **opt.objfun_kwargs)
 
-    fx, x = ALGORITHMS[opt.algorithm](f, x0, opt)
+    fx, x = opt.algorithm(f, x0, opt)
 
     print("Finished with fx = {fx}".format(fx=fx))
 
