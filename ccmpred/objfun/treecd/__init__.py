@@ -20,7 +20,7 @@ class TreeContrastiveDivergence(ccmpred.objfun.cd.ContrastiveDivergence):
         self.n_children = np.array([len(c.clades) for c in tree_bfs], dtype='uint32')
         self.branch_lengths = np.array([c.branch_length for c in tree_bfs], dtype=np.dtype('float64'))
 
-        self.mutation_rate = 0.1
+        self.mutation_rate = 1
         self.n_vertices = len(tree_bfs)
 
     def init_sample_alignment(self):
@@ -42,7 +42,11 @@ class TreeContrastiveDivergence(ccmpred.objfun.cd.ContrastiveDivergence):
         return x, res
 
     def sample_sequences(self, x):
-        return ccmpred.objfun.treecd.cext.mutate_along_tree(self.msa_sampled, self.n_children, self.branch_lengths, x, self.n_vertices, self.seq0, self.mutation_rate)
+        print(self.n_children)
+        msa = ccmpred.objfun.treecd.cext.mutate_along_tree(self.msa_sampled, self.n_children, self.branch_lengths, x, self.n_vertices, self.seq0, self.mutation_rate)
+
+        print(msa)
+        return msa
 
 
 def bfs_iterator(clade):

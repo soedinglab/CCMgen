@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -30,10 +31,10 @@ void mutate_sequence(uint8_t *seq, flt *x, uint16_t nmut, int ncol) {
 }
 
 
-void swap(void *a, void *b) {
-	void *temp = a;
-	a = b;
-	b = temp;
+void swap(void **a, void **b) {
+	void *temp = *a;
+	*a = *b;
+	*b = temp;
 }
 
 /**
@@ -60,9 +61,10 @@ void mutate_along_tree(
 
 	// Preprocessing: Count number of leaves and compute index of first children
 	uint32_t *first_child_index = (uint32_t *)malloc(sizeof(uint32_t) * nvert);
-	uint32_t fci = 0;
+	uint32_t fci = 1;
 	uint32_t nleaves = 0;
-	for(int i = 0; i < nvert; i++){
+
+	for(int i = 0; i < nvert; i++) {
 		if(n_children[i] == 0) { nleaves++; }
 		first_child_index[i] = fci;
 		fci += n_children[i];
@@ -76,6 +78,7 @@ void mutate_along_tree(
 	uint32_t *ni_in = (uint32_t *)malloc(sizeof(uint32_t) * nleaves);
 	uint32_t *ni_out = (uint32_t *)malloc(sizeof(uint32_t) * nleaves);
 
+	// seqs: sequences at index i of current BFS level
 	uint8_t *seqs_in = (uint8_t *)malloc(sizeof(uint8_t) * ncol * nleaves);
 	uint8_t *seqs_out = (uint8_t *)malloc(sizeof(uint8_t) * ncol * nleaves);
 
@@ -91,15 +94,17 @@ void mutate_along_tree(
 	// BFS over tree levels
 	while(nn < nleaves) {
 
+		printf("BEGIN LAYER: nn=%d   ::::::::::::::::::::::::::::::::::::::::::::::::::::::::\n", nn);
+
 		// Phase 1: grow nc_out, ni_out, bl and seqs_out
 		int pos = 0;
 		for(uint32_t i = 0; i < nn; i++) {
 
+
 			uint32_t nci = nc_in[i];
 
 			if(nci == 0) {
-
-				// keep a leaf in the subsequent tree level
+				// we have no children - copy the leaf node to keep it in next level
 				nc_out[pos] = nc_in[i];
 				ni_out[pos] = ni_in[i];
 				bl[pos] = 0;
@@ -109,9 +114,11 @@ void mutate_along_tree(
 
 			} else {
 
-				// grow to one or more descendants
+				// we have one or more children - grow out arrays to make room for descendants
+				// mutation to descendant sequences will be handled in phase 2
 				for(uint32_t j = 0; j < nci; j++) {
 					uint32_t inew = first_child_index[ni_in[i]] + j;
+					printf("%d is a new child of %d at position %d\n", inew, ni_in[i], pos);
 
 					nc_out[pos] = n_children[inew];
 					ni_out[pos] = inew;
@@ -131,10 +138,23 @@ void mutate_along_tree(
 			mutate_sequence(&seqs_out[i * ncol], x, nmut, ncol);
 		}
 
+		printf("nc_out ");
+		for(int i = 0; i < pos; i++) {
+			printf("%d\t", nc_out[i]);
+		}
+		printf("\n");
+
+		printf("ni_out ");
+		for(int i = 0; i < pos; i++) {
+			printf("%d\t", ni_out[i]);
+		}
+		printf("\n");
+
 		nn = pos;
-		swap(nc_in, nc_out);
-		swap(ni_in, ni_out);
-		swap(seqs_in, seqs_out);
+		swap((void **)&nc_in, (void **)&nc_out);
+		swap((void **)&ni_in, (void **)&ni_out);
+		swap((void **)&seqs_in, (void **)&seqs_out);
+		
 	}
 
 	memcpy(seqs, seqs_in, sizeof(uint8_t) * ncol * nleaves);
