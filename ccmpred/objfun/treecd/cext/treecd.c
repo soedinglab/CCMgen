@@ -21,7 +21,7 @@ void mutate_sequence(uint8_t *seq, flt *x, uint16_t nmut, int ncol) {
 	flt* pcond = fl_malloc(N_ALPHA);
 
 	for(int m = 0; m < nmut; m++) {
-		int i = pick_random_uniform(ncol);
+		int i = pick_random_uniform(ncol - 1);
 
 		compute_conditional_probs(i, pcond, x, seq, ncol);
 		seq[i] = pick_random_weighted(pcond, N_ALPHA - 1);
