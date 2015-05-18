@@ -5,6 +5,7 @@ import numpy as np
 import ccmpred.weighting
 import ccmpred.scoring
 import ccmpred.raw
+import ccmpred.logo
 import ccmpred.io.alignment as aln
 
 import ccmpred.objfun.pll as pll
@@ -39,6 +40,7 @@ def main():
     parser.add_option("-r", "--write-raw", dest="outrawfile", default=None, help="Write potentials to raw file")
     parser.add_option("-b", "--write-msgpack", dest="outmsgpackfile", default=None, help="Write potentials to MessagePack file")
     parser.add_option("--aln-format", dest="aln_format", default="psicov", help="File format for MSAs [default: \"psicov\"]")
+    parser.add_option("--no-logo", dest="logo", default=True, action="store_false", help="Disable showing the CCMpred logo")
 
     grp_of = parser.add_option_group("Objective Functions")
     grp_of.add_option("--ofn-pll", dest="objfun", action="store_const", const=pll.PseudoLikelihood, default=pll.PseudoLikelihood, help="Use pseudo-log-likelihood (default)")
@@ -52,6 +54,9 @@ def main():
     opt, args = parser.parse_args()
     if len(args) != 2:
         parser.error("Need exactly 2 positional arguments!")
+
+    if opt.logo:
+        ccmpred.logo.logo()
 
     alnfile, matfile = args
 

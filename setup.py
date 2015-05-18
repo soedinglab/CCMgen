@@ -3,7 +3,7 @@ from setuptools import setup, Extension, find_packages
 
 setup(
     name="CCMpred",
-    version="1.0",
+    version="1.0.0",
     description="Contact Prediction",
     packages=find_packages(),
     ext_modules=[
