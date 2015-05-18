@@ -42,11 +42,7 @@ class TreeContrastiveDivergence(ccmpred.objfun.cd.ContrastiveDivergence):
         return x, res
 
     def sample_sequences(self, x):
-        print(self.n_children)
-        msa = ccmpred.objfun.treecd.cext.mutate_along_tree(self.msa_sampled, self.n_children, self.branch_lengths, x, self.n_vertices, self.seq0, self.mutation_rate)
-
-        print(msa)
-        return msa
+        return ccmpred.objfun.treecd.cext.mutate_along_tree(self.msa_sampled, self.n_children, self.branch_lengths, x, self.n_vertices, self.seq0, self.mutation_rate)
 
 
 def bfs_iterator(clade):

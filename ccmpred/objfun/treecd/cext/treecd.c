@@ -94,8 +94,6 @@ void mutate_along_tree(
 	// BFS over tree levels
 	while(nn < nleaves) {
 
-		printf("BEGIN LAYER: nn=%d   ::::::::::::::::::::::::::::::::::::::::::::::::::::::::\n", nn);
-
 		// Phase 1: grow nc_out, ni_out, bl and seqs_out
 		int pos = 0;
 		for(uint32_t i = 0; i < nn; i++) {
@@ -118,7 +116,6 @@ void mutate_along_tree(
 				// mutation to descendant sequences will be handled in phase 2
 				for(uint32_t j = 0; j < nci; j++) {
 					uint32_t inew = first_child_index[ni_in[i]] + j;
-					printf("%d is a new child of %d at position %d\n", inew, ni_in[i], pos);
 
 					nc_out[pos] = n_children[inew];
 					ni_out[pos] = inew;
@@ -137,18 +134,6 @@ void mutate_along_tree(
 			int nmut = bl[i] * mutation_rate;
 			mutate_sequence(&seqs_out[i * ncol], x, nmut, ncol);
 		}
-
-		printf("nc_out ");
-		for(int i = 0; i < pos; i++) {
-			printf("%d\t", nc_out[i]);
-		}
-		printf("\n");
-
-		printf("ni_out ");
-		for(int i = 0; i < pos; i++) {
-			printf("%d\t", ni_out[i]);
-		}
-		printf("\n");
 
 		nn = pos;
 		swap((void **)&nc_in, (void **)&nc_out);
