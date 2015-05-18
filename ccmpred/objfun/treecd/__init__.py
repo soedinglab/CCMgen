@@ -9,7 +9,7 @@ import ccmpred.objfun.treecd.cext
 
 class TreeContrastiveDivergence(ccmpred.objfun.cd.ContrastiveDivergence):
 
-    def __init__(self, msa, tree, seq0, weights, lambda_single, lambda_pair):
+    def __init__(self, msa, tree, seq0, weights, lambda_single, lambda_pair, mutation_rate):
         super(TreeContrastiveDivergence, self).__init__(msa, weights, lambda_single, lambda_pair, len(tree.get_terminals()))
 
         self.tree = tree
@@ -20,15 +20,15 @@ class TreeContrastiveDivergence(ccmpred.objfun.cd.ContrastiveDivergence):
         self.n_children = np.array([len(c.clades) for c in tree_bfs], dtype='uint32')
         self.branch_lengths = np.array([c.branch_length for c in tree_bfs], dtype=np.dtype('float64'))
 
-        self.mutation_rate = 1
+        self.mutation_rate = mutation_rate
         self.n_vertices = len(tree_bfs)
 
     def init_sample_alignment(self):
         return np.empty_like(self.msa, dtype="uint8")
 
     @classmethod
-    def init_from_raw(cls, msa, weights, raw, tree, seq0, lambda_single=1e4, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2):
-        res = cls(msa, tree, seq0, weights, lambda_single, lambda_pair)
+    def init_from_raw(cls, msa, weights, raw, tree, seq0, lambda_single=1e4, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, mutation_rate=1):
+        res = cls(msa, tree, seq0, weights, lambda_single, lambda_pair, mutation_rate)
 
         if msa.shape[1] != raw.ncol:
             raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
