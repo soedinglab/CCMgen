@@ -39,7 +39,7 @@ def main():
     parser.add_option("-i", "--init-from-raw", dest="initrawfile", default=None, help="Init potentials from raw file")
     parser.add_option("-r", "--write-raw", dest="outrawfile", default=None, help="Write potentials to raw file")
     parser.add_option("-b", "--write-msgpack", dest="outmsgpackfile", default=None, help="Write potentials to MessagePack file")
-    parser.add_option("--aln-format", dest="aln_format", default="psicov", help="File format for MSAs [default: \"psicov\"]")
+    parser.add_option("--aln-format", dest="aln_format", default="psicov", help="File format for MSAs [default: \"%default\"]")
     parser.add_option("--no-logo", dest="logo", default=True, action="store_false", help="Disable showing the CCMpred logo")
 
     grp_of = parser.add_option_group("Objective Functions")
