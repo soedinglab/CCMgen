@@ -23,7 +23,7 @@ libtreecd.mutate_along_tree.argtypes = [
 
 def mutate_along_tree(msa_sampled, n_children, branch_lengths, x, nvert, seq0, mutation_rate):
     msa_sampled[:, :] = 0
-    msa_sampled[0, :] = seq0
+    msa_sampled[:seq0.shape[0], :] = seq0
     libtreecd.mutate_along_tree(n_children, branch_lengths, x, nvert, msa_sampled, seq0.shape[0], mutation_rate)
 
     return msa_sampled

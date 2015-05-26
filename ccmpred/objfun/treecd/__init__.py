@@ -1,4 +1,5 @@
 import numpy as np
+import Bio.Phylo
 
 import ccmpred.raw
 import ccmpred.counts
@@ -9,8 +10,10 @@ import ccmpred.objfun.treecd.cext
 
 class TreeContrastiveDivergence(ccmpred.objfun.cd.ContrastiveDivergence):
 
-    def __init__(self, msa, tree, seq0, weights, lambda_single, lambda_pair, mutation_rate):
+    def __init__(self, msa, tree, seq0, id0, weights, lambda_single, lambda_pair, mutation_rate):
         super(TreeContrastiveDivergence, self).__init__(msa, weights, lambda_single, lambda_pair, len(tree.get_terminals()))
+
+        tree = split_tree(tree, id0)
 
         self.tree = tree
         self.seq0 = seq0
@@ -27,8 +30,8 @@ class TreeContrastiveDivergence(ccmpred.objfun.cd.ContrastiveDivergence):
         return np.empty_like(self.msa, dtype="uint8")
 
     @classmethod
-    def init_from_raw(cls, msa, weights, raw, tree, seq0, lambda_single=1e4, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, mutation_rate=1):
-        res = cls(msa, tree, seq0, weights, lambda_single, lambda_pair, mutation_rate)
+    def init_from_raw(cls, msa, weights, raw, tree, seq0, id0, lambda_single=1e4, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, mutation_rate=1):
+        res = cls(msa, tree, seq0, id0, weights, lambda_single, lambda_pair, mutation_rate)
 
         if msa.shape[1] != raw.ncol:
             raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
@@ -55,3 +58,18 @@ def bfs_iterator(clade):
 
     yield clade
     yield from inner(clade)
+
+
+def split_tree(tree, id0):
+    """Reroot tree so that the clades in id0 are direct descendants of the root node"""
+    id_to_node = dict((cl.name, cl) for cl in bfs_iterator(tree.clade))
+
+    new_tree = Bio.Phylo.BaseTree.Tree()
+    new_tree.clade.clades = [id_to_node[i] for i in id0]
+
+    for cl in new_tree.clade.clades:
+        cl.branch_length = 0
+
+    new_tree.clade.branch_length = 0
+
+    return new_tree

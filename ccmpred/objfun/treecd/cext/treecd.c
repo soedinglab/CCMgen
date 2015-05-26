@@ -64,11 +64,12 @@ void mutate_along_tree(
 	uint32_t fci = 1;
 	uint32_t nleaves = 0;
 
-	for(int i = 0; i < nvert; i++) {
+	for(uint32_t i = 0; i < nvert; i++) {
 		if(n_children[i] == 0) { nleaves++; }
 		first_child_index[i] = fci;
 		fci += n_children[i];
 	}
+
 
 	// nc: number of children for vertex at index i of current BFS level
 	uint32_t *nc_in = (uint32_t *)malloc(sizeof(uint32_t) * nleaves);
@@ -85,11 +86,14 @@ void mutate_along_tree(
 	// bl: branch length at index i of current BFS level
 	flt *bl = fl_malloc(nleaves);
 
-	// initial level has one vertex with ancestral sequence
-	uint32_t nn = 1;
-	nc_in[0] = n_children[0];
-	ni_in[0] = 0;
-	memcpy(seqs_in, seqs, sizeof(uint8_t) * ncol);
+	// fill initial level with root nodes and ancestral sequences
+	uint32_t nn = n_children[0];
+	for(uint32_t i = 0; i < nn; i++) {
+		ni_in[i] = i + 1;
+
+	}
+	memcpy(nc_in, &n_children[1], sizeof(uint32_t) * nn);
+	memcpy(seqs_in, seqs, sizeof(uint8_t) * ncol * nn);
 
 	// BFS over tree levels
 	while(nn < nleaves) {

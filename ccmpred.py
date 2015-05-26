@@ -26,9 +26,9 @@ def cb_treecd(option, opt, value, parser):
     treefile, seq0file = value
 
     tree = Bio.Phylo.read(treefile, "newick")
-    seq0 = aln.read_msa(seq0file, parser.values.aln_format)[0]
+    seq0, id0 = aln.read_msa(seq0file, parser.values.aln_format, return_identifiers=True)
 
-    parser.values.objfun_args = [tree, seq0]
+    parser.values.objfun_args = [tree, seq0, id0]
     parser.values.objfun = treecd.TreeContrastiveDivergence
 
 

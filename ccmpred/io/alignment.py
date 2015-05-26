@@ -3,14 +3,14 @@ import numpy as np
 import ccmpred.counts
 
 
-def read_msa(f, format, return_indices=True):
+def read_msa(f, format, return_indices=True, return_identifiers=False):
     if format == 'psicov':
-        return read_msa_psicov(f, return_indices)
+        return read_msa_psicov(f, return_indices, return_identifiers)
     else:
-        return read_msa_biopython(f, format, return_indices)
+        return read_msa_biopython(f, format, return_indices, return_identifiers)
 
 
-def read_msa_biopython(f, format, return_indices=True):
+def read_msa_biopython(f, format, return_indices=True, return_identifiers=False):
     import Bio.AlignIO as aio
 
     records = list(aio.read(f, format))
@@ -21,10 +21,14 @@ def read_msa_biopython(f, format, return_indices=True):
     if return_indices:
         ccmpred.counts.index_msa(msa, in_place=True)
 
-    return msa
+    if return_identifiers:
+        identifiers = [r.name for r in records]
+        return msa, identifiers
+    else:
+        return msa
 
 
-def read_msa_psicov(f, return_indices=True):
+def read_msa_psicov(f, return_indices=True, return_identifiers=False):
 
     if isinstance(f, str):
         with open(f, 'r') as o:
@@ -41,7 +45,11 @@ def read_msa_psicov(f, return_indices=True):
     if return_indices:
         ccmpred.counts.index_msa(msa, in_place=True)
 
-    return msa
+    if return_identifiers:
+        identifiers = ["seq{0}".format(i) for i in range(msa.shape[0])]
+        return msa, identifiers
+    else:
+        return msa
 
 
 def write_msa_psicov(f, msa, is_indices=True):
