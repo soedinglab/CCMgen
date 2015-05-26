@@ -30,7 +30,7 @@ class TreeContrastiveDivergence(ccmpred.objfun.cd.ContrastiveDivergence):
         return np.empty_like(self.msa, dtype="uint8")
 
     @classmethod
-    def init_from_raw(cls, msa, weights, raw, tree, seq0, id0, lambda_single=1e4, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, mutation_rate=1):
+    def init_from_raw(cls, msa, weights, raw, tree, seq0, id0, lambda_single=1e4, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, mutation_rate=20):
         res = cls(msa, tree, seq0, id0, weights, lambda_single, lambda_pair, mutation_rate)
 
         if msa.shape[1] != raw.ncol:
