@@ -52,12 +52,17 @@ def bfs_iterator(clade):
     """Breadth-first iterator along a tree clade"""
 
     def inner(clade):
-        yield from clade.clades
         for c in clade.clades:
-            yield from inner(c)
+            yield c
+
+        for c in clade.clades:
+            for ci in inner(c):
+                yield ci
 
     yield clade
-    yield from inner(clade)
+
+    for ci in inner(clade):
+        yield ci
 
 
 def split_tree(tree, id0):
