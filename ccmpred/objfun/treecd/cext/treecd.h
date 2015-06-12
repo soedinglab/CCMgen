@@ -2,8 +2,7 @@
 #define TREECD_H
 
 #include <stdint.h>
-
-typedef double flt;
+#include "cd.h"
 
 void mutate_along_tree(
 	int32_t *n_children,
