@@ -47,9 +47,6 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         # init sample alignment
         self.msa_sampled = self.init_sample_alignment()
 
-        with open("data/degapped.psc", "w") as f:
-            ccmpred.io.alignment.write_msa_psicov(f, self.msa_sampled)
-
         # allocate centering - should be filled with init_* functions
         self.centering_x_single = np.zeros((self.ncol, 20), dtype=np.dtype('float64'))
 
