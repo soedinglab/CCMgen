@@ -16,7 +16,7 @@ import ccmpred.algorithm.gradient_descent
 import ccmpred.algorithm.conjugate_gradients
 
 ALGORITHMS = {
-    "gradient_descent": lambda of, x0, opt: ccmpred.algorithm.gradient_descent.minimize(of, x0, opt.numiter, alpha0=1e-4, alpha_decay=100),
+    "gradient_descent": lambda of, x0, opt: ccmpred.algorithm.gradient_descent.minimize(of, x0, opt.numiter, alpha0=1e-4, alpha_decay=1000),
     "conjugate_gradients": lambda of, x0, opt: ccmpred.algorithm.conjugate_gradients.minimize(of, x0, opt.numiter),
 }
 

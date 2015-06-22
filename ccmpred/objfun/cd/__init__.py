@@ -1,6 +1,7 @@
 import numpy as np
 
 import ccmpred.raw
+import ccmpred.gaps
 import ccmpred.counts
 import ccmpred.objfun
 import ccmpred.objfun.cd.cext
@@ -46,6 +47,9 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         # init sample alignment
         self.msa_sampled = self.init_sample_alignment()
 
+        with open("data/degapped.psc", "w") as f:
+            ccmpred.io.alignment.write_msa_psicov(f, self.msa_sampled)
+
         # allocate centering - should be filled with init_* functions
         self.centering_x_single = np.zeros((self.ncol, 20), dtype=np.dtype('float64'))
 
@@ -62,7 +66,7 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         return ccmpred.gaps.remove_gaps_col_freqs(msa_sampled)
 
     @classmethod
-    def init_from_raw(cls, msa, weights, raw, lambda_single=1e4, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, n_samples=1000):
+    def init_from_raw(cls, msa, weights, raw, lambda_single=1e4, lambda_pair=lambda msa: (msa.shape[1] - 1) * 1, n_samples=1000):
         res = cls(msa, weights, lambda_single, lambda_pair, n_samples)
 
         if msa.shape[1] != raw.ncol:
