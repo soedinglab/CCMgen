@@ -58,6 +58,15 @@ setup(
             sources=['ccmpred/gaps/cext/gaps.c'],
             extra_compile_args=['-g -std=c99'],
             extra_link_args=['-g'],
+        ),
+        Extension(
+            'ccmpred.weighting.cext.libweighting',
+            include_dirs=[],
+            library_dirs=[],
+            libraries=[],
+            sources=['ccmpred/weighting/cext/weighting.c'],
+            extra_compile_args=['-g -fopenmp -std=c99'],
+            extra_link_args=['-g -fopenmp'],
         )
     ],
     scripts=['ccmpred.py']
