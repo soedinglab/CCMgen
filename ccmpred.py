@@ -51,7 +51,12 @@ def main():
     grp_al.add_option("--alg-gd", dest="algorithm", action="store_const", const=ALGORITHMS['gradient_descent'], default=ALGORITHMS['gradient_descent'], help='Use gradient descent (default)')
     grp_al.add_option("--alg-cg", dest="algorithm", action="store_const", const=ALGORITHMS['conjugate_gradients'], help='Use conjugate gradients')
 
+    grp_wt = parser.add_option_group("Weighting")
+    grp_wt.add_option("--wt-simple", dest="weight", action="store_const", const=ccmpred.weighting.weights_simple, default=ccmpred.weighting.weights_simple, help='Use simple weighting (default)')
+    grp_wt.add_option("--wt-uniform", dest="weight", action="store_const", const=ccmpred.weighting.weights_uniform, help='Use uniform weighting')
+
     opt, args = parser.parse_args()
+
     if len(args) != 2:
         parser.error("Need exactly 2 positional arguments!")
 
@@ -61,7 +66,7 @@ def main():
     alnfile, matfile = args
 
     msa = aln.read_msa(alnfile, opt.aln_format)
-    weights = ccmpred.weighting.weights_simple(msa)
+    weights = opt.weight(msa)
 
     if not hasattr(opt, "objfun_args"):
         opt.objfun_args = []
