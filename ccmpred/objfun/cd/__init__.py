@@ -94,8 +94,14 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         sample_counts_pair = ccmpred.counts.pair_counts(self.msa_sampled)
 
         # renormalize to the number of non-gapped rows in the original sequence alignment
+
+        # VARIANT 1: nrow_nogaps_*
         sample_counts_single *= self.nrow_nogaps_single[:, np.newaxis] / self.n_samples
         sample_counts_pair *= self.nrow_nogaps_pair[:, :, np.newaxis, np.newaxis] / self.n_samples
+
+        # # VARIANT 2: nrow
+        # sample_counts_single *= self.nrow / self.n_samples
+        # sample_counts_pair *= self.nrow / self.n_samples
 
         g_single = sample_counts_single - self.msa_counts_single
         g_pair = sample_counts_pair - self.msa_counts_pair
