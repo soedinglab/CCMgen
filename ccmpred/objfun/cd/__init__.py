@@ -50,20 +50,13 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         # allocate centering - should be filled with init_* functions
         self.centering_x_single = np.zeros((self.ncol, 20), dtype=np.dtype('float64'))
 
-        # TODO weight sequences?
-
     def init_sample_alignment(self):
-
-        msa_sampled = np.empty((self.n_samples, self.msa.shape[1]), dtype="uint8")
-
-        # make initial sample alignment from real alignment
-        msa_sampled[:] = self.msa[np.random.choice(range(self.msa.shape[0]), size=self.n_samples, replace=True), :]
-
-        # remove gaps from sample alignment
-        return ccmpred.gaps.remove_gaps_col_freqs(msa_sampled)
+        return self.msa.copy()
 
     @classmethod
-    def init_from_raw(cls, msa, weights, raw, lambda_single=1e4, lambda_pair=lambda msa: (msa.shape[1] - 1) * 1, n_samples=1000):
+    def init_from_raw(cls, msa, weights, raw, lambda_single=1e4, lambda_pair=lambda msa: (msa.shape[1] - 1) * 1):
+        n_samples = msa.shape[0]
+
         res = cls(msa, weights, lambda_single, lambda_pair, n_samples)
 
         if msa.shape[1] != raw.ncol:
@@ -92,16 +85,6 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
 
         sample_counts_single = ccmpred.counts.single_counts(self.msa_sampled)
         sample_counts_pair = ccmpred.counts.pair_counts(self.msa_sampled)
-
-        # renormalize to the number of non-gapped rows in the original sequence alignment
-
-        # VARIANT 1: nrow_nogaps_*
-        sample_counts_single *= self.nrow_nogaps_single[:, np.newaxis] / self.n_samples
-        sample_counts_pair *= self.nrow_nogaps_pair[:, :, np.newaxis, np.newaxis] / self.n_samples
-
-        # # VARIANT 2: nrow
-        # sample_counts_single *= self.nrow / self.n_samples
-        # sample_counts_pair *= self.nrow / self.n_samples
 
         g_single = sample_counts_single - self.msa_counts_single
         g_pair = sample_counts_pair - self.msa_counts_pair

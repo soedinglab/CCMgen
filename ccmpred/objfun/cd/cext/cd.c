@@ -77,7 +77,10 @@ void sample_sequences(
 
 		#pragma omp for
 		for (k = 0; k < n_samples; k++) {
-			i = pick_random_uniform(ncol - 1);
+
+			do {
+				i = pick_random_uniform(ncol - 1);
+			} while(seq[k * ncol + i] == GAP);
 
 			compute_conditional_probs(i, pcondcurr, x, &seq[k * ncol], ncol);
 			seq[k * ncol + i] = pick_random_weighted(pcondcurr, N_ALPHA - 1);
