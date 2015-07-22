@@ -49,24 +49,14 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
         if msa.shape[1] != raw.ncol:
             raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
 
-        x_single = raw.x_single
+        x = structured_to_linear(raw.x_single, raw.x_pair)
 
-        x_pair = np.zeros((21, res.ncol, 32, res.ncol))
-        x_pair[:, :, :21, :] = np.transpose(raw.x_pair, (3, 1, 2, 0))
-
-        x = np.zeros((res.nvar, ), dtype=np.dtype('float64'))
-
-        x[:res.nsingle] = x_single.reshape(-1)
-        x[res.nsingle_padded:] = x_pair.reshape(-1)
-
-        res.v_centering[:] = x_single.reshape(-1)
+        res.v_centering[:] = raw.x_single.reshape(-1)
 
         return x, res
 
     def finalize(self, x):
-        x_single = x[:self.nsingle].reshape((self.ncol, 20))
-        x_pair = np.transpose(x[self.nsingle_padded:].reshape((21, self.ncol, 32, self.ncol))[:, :, :21, :], (3, 1, 2, 0))
-
+        x_single, x_pair = linear_to_structured(x, self.ncol, clip=True)
         return ccmpred.raw.CCMRaw(self.ncol, x_single, x_pair, {})
 
     def evaluate(self, x):
@@ -89,3 +79,34 @@ def calculate_centering(msa, weights, tau=0.1):
 
     v_center = np.log(aafrac_pseudo) - aafrac_logsum[:, np.newaxis] / 20
     return v_center.T.reshape((ncol * 20,))
+
+
+def linear_to_structured(x, ncol, clip=False):
+    """Convert linear vector of variables into multidimensional arrays"""
+    nsingle = ncol * 20
+    nsingle_padded = nsingle + 32 - (nsingle % 32)
+
+    x_single = x[:nsingle].reshape((ncol, 20))
+    x_pair = np.transpose(x[nsingle_padded:].reshape((21, ncol, 32, ncol)), (3, 1, 2, 0))
+
+    if clip:
+        x_pair = x_pair[:, :, :21, :21]
+
+    return x_single, x_pair
+
+
+def structured_to_linear(x_single, x_pair):
+    """Convert structured variables into linear array"""
+    ncol = x_single.shape[0]
+    nsingle = ncol * 20
+    nsingle_padded = nsingle + 32 - (nsingle % 32)
+    nvar = nsingle_padded + ncol * ncol * 21 * 32
+
+    out_x_pair = np.zeros((21, ncol, 32, ncol), dtype='float64')
+    out_x_pair[:, :, :21, :] = np.transpose(x_pair, (3, 1, 2, 0))
+
+    x = np.zeros((nvar, ), dtype='float64')
+    x[:nsingle] = x_single.reshape(-1)
+    x[nsingle_padded:] = out_x_pair.reshape(-1)
+
+    return x
