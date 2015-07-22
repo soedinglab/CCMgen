@@ -12,13 +12,10 @@ double evaluate_pll(
 	const double *x,
 	double *g,
 	double *g2,
-	double *v_centering,
 	double *weights,
 	unsigned char *msa,
 	const uint32_t ncol,
-	const uint32_t nrow,
-	double lambda_single,
-	double lambda_pair
+	const uint32_t nrow
 ) {
 	uint32_t nsingle = ncol * (N_ALPHA - 1);
 	uint32_t nsingle_padded = nsingle + N_ALPHA_PAD - (nsingle % N_ALPHA_PAD);
@@ -141,23 +138,6 @@ double evaluate_pll(
 			}
 		}
 	}
-
-	// regularization
-	double reg = 0.0; // 0.0
-	for(uint32_t v = 0; v < nsingle; v++) {
-
-		double xdelta = x[v] - v_centering[v];
-
-		reg += lambda_single * xdelta * xdelta;
-		g[v] += 2 * lambda_single * xdelta; // F2 is 2.0
-	}
-
-	for(uint32_t v = nsingle_padded; v < nvar_padded; v++) {
-		reg += 0.5 * lambda_pair * x[v] * x[v]; // F05 is 0.5
-		g[v] += 2 * lambda_pair * x[v]; // F2 is 2.0
-	}
-
-	fx += reg;
 
 	free(precomp_norm);
 

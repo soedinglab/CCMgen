@@ -7,6 +7,8 @@ import ccmpred.scoring
 import ccmpred.raw
 import ccmpred.logo
 import ccmpred.io.alignment as aln
+import ccmpred.centering
+import ccmpred.regularization
 
 import ccmpred.objfun.pll as pll
 import ccmpred.objfun.cd as cd
@@ -74,12 +76,15 @@ def main():
     if not hasattr(opt, "objfun_kwargs"):
         opt.objfun_kwargs = {}
 
+    centering = ccmpred.centering.calculate(msa, weights)
+    regularization = ccmpred.regularization.L2(10, 0.2 * (msa.shape[1] - 1), centering)
+
     if opt.initrawfile:
         raw = ccmpred.raw.parse(opt.initrawfile)
-        x0, f = opt.objfun.init_from_raw(msa, weights, raw, *opt.objfun_args, **opt.objfun_kwargs)
+        x0, f = opt.objfun.init_from_raw(msa, weights, raw, regularization, *opt.objfun_args, **opt.objfun_kwargs)
 
     else:
-        x0, f = opt.objfun.init_from_default(msa, weights, *opt.objfun_args, **opt.objfun_kwargs)
+        x0, f = opt.objfun.init_from_default(msa, weights, regularization, *opt.objfun_args, **opt.objfun_kwargs)
 
     fx, x = opt.algorithm(f, x0, opt)
 

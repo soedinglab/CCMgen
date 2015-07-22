@@ -13,17 +13,14 @@ libpll.evaluate_pll.argtypes = [
     array_1d_float,    # *x
     array_1d_float,    # *g
     array_1d_float,    # *g2
-    array_1d_float,    # *v_centering
     array_1d_float,    # *weights
     array_2d_char,      # *msa
     ctypes.c_uint32,    # ncol
     ctypes.c_uint32,    # nrow
-    ctypes.c_double,     # lambda_single
-    ctypes.c_double,     # lambda_pair
 ]
 
 
-def evaluate(x, g, g2, v_centering, weights, msa, lambda_single, lambda_pair):
+def evaluate(x, g, g2, weights, msa):
     nrow, ncol = msa.shape
-    fx = libpll.evaluate_pll(x, g, g2, v_centering, weights, msa, ncol, nrow, lambda_single, lambda_pair)
+    fx = libpll.evaluate_pll(x, g, g2, weights, msa, ncol, nrow)
     return fx, g
