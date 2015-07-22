@@ -114,10 +114,10 @@ double evaluate_pll(
 	} // nj
 
 	// add transposed onto un-transposed
-	for(int b = 0; b < N_ALPHA; b++) {
-		for(int j = 0; j < ncol; j++) {
-			for(int a = 0; a < N_ALPHA; a++) {
-				for(int i = 0; i < ncol; i++) {
+	for(uint32_t b = 0; b < N_ALPHA; b++) {
+		for(uint32_t j = 0; j < ncol; j++) {
+			for(uint32_t a = 0; a < N_ALPHA; a++) {
+				for(uint32_t i = 0; i < ncol; i++) {
 					G2L(b, j, a, i) = G2(b, j, a, i) + G2(a, i, b, j);
 				}
 			}
@@ -125,17 +125,17 @@ double evaluate_pll(
 	}
 
 	// set gradients to zero for self-edges
-	for(int b = 0; b < N_ALPHA; b++) {
-		for(int j = 0; j < ncol; j++) {
-			for(int a = 0; a < N_ALPHA; a++) {
+	for(uint32_t b = 0; b < N_ALPHA; b++) {
+		for(uint32_t j = 0; j < ncol; j++) {
+			for(uint32_t a = 0; a < N_ALPHA; a++) {
 				G2L(b, j, a, j) = 0;
 			}
 		}
 	}
 
-	for(int j = 0; j < ncol; j++) {
-		for(int i = 0; i < ncol; i++) {
-			for(int a = 0; a < N_ALPHA; a++) {
+	for(uint32_t j = 0; j < ncol; j++) {
+		for(uint32_t i = 0; i < ncol; i++) {
+			for(uint32_t a = 0; a < N_ALPHA; a++) {
 				G2L(a, j, N_ALPHA - 1, i) = 0;
 				G2L(N_ALPHA - 1, j, a, i) = 0;
 			}
@@ -144,7 +144,7 @@ double evaluate_pll(
 
 	// regularization
 	double reg = 0.0; // 0.0
-	for(int v = 0; v < nsingle; v++) {
+	for(uint32_t v = 0; v < nsingle; v++) {
 
 		double xdelta = x[v] - v_centering[v];
 
@@ -152,7 +152,7 @@ double evaluate_pll(
 		g[v] += 2 * lambda_single * xdelta; // F2 is 2.0
 	}
 
-	for(int v = nsingle_padded; v < nvar_padded; v++) {
+	for(uint32_t v = nsingle_padded; v < nvar_padded; v++) {
 		reg += 0.5 * lambda_pair * x[v] * x[v]; // F05 is 0.5
 		g[v] += 2 * lambda_pair * x[v]; // F2 is 2.0
 	}
