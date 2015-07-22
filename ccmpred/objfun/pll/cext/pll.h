@@ -4,10 +4,10 @@
 #define N_ALPHA 21
 #define N_ALPHA_PAD 32
 
-#define x1_index(j,a) (a) * (ncol) + j
-#define V(j,a) x1[x1_index(j,a)]
-#define G1(j,a) g1[x1_index(j,a)]
-#define L1(j,a) l1[x1_index(j,a)]
+#define x1_index(a,j) (a) * (ncol) + j
+#define V(a,j) x1[x1_index(a,j)]
+#define G1(a,j) g1[x1_index(a,j)]
+#define L1(a,j) l1[x1_index(a,j)]
 
 #define x2_index(b,k,a,j) (((b) * ncol + (k)) * (N_ALPHA_PAD) + (a)) * ncol + j
 #define W(b,k,a,j) x2[x2_index(b,k,a,j)]

@@ -86,7 +86,7 @@ def linear_to_structured(x, ncol, clip=False):
     nsingle = ncol * 20
     nsingle_padded = nsingle + 32 - (nsingle % 32)
 
-    x_single = x[:nsingle].reshape((ncol, 20))
+    x_single = x[:nsingle].reshape((20, ncol)).T
     x_pair = np.transpose(x[nsingle_padded:].reshape((21, ncol, 32, ncol)), (3, 1, 2, 0))
 
     if clip:
@@ -106,7 +106,7 @@ def structured_to_linear(x_single, x_pair):
     out_x_pair[:21, :, :21, :] = np.transpose(x_pair[:, :, :21, :21], (3, 1, 2, 0))
 
     x = np.zeros((nvar, ), dtype='float64')
-    x[:nsingle] = x_single.reshape(-1)
+    x[:nsingle] = x_single.T.reshape(-1)
     x[nsingle_padded:] = out_x_pair.reshape(-1)
 
     return x
