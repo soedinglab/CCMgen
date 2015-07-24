@@ -74,7 +74,12 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
 
 
 def linear_to_structured(x, ncol, clip=False):
-    """Convert linear vector of variables into multidimensional arrays"""
+    """Convert linear vector of variables into multidimensional arrays.
+
+    in linear memory, memory order is v[a, j] and w[b, j, a, i] (dimensions 20xL + padding + 21xLx32xL)
+    output will have  memory order of v[j, a] and w[i, j, a, b] (dimensions Lx20     and     LxLx32x21)
+    """
+
     nsingle = ncol * 20
     nsingle_padded = nsingle + 32 - (nsingle % 32)
 
@@ -88,7 +93,12 @@ def linear_to_structured(x, ncol, clip=False):
 
 
 def structured_to_linear(x_single, x_pair):
-    """Convert structured variables into linear array"""
+    """Convert structured variables into linear array
+
+    with input arrays of memory order v[j, a] and w[i, j, a, b] (dimensions Lx20     and     LxLx32x21)
+    output will have  memory order of v[a, j] and w[b, j, a, i] (dimensions 20xL + padding + 21xLx32xL)
+    """
+
     ncol = x_single.shape[0]
     nsingle = ncol * 20
     nsingle_padded = nsingle + 32 - (nsingle % 32)
