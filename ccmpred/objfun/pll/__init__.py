@@ -103,7 +103,7 @@ def structured_to_linear(x_single, x_pair):
     nvar = nsingle_padded + ncol * ncol * 21 * 32
 
     out_x_pair = np.zeros((21, ncol, 32, ncol), dtype='float64')
-    out_x_pair[:, :, :21, :] = np.transpose(x_pair, (3, 1, 2, 0))
+    out_x_pair[:21, :, :21, :] = np.transpose(x_pair[:, :, :21, :21], (3, 1, 2, 0))
 
     x = np.zeros((nvar, ), dtype='float64')
     x[:nsingle] = x_single.reshape(-1)
