@@ -84,14 +84,15 @@ def main():
     if not hasattr(opt, "objfun_kwargs"):
         opt.objfun_kwargs = {}
 
-    centering = ccmpred.centering.calculate(msa, weights)
-    regularization = opt.regularization(msa, centering)
-
     if opt.initrawfile:
         raw = ccmpred.raw.parse(opt.initrawfile)
+        centering = raw.x_single.copy()
+        regularization = opt.regularization(msa, centering)
         x0, f = opt.objfun.init_from_raw(msa, weights, raw, regularization, *opt.objfun_args, **opt.objfun_kwargs)
 
     else:
+        centering = ccmpred.centering.calculate(msa, weights)
+        regularization = opt.regularization(msa, centering)
         x0, f = opt.objfun.init_from_default(msa, weights, regularization, *opt.objfun_args, **opt.objfun_kwargs)
 
     fx, x = opt.algorithm(f, x0, opt)

@@ -47,7 +47,6 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
             raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
 
         x = structured_to_linear(raw.x_single, raw.x_pair)
-        res.v_centering[:] = raw.x_single.reshape(-1)
 
         return x, res
 
