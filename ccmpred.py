@@ -34,6 +34,11 @@ def cb_treecd(option, opt, value, parser):
     parser.values.objfun = treecd.TreeContrastiveDivergence
 
 
+def cb_reg_l2(option, opt, value, parser):
+    lambda_single, lambda_pair = value
+    parser.values.regularization = lambda msa, centering: ccmpred.regularization.L2(lambda_single, lambda_pair * (msa.shape[1] - 1), centering)
+
+
 def main():
     parser = optparse.OptionParser(usage="%prog [options] alnfile matfile")
     parser.add_option("-n", "--num-iterations", dest="numiter", default=100, type=int, help="Specify the number of iterations [default: %default]")
@@ -57,6 +62,9 @@ def main():
     grp_wt.add_option("--wt-simple", dest="weight", action="store_const", const=ccmpred.weighting.weights_simple, default=ccmpred.weighting.weights_simple, help='Use simple weighting (default)')
     grp_wt.add_option("--wt-uniform", dest="weight", action="store_const", const=ccmpred.weighting.weights_uniform, help='Use uniform weighting')
 
+    grp_rg = parser.add_option_group("Regularization")
+    grp_rg.add_option("--reg-l2", dest="regularization", action="callback", callback=cb_reg_l2, type=float, nargs=2, metavar="LAMBDA_SINGLE LAMBDA_PAIR", default=lambda msa, centering: ccmpred.regularization.L2(10, 0.2 * (msa.shape[1] - 1), centering), help='Use L2 regularization with coefficients LAMBDA_SINGLE, LAMBDA_PAIR * L (default)')
+
     opt, args = parser.parse_args()
 
     if len(args) != 2:
@@ -77,7 +85,7 @@ def main():
         opt.objfun_kwargs = {}
 
     centering = ccmpred.centering.calculate(msa, weights)
-    regularization = ccmpred.regularization.L2(10, 0.2 * (msa.shape[1] - 1), centering)
+    regularization = opt.regularization(msa, centering)
 
     if opt.initrawfile:
         raw = ccmpred.raw.parse(opt.initrawfile)
