@@ -63,7 +63,7 @@ def main():
     grp_wt.add_option("--wt-uniform", dest="weight", action="store_const", const=ccmpred.weighting.weights_uniform, help='Use uniform weighting')
 
     grp_rg = parser.add_option_group("Regularization")
-    grp_rg.add_option("--reg-l2", dest="regularization", action="callback", callback=cb_reg_l2, type=float, nargs=2, metavar="LAMBDA_SINGLE LAMBDA_PAIR", default=lambda msa, centering: ccmpred.regularization.L2(10, 0.2 * (msa.shape[1] - 1), centering), help='Use L2 regularization with coefficients LAMBDA_SINGLE, LAMBDA_PAIR * L (default)')
+    grp_rg.add_option("--reg-l2", dest="regularization", action="callback", callback=cb_reg_l2, type=float, nargs=2, metavar="LAMBDA_SINGLE LAMBDA_PAIR", default=lambda msa, centering: ccmpred.regularization.L2(10, 0.2 * (msa.shape[1] - 1), centering), help='Use L2 regularization with coefficients LAMBDA_SINGLE, LAMBDA_PAIR * L (default: 10 0.2)')
 
     opt, args = parser.parse_args()
 
