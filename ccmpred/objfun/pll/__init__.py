@@ -62,9 +62,6 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
 
         fx_reg, g_single_reg, g_pair_reg = self.regularization(x_single, x_pair)
 
-        v_centering = self.regularization.center_x_single
-
-
         fx += fx_reg
         g[:self.nsingle] += g_single_reg.reshape(-1)
         g[self.nsingle_padded:] += np.transpose(g_pair_reg, (3, 1, 2, 0)).reshape(-1)
