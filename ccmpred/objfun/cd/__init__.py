@@ -9,18 +9,11 @@ import ccmpred.objfun.cd.cext
 
 class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
 
-    def __init__(self, msa, weights, lambda_single, lambda_pair, n_samples):
-
-        if hasattr(lambda_single, '__call__'):
-            lambda_single = lambda_single(msa)
-
-        if hasattr(lambda_pair, '__call__'):
-            lambda_pair = lambda_pair(msa)
+    def __init__(self, msa, weights, regularization, n_samples):
 
         self.msa = msa
         self.weights = weights
-        self.lambda_single = lambda_single
-        self.lambda_pair = lambda_pair
+        self.regularization = regularization
 
         self.nrow, self.ncol = msa.shape
         self.nsingle = self.ncol * 20
@@ -47,32 +40,23 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         # init sample alignment
         self.msa_sampled = self.init_sample_alignment()
 
-        # allocate centering - should be filled with init_* functions
-        self.centering_x_single = np.zeros((self.ncol, 20), dtype=np.dtype('float64'))
-
     def init_sample_alignment(self):
         return self.msa.copy()
 
     @classmethod
-    def init_from_raw(cls, msa, weights, raw, lambda_single=1e4, lambda_pair=lambda msa: (msa.shape[1] - 1) * 1):
+    def init_from_raw(cls, msa, weights, raw, regularization):
         n_samples = msa.shape[0]
 
-        res = cls(msa, weights, lambda_single, lambda_pair, n_samples)
+        res = cls(msa, weights, regularization, n_samples)
 
         if msa.shape[1] != raw.ncol:
             raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
 
-        x_single = raw.x_single
-        x_pair = np.transpose(raw.x_pair, (0, 2, 1, 3))
-        x = np.hstack((x_single.reshape((-1,)), x_pair.reshape((-1),)))
-
-        res.centering_x_single[:] = x_single
-
+        x = structured_to_linear(raw.x_single, raw.x_pair)
         return x, res
 
     def finalize(self, x):
-        x_single = x[:self.nsingle].reshape((self.ncol, 20))
-        x_pair = np.transpose(x[self.nsingle:].reshape((self.ncol, 21, self.ncol, 21)), (0, 2, 1, 3))
+        x_single, x_pair = linear_to_structured(x, self.ncol, clip=True)
 
         return ccmpred.raw.CCMRaw(self.ncol, x_single, x_pair, {})
 
@@ -89,23 +73,54 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         g_single = sample_counts_single - self.msa_counts_single
         g_pair = sample_counts_pair - self.msa_counts_pair
 
-        # regularization
-        x_single = x[:self.nsingle].reshape((self.ncol, 20)) - self.centering_x_single
-        x_pair = x[self.nsingle:].reshape((self.ncol, 21, self.ncol, 21))
-        x_pair = np.transpose(x_pair, (0, 2, 1, 3))
-
-        g_single[:, :20] += 2 * self.lambda_single * x_single
-        g_pair += 2 * self.lambda_pair * x_pair
+        x_single, x_pair = linear_to_structured(x, self.ncol)
+        _, g_single_reg, g_pair_reg = self.regularization(x_single, x_pair)
 
         # set gradients for gap states to 0
-        g_single[:, 20] = 0
         g_pair[:, :, :, 20] = 0
         g_pair[:, :, 20, :] = 0
 
         for i in range(self.ncol):
             g_pair[i, i, :, :] = 0
 
-        # reorder dimensions for gradient
-        g_pair = np.transpose(g_pair, (0, 2, 1, 3))
+        g = structured_to_linear(g_single[:, :20], g_pair)
+        return -1, g
 
-        return -1, np.hstack((g_single[:, :20].reshape(-1), g_pair.reshape(-1)))
+
+def linear_to_structured(x, ncol, clip=False):
+    """Convert linear vector of variables into multidimensional arrays.
+
+    in linear memory, memory order is v[j, a] and w[i, a, j, b] (dimensions Lx20 and Lx21xLx21)
+    output will have  memory order of v[j, a] and w[i, j, a, b] (dimensions Lx20 and LxLx21x21)
+    """
+
+    nsingle = ncol * 20
+
+    x_single = x[:nsingle].reshape((ncol, 20))
+    x_pair = np.transpose(x[nsingle:].reshape((ncol, 21, ncol, 21)), (0, 2, 1, 3))
+
+    if clip:
+        x_pair = x_pair[:, :, :21, :21]
+
+    return x_single, x_pair
+
+
+def structured_to_linear(x_single, x_pair):
+    """Convert structured variables into linear array
+
+    with input arrays of memory order v[j, a] and w[i, j, a, b] (dimensions Lx20 and LxLx21x21)
+    output will have  memory order of v[j, a] and w[i, a, j, b] (dimensions Lx20 and Lx21xLx21)
+    """
+
+    ncol = x_single.shape[0]
+    nsingle = ncol * 20
+    nvar = nsingle + ncol * ncol * 21 * 21
+
+    out_x_pair = np.zeros((ncol, 21, ncol, 21), dtype='float64')
+    out_x_pair[:, :21, :, :21] = np.transpose(x_pair[:, :, :21, :21], (0, 2, 1, 3))
+
+    x = np.zeros((nvar, ), dtype='float64')
+    x[:nsingle] = x_single.reshape(-1)
+    x[nsingle:] = out_x_pair.reshape(-1)
+
+    return x
