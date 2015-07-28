@@ -20,5 +20,3 @@ libcd.sample_sequences.argtypes = [
 def sample_sequences(msa, x):
     libcd.sample_sequences(msa, x, *msa.shape)
     return msa
-
-
