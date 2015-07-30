@@ -24,14 +24,6 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         self.msa_counts_single = ccmpred.counts.single_counts(msa)
         self.msa_counts_pair = ccmpred.counts.pair_counts(msa)
 
-        # compute number of ungapped rows per column, pair of columns
-        self.nrow_nogaps_single = msa.shape[0] - self.msa_counts_single[:, 20]
-        self.nrow_nogaps_pair = msa.shape[0] - (
-            np.sum(self.msa_counts_pair[:, :, 20, :], axis=2) +
-            np.sum(self.msa_counts_pair[:, :, :, 20], axis=2) -
-            self.msa_counts_pair[:, :, 20, 20]
-        )
-
         # reset gap counts
         self.msa_counts_single[:, 20] = 0
         self.msa_counts_pair[:, :, :, 20] = 0
