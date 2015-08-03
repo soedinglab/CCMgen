@@ -4,7 +4,8 @@ from setuptools import setup, Extension, find_packages
 setup(
     name="CCMpred",
     version="1.0.0",
-    description="Contact Prediction",
+    description="Residue-residue Contacts from correlated mutations predicted quickly and precisely",
+    license="AGPLv3",
     packages=find_packages(),
     ext_modules=[
         Extension(
