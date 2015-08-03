@@ -10,8 +10,8 @@ import ccmpred.objfun.treecd.cext
 
 class TreeContrastiveDivergence(ccmpred.objfun.cd.ContrastiveDivergence):
 
-    def __init__(self, msa, tree, seq0, id0, weights, lambda_single, lambda_pair, mutation_rate):
-        super(TreeContrastiveDivergence, self).__init__(msa, weights, lambda_single, lambda_pair, len(tree.get_terminals()))
+    def __init__(self, msa, tree, seq0, id0, weights, regularization, mutation_rate):
+        super(TreeContrastiveDivergence, self).__init__(msa, weights, regularization, len(tree.get_terminals()))
 
         tree = split_tree(tree, id0)
 
@@ -30,17 +30,13 @@ class TreeContrastiveDivergence(ccmpred.objfun.cd.ContrastiveDivergence):
         return np.empty_like(self.msa, dtype="uint8")
 
     @classmethod
-    def init_from_raw(cls, msa, weights, raw, tree, seq0, id0, lambda_single=1e4, lambda_pair=lambda msa: (msa.shape[1] - 1) * 0.2, mutation_rate=20):
-        res = cls(msa, tree, seq0, id0, weights, lambda_single, lambda_pair, mutation_rate)
+    def init_from_raw(cls, msa, weights, raw, regularization, tree, seq0, id0, mutation_rate=20):
+        res = cls(msa, tree, seq0, id0, weights, regularization, mutation_rate)
 
         if msa.shape[1] != raw.ncol:
             raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
 
-        x_single = raw.x_single
-        x_pair = np.transpose(raw.x_pair, (0, 2, 1, 3))
-        x = np.hstack((x_single.reshape((-1,)), x_pair.reshape((-1),)))
-
-        res.centering_x_single[:] = x_single
+        x = ccmpred.objfun.cd.structured_to_linear(raw.x_single, raw.x_pair)
 
         return x, res
 
