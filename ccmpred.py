@@ -54,7 +54,7 @@ def main():
     grp_of.add_option("--ofn-pcd", dest="objfun", action="store_const", const=cd.ContrastiveDivergence, help="Use Persistent Contrastive Divergence")
     grp_of.add_option("--ofn-tree-cd", action="callback", metavar="TREEFILE ANCESTORFILE", callback=cb_treecd, nargs=2, type=str, help="Use Tree-controlled Contrastive Divergence, loading tree data from TREEFILE and ancestral sequence data from ANCESTORFILE")
 
-    grp_of.add_option("--write-cg-alignment", dest="cg_alnfile", default=None, metavar="ALNFILE", help="Write PSICOV-formatted sampled alignment to ALNFILE")
+    grp_of.add_option("--write-cd-alignment", dest="cd_alnfile", default=None, metavar="ALNFILE", help="Write PSICOV-formatted sampled alignment to ALNFILE")
 
     grp_al = parser.add_option_group("Algorithms")
     grp_al.add_option("--alg-gd", dest="algorithm", action="store_const", const=ALGORITHMS['gradient_descent'], default=ALGORITHMS['gradient_descent'], help='Use gradient descent (default)')
@@ -72,8 +72,8 @@ def main():
     if len(args) != 2:
         parser.error("Need exactly 2 positional arguments!")
 
-    if opt.cg_alnfile and opt.objfun != cd.ContrastiveDivergence:
-        parser.error("--write-cg-alignment is only supported for contrastive divergence!")
+    if opt.cd_alnfile and opt.objfun not in (cd.ContrastiveDivergence, treecd.TreeContrastiveDivergence):
+        parser.error("--write-cd-alignment is only supported for (tree) contrastive divergence!")
 
     if opt.logo:
         ccmpred.logo.logo()
@@ -106,11 +106,11 @@ def main():
 
     res = f.finalize(x)
 
-    if opt.objfun == cd.ContrastiveDivergence and opt.cg_alnfile:
-        print("Writing sampled alignment to {0}".format(opt.cg_alnfile))
+    if opt.cd_alnfile and hasattr(f, 'msa_sampled'):
+        print("Writing sampled alignment to {0}".format(opt.cd_alnfile))
         msa_sampled = f.msa_sampled
 
-        with open(opt.cg_alnfile, "w") as f:
+        with open(opt.cd_alnfile, "w") as f:
             aln.write_msa_psicov(f, msa_sampled)
 
     if opt.outrawfile:
