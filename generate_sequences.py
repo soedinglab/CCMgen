@@ -18,8 +18,8 @@ def cb_tree_binary(option, opt_str, value, parser, *args, **kwargs):
 
 
 def cb_tree_star(option, opt_str, value, parser, *args, **kwargs):
-    splits, depth = int(value[0]), float(value[1])
-    parser.values.tree_source = lambda opt, id0: ccmpred.trees.create_star_tree(splits, depth, root_name=id0[0])
+    leaves, depth = int(value[0]), float(value[1])
+    parser.values.tree_source = lambda opt, id0: ccmpred.trees.create_star_tree(leaves, depth, root_name=id0[0])
 
 
 def get_options():
