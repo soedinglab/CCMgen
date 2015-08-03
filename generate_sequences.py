@@ -37,6 +37,9 @@ def get_options():
     if len(args) != 3:
         parser.error("Need three positional arguments!")
 
+    if not opt.tree_source:
+        parser.error("Need one of the --tree-* options!")
+
     return opt, args
 
 
