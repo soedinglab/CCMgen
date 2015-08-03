@@ -22,9 +22,13 @@ def cb_tree_star(option, opt_str, value, parser, *args, **kwargs):
     parser.values.tree_source = lambda opt, id0: ccmpred.trees.create_star_tree(leaves, depth, root_name=id0[0])
 
 
+def cb_seq0_file(option, opt_str, value, parser, *args, **kwargs):
+    parser.values.seq0_source = lambda opt, raw: ccmpred.io.alignment.read_msa(value, opt.aln_format, return_identifiers=True)
+
+
 def get_options():
     import optparse
-    parser = optparse.OptionParser(usage="%prog [options] rawfile seq0file outalignment")
+    parser = optparse.OptionParser(usage="%prog [options] rawfile outalignment")
     parser.add_option("--aln-format", dest="aln_format", default="fasta", help="Specify format for alignment files [default: \"%default\"]")
     parser.add_option("--mutation-rate", dest="mutation_rate", default=20, type=float, help="Specify mutation rate [default: %default]")
 
@@ -32,13 +36,18 @@ def get_options():
     parser.add_option("--tree-binary", metavar="SPLITS DEPTH", action="callback", nargs=2, type=str, callback=cb_tree_binary, help="Generate binary tree with 2^SPLITS sequences and total depth DEPTH")
     parser.add_option("--tree-star", metavar="LEAVES DEPTH", action="callback", nargs=2, type=str, callback=cb_tree_star, help="Generate star tree with LEAVES sequences and total depth DEPTH")
 
-    opt, args = parser.parse_args()
+    parser.add_option("--seq0-file", metavar="ALNFILE", action="callback", nargs=1, type=str, callback=cb_seq0_file, help="Get initial sequenc from ALNFILE")
 
-    if len(args) != 3:
-        parser.error("Need three positional arguments!")
+    opt, args = parser.parse_args()
 
     if not opt.tree_source:
         parser.error("Need one of the --tree-* options!")
+
+    if not opt.seq0_source:
+        parser.error("Need one of the --seq0-* options!")
+
+    if len(args) != 2:
+        parser.error("Need two positional arguments!")
 
     return opt, args
 
@@ -67,10 +76,10 @@ def get_child_depth_range(clade):
 
 
 def main():
-    opt, (rawfile, seq0file, outalnfile) = get_options()
+    opt, (rawfile, outalnfile) = get_options()
 
     raw = ccmpred.raw.parse(rawfile)
-    seq0, id0 = ccmpred.io.alignment.read_msa(seq0file, opt.aln_format, return_identifiers=True)
+    seq0, id0 = opt.seq0_source(opt, raw)
 
     if raw.ncol != seq0.shape[1]:
         raise Exception("Mismatching number of columns: raw {0}, seq0 {1}".format(raw.ncol, seq0.shape[1]))
