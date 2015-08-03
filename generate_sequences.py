@@ -26,6 +26,26 @@ def cb_seq0_file(option, opt_str, value, parser, *args, **kwargs):
     parser.values.seq0_source = lambda opt, raw: ccmpred.io.alignment.read_msa(value, opt.aln_format, return_identifiers=True)
 
 
+def cb_seq0_mrf(option, opt_str, value, parser, *args, **kwargs):
+
+    nmut = value
+
+    def get_seq0_mrf(opt, raw):
+
+        # generate a poly-A alignment
+        seq0 = np.zeros((1, raw.ncol), dtype="uint8")
+        id0 = ["root"]
+
+        x = cd.structured_to_linear(raw.x_single, raw.x_pair)
+
+        for _ in range(nmut):
+            seq0 = cd.cext.sample_sequences(seq0, x)
+
+        return seq0, id0
+
+    parser.values.seq0_source = get_seq0_mrf
+
+
 def get_options():
     import optparse
     parser = optparse.OptionParser(usage="%prog [options] rawfile outalignment")
@@ -37,6 +57,7 @@ def get_options():
     parser.add_option("--tree-star", metavar="LEAVES DEPTH", action="callback", nargs=2, type=str, callback=cb_tree_star, help="Generate star tree with LEAVES sequences and total depth DEPTH")
 
     parser.add_option("--seq0-file", metavar="ALNFILE", action="callback", nargs=1, type=str, callback=cb_seq0_file, help="Get initial sequenc from ALNFILE")
+    parser.add_option("--seq0-mrf", metavar="NMUT", action="callback", nargs=1, type=int, callback=cb_seq0_mrf, help="Sample initial sequence from MRF by mutating NMUT times from a poly-A sequence")
 
     opt, args = parser.parse_args()
 
