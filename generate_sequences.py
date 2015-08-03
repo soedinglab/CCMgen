@@ -52,11 +52,11 @@ def get_options():
     parser.add_option("--aln-format", dest="aln_format", default="fasta", help="Specify format for alignment files [default: \"%default\"]")
     parser.add_option("--mutation-rate", dest="mutation_rate", default=20, type=float, help="Specify mutation rate [default: %default]")
 
-    parser.add_option("--tree-newick", metavar="DNDFILE", action="callback", nargs=1, type=str, callback=cb_tree_newick, help="Load tree from newick-formatted file DNDFILE")
+    parser.add_option("--tree-newick", dest="tree_source", default=None, metavar="DNDFILE", action="callback", nargs=1, type=str, callback=cb_tree_newick, help="Load tree from newick-formatted file DNDFILE")
     parser.add_option("--tree-binary", metavar="SPLITS DEPTH", action="callback", nargs=2, type=str, callback=cb_tree_binary, help="Generate binary tree with 2^SPLITS sequences and total depth DEPTH")
     parser.add_option("--tree-star", metavar="LEAVES DEPTH", action="callback", nargs=2, type=str, callback=cb_tree_star, help="Generate star tree with LEAVES sequences and total depth DEPTH")
 
-    parser.add_option("--seq0-file", metavar="ALNFILE", action="callback", nargs=1, type=str, callback=cb_seq0_file, help="Get initial sequenc from ALNFILE")
+    parser.add_option("--seq0-file", dest="seq0_source", default=None, metavar="ALNFILE", action="callback", nargs=1, type=str, callback=cb_seq0_file, help="Get initial sequenc from ALNFILE")
     parser.add_option("--seq0-mrf", metavar="NMUT", action="callback", nargs=1, type=int, callback=cb_seq0_mrf, help="Sample initial sequence from MRF by mutating NMUT times from a poly-A sequence")
 
     opt, args = parser.parse_args()
