@@ -53,10 +53,10 @@ double evaluate_pll(
 			precomp_sum += expf(precomp[a]);
 		}
 		precomp[N_ALPHA - 1] = 0;
-		precomp_sum = logf(precomp_sum);
+		precomp_sum = log(precomp_sum);
 
 		for(int a = 0; a < N_ALPHA - 1; a++) {
-			precomp_norm[(n * N_ALPHA + a) * ncol + j] = expf(precomp[a] - precomp_sum);
+			precomp_norm[(n * N_ALPHA + a) * ncol + j] = exp(precomp[a] - precomp_sum);
 		}
 		precomp_norm[(n * N_ALPHA + N_ALPHA - 1) * ncol + j] = 0;
 
