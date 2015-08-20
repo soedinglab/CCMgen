@@ -1,8 +1,18 @@
 #include <string.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
 #include "cd.h"
 #include "cdutil.h"
+
+
+void seed_rng() {
+	int pid;
+	struct timeval t;
+	gettimeofday(&t, NULL);
+	pid = getpid();
+	srand(t.tv_usec * t.tv_sec * pid);
+}
 
 int pick_random_uniform(int max) {
     int div = RAND_MAX / (max + 1);

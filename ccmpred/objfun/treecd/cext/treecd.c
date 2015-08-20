@@ -59,6 +59,8 @@ void mutate_along_tree(
 	flt mutation_rate
 ) {
 
+	seed_rng();
+
 	// Preprocessing: Count number of leaves and compute index of first children
 	uint32_t *first_child_index = (uint32_t *)malloc(sizeof(uint32_t) * nvert);
 	uint32_t fci = 1;

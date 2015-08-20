@@ -70,6 +70,8 @@ void sample_sequences(
 	const int n_samples,
 	const int ncol
 ) {
+	seed_rng();
+
 	#pragma omp parallel
 	{
 		int k, i;
