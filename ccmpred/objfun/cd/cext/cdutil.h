@@ -1,7 +1,7 @@
 #ifndef CDUTIL_H
 #define CDUTIL_H
 
-void seed_rng();
+void seed_rng(void);
 
 int pick_random_uniform(int max);
 int pick_random_weighted(flt *probs, int n);

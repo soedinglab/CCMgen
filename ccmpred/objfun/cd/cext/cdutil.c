@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 #include "cd.h"
 #include "cdutil.h"
