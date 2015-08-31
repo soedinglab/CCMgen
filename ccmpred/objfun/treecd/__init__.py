@@ -20,7 +20,7 @@ class TreeContrastiveDivergence(ccmpred.objfun.cd.ContrastiveDivergence):
 
         tree_bfs = [c for c in bfs_iterator(tree.clade)]
 
-        self.n_children = np.array([len(c.clades) for c in tree_bfs], dtype='uint32')
+        self.n_children = np.array([len(c.clades) for c in tree_bfs], dtype='uint64')
         self.branch_lengths = np.array([c.branch_length for c in tree_bfs], dtype=np.dtype('float64'))
 
         self.mutation_rate = mutation_rate

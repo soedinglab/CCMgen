@@ -67,14 +67,15 @@ void compute_conditional_probs(
 void sample_sequences(
 	unsigned char *seq,
 	const flt *const x,
-	const int n_samples,
+	const unsigned long n_samples,
 	const int ncol
 ) {
 	seed_rng();
 
 	#pragma omp parallel
 	{
-		int k, i;
+		int i;
+		unsigned long k;
 		flt *pcondcurr = fl_malloc(N_ALPHA);
 
 		#pragma omp for

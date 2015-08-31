@@ -50,10 +50,10 @@ void swap(void **a, void **b) {
  * @param[in] mutation_rate Coefficient to tune the number of substitutions to make per evolutionary time unit
  */
 void mutate_along_tree(
-	int32_t *n_children, 
+	uint64_t *n_children,
 	flt *branch_lengths,
 	flt *x,
-	uint32_t nvert,
+	uint64_t nvert,
 	uint8_t *seqs,
 	uint32_t ncol,
 	flt mutation_rate
@@ -62,23 +62,23 @@ void mutate_along_tree(
 	seed_rng();
 
 	// Preprocessing: Count number of leaves and compute index of first children
-	uint32_t *first_child_index = (uint32_t *)malloc(sizeof(uint32_t) * nvert);
-	uint32_t fci = 1;
-	uint32_t nleaves = 0;
+	uint64_t *first_child_index = (uint64_t *)malloc(sizeof(uint64_t) * nvert);
+	uint64_t fci = 1;
+	uint64_t nleaves = 0;
 
-	for(uint32_t i = 0; i < nvert; i++) {
+	for(uint64_t i = 0; i < nvert; i++) {
 		if(n_children[i] == 0) { nleaves++; }
 		first_child_index[i] = fci;
 		fci += n_children[i];
 	}
 
 	// nc: number of children for vertex at index i of current BFS level
-	uint32_t *nc_in = (uint32_t *)malloc(sizeof(uint32_t) * nleaves);
-	uint32_t *nc_out = (uint32_t *)malloc(sizeof(uint32_t) * nleaves);
+	uint64_t *nc_in = (uint64_t *)malloc(sizeof(uint64_t) * nleaves);
+	uint64_t *nc_out = (uint64_t *)malloc(sizeof(uint64_t) * nleaves);
 
 	// ni: index of vertex at index i of current BFS level
-	uint32_t *ni_in = (uint32_t *)malloc(sizeof(uint32_t) * nleaves);
-	uint32_t *ni_out = (uint32_t *)malloc(sizeof(uint32_t) * nleaves);
+	uint64_t *ni_in = (uint64_t *)malloc(sizeof(uint64_t) * nleaves);
+	uint64_t *ni_out = (uint64_t *)malloc(sizeof(uint64_t) * nleaves);
 
 	// seqs: sequences at index i of current BFS level
 	uint8_t *seqs_in = (uint8_t *)malloc(sizeof(uint8_t) * ncol * nleaves);
@@ -88,10 +88,10 @@ void mutate_along_tree(
 	flt *bl = fl_malloc(nleaves);
 
 	// fill initial level with root nodes and ancestral sequences
-	uint32_t nn = n_children[0];
-	memcpy(nc_in, &n_children[1], sizeof(uint32_t) * nn);
+	uint64_t nn = n_children[0];
+	memcpy(nc_in, &n_children[1], sizeof(uint64_t) * nn);
 	memcpy(seqs_in, seqs, sizeof(uint8_t) * ncol * nn);
-	for(uint32_t i = 0; i < nn; i++) {
+	for(uint64_t i = 0; i < nn; i++) {
 		ni_in[i] = i + 1;
 	}
 
@@ -99,10 +99,10 @@ void mutate_along_tree(
 	while(nn < nleaves) {
 
 		// Phase 1: grow nc_out, ni_out, bl and seqs_out
-		int pos = 0;
-		for(uint32_t i = 0; i < nn; i++) {
+		uint64_t pos = 0;
+		for(uint64_t i = 0; i < nn; i++) {
 
-			uint32_t nci = nc_in[i];
+			uint64_t nci = nc_in[i];
 
 			if(nci == 0) {
 				// we have no children - copy the leaf node to keep it in next level
@@ -117,8 +117,8 @@ void mutate_along_tree(
 
 				// we have one or more children - grow out arrays to make room for descendants
 				// mutation to descendant sequences will be handled in phase 2
-				for(uint32_t j = 0; j < nci; j++) {
-					uint32_t inew = first_child_index[ni_in[i]] + j;
+				for(uint64_t j = 0; j < nci; j++) {
+					uint64_t inew = first_child_index[ni_in[i]] + j;
 
 					nc_out[pos] = n_children[inew];
 					ni_out[pos] = inew;
@@ -134,7 +134,7 @@ void mutate_along_tree(
 
 		// Phase 2: evolve seq according to bl
 		#pragma omp parallel for
-		for(int i = 0; i < pos; i++) {
+		for(uint64_t i = 0; i < pos; i++) {
 			int nmut = bl[i] * mutation_rate;
 			mutate_sequence(&seqs_out[i * ncol], x, nmut, ncol);
 		}

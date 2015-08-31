@@ -5,9 +5,9 @@
 
 void count_ids(
 	const uint8_t *msa,
-	uint16_t *ids,
-	const uint32_t nrow,
-	const uint32_t ncol
+	uint64_t *ids,
+	const uint64_t nrow,
+	const uint64_t ncol
 );
 
 #endif

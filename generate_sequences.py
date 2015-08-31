@@ -112,7 +112,7 @@ def main():
 
     print("Got tree with depth_min={0}, depth_max={1}, mutation_rate={2}".format(depth_min, depth_max, opt.mutation_rate))
 
-    n_children = np.array([len(c.clades) for c in tree_bfs], dtype='uint32')
+    n_children = np.array([len(c.clades) for c in tree_bfs], dtype='uint64')
     branch_lengths = np.array([c.branch_length for c in tree_bfs], dtype=np.dtype('float64'))
 
     n_vertices = len(tree_bfs)

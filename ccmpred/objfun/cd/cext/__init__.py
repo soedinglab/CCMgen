@@ -12,7 +12,7 @@ libcd.sample_sequences.restype = None
 libcd.sample_sequences.argtypes = [
     array_2d_char,     # *msa
     array_1d_float,    # *x
-    ctypes.c_uint32,    # nrow
+    ctypes.c_uint64,    # nrow
     ctypes.c_uint32,    # ncol
 ]
 
