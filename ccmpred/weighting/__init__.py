@@ -1,5 +1,5 @@
 import numpy as np
-from ccmpred.weighting.cext import count_ids
+from ccmpred.weighting.cext import count_ids, calculate_weights
 
 
 def weights_uniform(msa):
@@ -13,12 +13,4 @@ def weights_simple(msa, cutoff=0.8):
     if cutoff >= 1:
         return weights_uniform(msa)
 
-    ncol = msa.shape[1]
-
-    # calculate pairwise sequence identity between all alignments
-    ids = count_ids(msa)
-
-    # calculate number of cluster members at identity cutoff
-    n_cluster = np.sum(ids > cutoff * ncol, axis=0)
-
-    return (1 / n_cluster.astype("float64"))
+    return calculate_weights(msa, cutoff)

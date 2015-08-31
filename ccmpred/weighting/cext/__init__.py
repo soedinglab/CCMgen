@@ -3,6 +3,7 @@ import numpy.ctypeslib as npct
 import ctypes
 import os.path
 
+array_1d_double = npct.ndpointer(dtype=np.dtype('double'), ndim=1, flags='CONTIGUOUS')
 array_2d_char = npct.ndpointer(dtype=np.dtype('uint8'), ndim=2, flags='CONTIGUOUS')
 array_2d_uint64 = npct.ndpointer(dtype=np.dtype('uint64'), ndim=2, flags='CONTIGUOUS')
 
@@ -16,6 +17,15 @@ libweighting.count_ids.argtypes = [
     ctypes.c_uint64,    # ncol
 ]
 
+libweighting.calculate_weights.restype = None
+libweighting.calculate_weights.argtypes = [
+    array_2d_char,      # *msa
+    array_1d_double,    # *weights
+    ctypes.c_double,    # cutoff
+    ctypes.c_uint64,    # nrow
+    ctypes.c_uint64,    # ncol
+]
+
 
 def count_ids(msa):
     nrow = msa.shape[0]
@@ -23,6 +33,14 @@ def count_ids(msa):
     libweighting.count_ids(msa, ids, *msa.shape)
 
     return ids + ids.T - np.diag(ids.diagonal())
+
+
+def calculate_weights(msa, cutoff):
+    nrow = msa.shape[0]
+    weights = np.zeros((nrow,), dtype='double')
+    libweighting.calculate_weights(msa, weights, cutoff, *msa.shape)
+
+    return weights
 
 
 if __name__ == '__main__':
