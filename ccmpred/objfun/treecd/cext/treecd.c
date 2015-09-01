@@ -135,7 +135,7 @@ void mutate_along_tree(
 		// Phase 2: evolve seq according to bl
 		#pragma omp parallel for
 		for(uint64_t i = 0; i < pos; i++) {
-			int nmut = bl[i] * mutation_rate;
+			int nmut = bl[i] * mutation_rate * ncol;
 			mutate_sequence(&seqs_out[i * ncol], x, nmut, ncol);
 		}
 
