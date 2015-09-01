@@ -61,7 +61,7 @@ def get_options():
     import optparse
     parser = optparse.OptionParser(usage="%prog [options] rawfile outalignment")
     parser.add_option("--aln-format", dest="aln_format", default="fasta", help="Specify format for alignment files [default: \"%default\"]")
-    parser.add_option("--mutation-rate", dest="mutation_rate", default=20, type=float, help="Specify mutation rate [default: %default]")
+    parser.add_option("--mutation-rate", dest="mutation_rate", default=1.7, type=float, help="Specify mutation rate [default: %default]")
     parser.add_option("--mutation-rate-sample", dest="mutation_rate_sample", default=False, action="store_true", help="Sample mutation rates and Neffs")
     parser.add_option("--mutation-rate-neff", dest="mutation_rate_neff", type=float, metavar="NEFF", help="Set mutation rate to generate alignment of given number of effective sequences")
     parser.add_option("--mutation-rate-neff-aln", action="callback", callback=cb_mutation_rate_neff_aln, nargs=1, type=str, metavar="ALNFILE", help="Set mutation rate to generate alignment with same number of effective sequences as given alignment")
