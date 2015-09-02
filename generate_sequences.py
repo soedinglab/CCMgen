@@ -6,9 +6,8 @@ import ccmpred.objfun.treecd as treecd
 import ccmpred.raw
 import ccmpred.trees
 import ccmpred.weighting
-import ccmpred.sampling.neff
+import ccmpred.sampling
 import Bio.Phylo
-import sys
 
 
 def cb_tree_newick(option, opt_str, value, parser, *args, **kwargs):
@@ -88,29 +87,6 @@ def get_options():
     return opt, args
 
 
-def get_child_depth_range(clade):
-    level = [(0, clade)]
-
-    mn = float('inf')
-    mx = float('-inf')
-    while level:
-        new_level = []
-
-        for d, parent in level:
-            dc = d + parent.branch_length
-
-            if parent.clades:
-                for c in parent.clades:
-                    new_level.append((dc, c))
-            else:
-                mn = min(mn, dc)
-                mx = max(mx, dc)
-
-        level = new_level
-
-    return mn, mx
-
-
 def main():
     opt, (rawfile, outalnfile) = get_options()
 
@@ -123,7 +99,7 @@ def main():
     tree = treecd.split_tree(opt.tree_source(opt, id0), id0)
     tree_bfs = [c for c in treecd.bfs_iterator(tree.clade)]
 
-    depth_min, depth_max = get_child_depth_range(tree.clade)
+    depth_min, depth_max = ccmpred.sampling.get_child_depth_range(tree.clade)
 
     n_children = np.array([len(c.clades) for c in tree_bfs], dtype='uint64')
     branch_lengths = np.array([c.branch_length for c in tree_bfs], dtype=np.dtype('float64'))
@@ -136,26 +112,12 @@ def main():
     x = cd.structured_to_linear(raw.x_single, raw.x_pair)
 
     if opt.mutation_rate_sample:
-
-        msa_sampled = np.empty((n_leaves, raw.ncol), dtype="uint8")
-
-        def sample_neff(mutation_rate):
-
-            treecd.cext.mutate_along_tree(msa_sampled, n_children, branch_lengths, x, n_vertices, seq0, mutation_rate)
-            neff = np.sum(ccmpred.weighting.weights_simple(msa_sampled))
-
-            print(mutation_rate, neff)
-            sys.stdout.flush()
-
-        print("x y")
-        for _ in range(3):
-            for mr in np.arange(0, 4.81, 0.4):
-                sample_neff(mr)
+        ccmpred.sampling.sample_neff(branch_lengths, n_children, n_vertices, n_leaves, raw.ncol, x, seq0)
 
     else:
 
         if opt.mutation_rate_neff:
-            mutation_rate = ccmpred.sampling.neff.evoldist_for_neff(opt.mutation_rate_neff, n_leaves)
+            mutation_rate = ccmpred.sampling.evoldist_for_neff(opt.mutation_rate_neff, n_leaves)
         else:
             mutation_rate = opt.mutation_rate
 

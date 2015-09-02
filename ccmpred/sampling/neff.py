@@ -1,4 +1,8 @@
+import sys
 import numpy as np
+
+import ccmpred.weighting
+import ccmpred.objfun.treecd as treecd
 
 
 RFIT_PARAMETERS = {
@@ -31,3 +35,21 @@ def evoldist_for_neff(target_neff, n_leaves, model_parameters=RFIT_PARAMETERS):
     mutation_rate = np.real(roots[np.abs(np.imag(roots)) < 1e-5])[0] + model_parameters['t']
 
     return mutation_rate
+
+
+def sample_neff(branch_lengths, n_children, n_vertices, n_leaves, ncol, x, seq0):
+
+    msa_sampled = np.empty((n_leaves, ncol), dtype="uint8")
+
+    def sample_neff(mutation_rate):
+
+        treecd.cext.mutate_along_tree(msa_sampled, n_children, branch_lengths, x, n_vertices, seq0, mutation_rate)
+        neff = np.sum(ccmpred.weighting.weights_simple(msa_sampled))
+
+        print(mutation_rate, neff)
+        sys.stdout.flush()
+
+    print("x y")
+    for _ in range(3):
+        for mr in np.arange(0, 4.81, 0.4):
+            sample_neff(mr)
