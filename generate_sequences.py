@@ -118,13 +118,12 @@ def main():
 
         if opt.mutation_rate_neff:
             model_parameters = ccmpred.sampling.fit_neff_model(branch_lengths, n_children, n_vertices, n_leaves, raw.ncol, x, seq0)
-            print(model_parameters)
-
             mutation_rate = ccmpred.sampling.evoldist_for_neff(opt.mutation_rate_neff, n_leaves, model_parameters)
             print("Using mutation rate {0} for Neff {1}".format(mutation_rate, opt.mutation_rate_neff))
 
         else:
             mutation_rate = opt.mutation_rate
+            print("Using mutation rate {0}".format(mutation_rate))
 
         msa_sampled = np.empty((n_leaves, raw.ncol), dtype="uint8")
         msa_sampled = treecd.cext.mutate_along_tree(msa_sampled, n_children, branch_lengths, x, n_vertices, seq0, mutation_rate)

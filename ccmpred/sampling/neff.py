@@ -15,14 +15,16 @@ where N is the number of sampled leaves and a, b and t are
 parameters fitted from a regression.
 """
 
+
+# starting parameters from a global fit of a few protein families
 RFIT_PARAMETERS = {
-    'a': -1.238,
-    'b': 1.033,
-    't': 1.547
+    'a': 0.7513,
+    'b': -1.1308,
+    't': 1.6381
 }
 
 
-def fit_neff_model(branch_lengths, n_children, n_vertices, n_leaves, ncol, x, seq0, n_reps=1, mr_samples=np.arange(0, 4.0, 0.05), start_parameters=RFIT_PARAMETERS):
+def fit_neff_model(branch_lengths, n_children, n_vertices, n_leaves, ncol, x, seq0, n_reps=1, mr_samples=np.arange(0, 5.0, 1), start_parameters=RFIT_PARAMETERS):
     """Fit model parameters by computing Neff for some sample points"""
     ns = neff_sampler(branch_lengths, n_children, n_vertices, n_leaves, ncol, x, seq0)
 
