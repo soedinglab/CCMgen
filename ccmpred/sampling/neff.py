@@ -44,23 +44,6 @@ def fit_neff_model(branch_lengths, n_children, n_vertices, n_leaves, ncol, x, se
         't': popt[2]
     }
 
-    """
-    import pandas as pd
-    import matplotlib.pyplot as plt
-    df = pd.DataFrame({'mutation_rate': mrs, 'neff': nfs})
-    df['neff_pred'] = [f(mr, *popt) for mr in df['mutation_rate']]
-    print(df)
-
-    plt.figure()
-
-    plt.plot(
-        df['mutation_rate'], df['neff'], 'ro',
-        df['mutation_rate'], df['neff_pred'], 'b-'
-    )
-
-    plt.show()
-    """
-
     return mdl
 
 
