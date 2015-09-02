@@ -1,4 +1,4 @@
-from ccmpred.sampling.neff import evoldist_for_neff, sample_neff
+from ccmpred.sampling.neff import evoldist_for_neff, sample_neff, fit_neff_model
 
 
 def get_child_depth_range(clade):

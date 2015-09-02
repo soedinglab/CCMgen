@@ -107,7 +107,7 @@ def main():
     n_vertices = len(tree_bfs)
     n_leaves = len(tree.get_terminals())
 
-    print("Got tree with {3} leaves, depth_min={0}, depth_max={1}, mutation_rate={2}".format(depth_min, depth_max, opt.mutation_rate, n_leaves))
+    print("Got tree with {2} leaves, depth_min={0}, depth_max={1}".format(depth_min, depth_max, n_leaves))
 
     x = cd.structured_to_linear(raw.x_single, raw.x_pair)
 
@@ -117,12 +117,21 @@ def main():
     else:
 
         if opt.mutation_rate_neff:
-            mutation_rate = ccmpred.sampling.evoldist_for_neff(opt.mutation_rate_neff, n_leaves)
+            model_parameters = ccmpred.sampling.fit_neff_model(branch_lengths, n_children, n_vertices, n_leaves, raw.ncol, x, seq0)
+            print(model_parameters)
+
+            mutation_rate = ccmpred.sampling.evoldist_for_neff(opt.mutation_rate_neff, n_leaves, model_parameters)
+            print("Using mutation rate {0} for Neff {1}".format(mutation_rate, opt.mutation_rate_neff))
+
         else:
             mutation_rate = opt.mutation_rate
 
         msa_sampled = np.empty((n_leaves, raw.ncol), dtype="uint8")
         msa_sampled = treecd.cext.mutate_along_tree(msa_sampled, n_children, branch_lengths, x, n_vertices, seq0, mutation_rate)
+
+        neff = np.sum(ccmpred.weighting.weights_simple(msa_sampled))
+
+        print("Sampled alignment has Neff {0}".format(neff))
 
     with open(outalnfile, "w") as f:
         ccmpred.io.alignment.write_msa_psicov(f, msa_sampled)
