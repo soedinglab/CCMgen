@@ -6,6 +6,7 @@ import ccmpred.objfun.treecd as treecd
 import ccmpred.raw
 import ccmpred.trees
 import ccmpred.weighting
+import ccmpred.sampling.neff
 import Bio.Phylo
 import sys
 
@@ -154,26 +155,7 @@ def main():
     else:
 
         if opt.mutation_rate_neff:
-            # Neff is dependant on the evolutionary distance D by the following
-            # relationship:
-
-            # Neff = 1 + (N - 1) / (1 + exp(-a*(D-t)^3 + b*(D-t)))
-
-            # where N is the number of sampled leaves and a, b and t are
-            # parameters fitted from a regression.
-            a = -1.238
-            b = 1.033
-            t = 1.547
-
-            # we substitute z = D - t and obtain the polynomial:
-            # a*z^3 + b*z + log((N - 1) / (Neff - 1) - 1) = 0
-            # solve using numpy.roots
-            neffratio = np.log((n_leaves - 1) / (opt.mutation_rate_neff - 1) - 1)
-            roots = np.roots([a, 0, b, neffratio])
-
-            # only keep real solutions and resubstitute D = z + t
-            mutation_rate = np.real(roots[np.abs(np.imag(roots)) < 1e-5])[0] + t
-
+            mutation_rate = ccmpred.sampling.neff.evoldist_for_neff(opt.mutation_rate_neff, n_leaves)
         else:
             mutation_rate = opt.mutation_rate
 
