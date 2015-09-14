@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 
 
 class ObjectiveFunction(object):
@@ -43,3 +44,5 @@ class ObjectiveFunction(object):
 
         else:
             print("{n_iter:8d} {n_ls:3d} {fx:12g} {xnorm:12g} {gnorm:12g} {step: 8g}".format(n_iter=n_iter, n_ls=n_ls, fx=fx, xnorm=xnorm, gnorm=gnorm, step=step))
+
+        sys.stdout.flush()
