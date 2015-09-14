@@ -107,8 +107,6 @@ def main():
 
     fx, x = opt.algorithm(f, x0, opt)
 
-    print("Finished with fx = {fx}".format(fx=fx))
-
     res = f.finalize(x)
 
     if opt.cd_alnfile and hasattr(f, 'msa_sampled'):
