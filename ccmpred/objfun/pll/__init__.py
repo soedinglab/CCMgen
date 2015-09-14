@@ -25,6 +25,8 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
         self.g = np.empty((self.nsingle_padded + self.ncol * self.ncol * 21 * 32,), dtype=np.dtype('float64'))
         self.g2 = np.empty((self.ncol * self.ncol * 21 * 32,), dtype=np.dtype('float64'))
 
+        self.linear_to_structured = lambda x: linear_to_structured(x, self.ncol)
+
     @classmethod
     def init_from_default(cls, msa, weights, regularization):
         res = cls(msa, weights, regularization)

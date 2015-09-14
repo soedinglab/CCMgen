@@ -10,6 +10,7 @@ import ccmpred.objfun.cd.cext
 class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
 
     def __init__(self, msa, weights, regularization, n_samples):
+        super(ContrastiveDivergence, self).__init__()
 
         self.msa = msa
         self.weights = weights
@@ -31,6 +32,8 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
 
         # init sample alignment
         self.msa_sampled = self.init_sample_alignment()
+
+        self.linear_to_structured = lambda x: linear_to_structured(x, self.ncol)
 
     def init_sample_alignment(self):
         return self.msa.copy()
