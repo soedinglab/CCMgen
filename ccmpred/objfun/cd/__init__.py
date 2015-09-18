@@ -71,6 +71,9 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         x_single, x_pair = linear_to_structured(x, self.ncol)
         _, g_single_reg, g_pair_reg = self.regularization(x_single, x_pair)
 
+        g_single[:, :20] += g_single_reg
+        g_pair += g_pair_reg
+
         # set gradients for gap states to 0
         g_pair[:, :, :, 20] = 0
         g_pair[:, :, 20, :] = 0
