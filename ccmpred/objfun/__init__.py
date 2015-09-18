@@ -1,12 +1,13 @@
 import numpy as np
 import sys
+import ccmpred.raw
 
 
 class ObjectiveFunction(object):
     def __init__(self):
         self.compare_raw = None
+        self.trajectory_file = None
         self.linear_to_structured = None
-        pass
 
     @classmethod
     def init_from_default(cls, msa):
@@ -32,7 +33,7 @@ class ObjectiveFunction(object):
         xnorm = np.sum(x * x)
         gnorm = np.sum(g * g)
 
-        if self.compare_raw:
+        if self.compare_raw and self.linear_to_structured:
             ox_single, ox_pair = self.linear_to_structured(x)
             dx_single = ox_single - self.compare_raw.x_single
             dx_pair = ox_pair - self.compare_raw.x_pair
@@ -44,5 +45,10 @@ class ObjectiveFunction(object):
 
         else:
             print("{n_iter:8d} {n_ls:3d} {fx:12g} {xnorm:12g} {gnorm:12g} {step: 8g}".format(n_iter=n_iter, n_ls=n_ls, fx=fx, xnorm=xnorm, gnorm=gnorm, step=step))
+
+        if self.trajectory_file and self.linear_to_structured:
+            x_single, x_pair = self.linear_to_structured(x)
+            raw = ccmpred.raw.CCMRaw(x_single.shape[0], x_single, x_pair, None)
+            ccmpred.raw.write_msgpack(self.trajectory_file.format(n_iter), raw)
 
         sys.stdout.flush()

@@ -45,6 +45,7 @@ def main():
 
     parser.add_option("-i", "--init-from-raw", dest="initrawfile", default=None, help="Init potentials from raw file")
     parser.add_option("-c", "--compare-to-raw", dest="comparerawfile", default=None, help="Compare potentials to raw file")
+    parser.add_option("--write-trajectory", dest="trajectoryfile", default=None, help="Write trajectory to files with format expression")
     parser.add_option("-r", "--write-raw", dest="outrawfile", default=None, help="Write potentials to raw file")
     parser.add_option("-b", "--write-msgpack", dest="outmsgpackfile", default=None, help="Write potentials to MessagePack file")
     parser.add_option("--aln-format", dest="aln_format", default="psicov", help="File format for MSAs [default: \"%default\"]")
@@ -104,6 +105,8 @@ def main():
     if opt.comparerawfile:
         craw = ccmpred.raw.parse(opt.comparerawfile)
         f.compare_raw = craw
+
+    f.trajectory_file = opt.trajectoryfile
 
     fx, x = opt.algorithm(f, x0, opt)
 
