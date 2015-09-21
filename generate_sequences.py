@@ -14,16 +14,6 @@ def cb_tree_newick(option, opt_str, value, parser, *args, **kwargs):
     parser.values.tree_source = lambda opt, id0: Bio.Phylo.read(value, "newick")
 
 
-def cb_tree_binary(option, opt_str, value, parser, *args, **kwargs):
-    splits, depth = int(value[0]), float(value[1])
-    parser.values.tree_source = lambda opt, id0: ccmpred.trees.create_binary_tree(splits, depth, root_name=id0[0])
-
-
-def cb_tree_star(option, opt_str, value, parser, *args, **kwargs):
-    leaves, depth = int(value[0]), float(value[1])
-    parser.values.tree_source = lambda opt, id0: ccmpred.trees.create_star_tree(leaves, depth, root_name=id0[0])
-
-
 def cb_seq0_file(option, opt_str, value, parser, *args, **kwargs):
     parser.values.seq0_source = lambda opt, raw: ccmpred.io.alignment.read_msa(value, opt.aln_format, return_identifiers=True)
 
@@ -48,10 +38,11 @@ def cb_seq0_mrf(option, opt_str, value, parser, *args, **kwargs):
     parser.values.seq0_source = get_seq0_mrf
 
 
-def cb_mutation_rate_neff_aln(option, opt_str, value, parser, *args, **kwargs):
+def cb_like_aln(option, opt_str, value, parser, *args, **kwargs):
     msa = ccmpred.io.alignment.read_msa(value, parser.values.aln_format)
     neff = np.sum(ccmpred.weighting.weights_simple(msa))
     parser.values.mutation_rate_neff = neff
+    parser.values.nseq = msa.shape[0]
 
 
 def get_options():
@@ -60,15 +51,18 @@ def get_options():
     parser.add_option("--aln-format", dest="aln_format", default="fasta", help="Specify format for alignment files [default: \"%default\"]")
     parser.add_option("--mutation-rate", dest="mutation_rate", default=1.7, type=float, help="Specify mutation rate [default: %default]")
     parser.add_option("--mutation-rate-sample", dest="mutation_rate_sample", default=False, action="store_true", help="Sample mutation rates and Neffs")
+
     parser.add_option("--mutation-rate-neff", dest="mutation_rate_neff", type=float, metavar="NEFF", help="Set mutation rate to generate alignment of given number of effective sequences")
-    parser.add_option("--mutation-rate-neff-aln", action="callback", callback=cb_mutation_rate_neff_aln, nargs=1, type=str, metavar="ALNFILE", help="Set mutation rate to generate alignment with same number of effective sequences as given alignment")
+    parser.add_option("--like-aln", action="callback", callback=cb_like_aln, nargs=1, type=str, metavar="ALNFILE", help="Set mutation rate and number of sequences to generate an alignment with the same number of effective sequences as given alignment")
 
     parser.add_option("--tree-newick", dest="tree_source", default=None, metavar="DNDFILE", action="callback", nargs=1, type=str, callback=cb_tree_newick, help="Load tree from newick-formatted file DNDFILE")
-    parser.add_option("--tree-binary", metavar="SPLITS DEPTH", action="callback", nargs=2, type=str, callback=cb_tree_binary, help="Generate binary tree with 2^SPLITS sequences and total depth DEPTH")
-    parser.add_option("--tree-star", metavar="LEAVES DEPTH", action="callback", nargs=2, type=str, callback=cb_tree_star, help="Generate star tree with LEAVES sequences and total depth DEPTH")
+    parser.add_option("--tree-binary", dest="tree_source", action="store_const", const=lambda opt, id0: ccmpred.trees.create_binary_tree(opt.nseq, root_name=id0[0]), help="Generate binary tree")
+    parser.add_option("--tree-star", dest="tree_source", action="store_const", const=lambda opt, id0: ccmpred.trees.create_star_tree(opt.nseq, root_name=id0[0]), help="Generate star tree")
 
     parser.add_option("--seq0-file", dest="seq0_source", default=None, metavar="ALNFILE", action="callback", nargs=1, type=str, callback=cb_seq0_file, help="Get initial sequenc from ALNFILE")
     parser.add_option("--seq0-mrf", metavar="NMUT", action="callback", nargs=1, type=int, callback=cb_seq0_mrf, help="Sample initial sequence from MRF by mutating NMUT times from a poly-A sequence")
+
+    parser.add_option("-n", "--num-sequences", dest="nseq", type=int, default=2**12, help="Set the number of sequences to generate to NSEQ [default: %default]")
 
     opt, args = parser.parse_args()
 

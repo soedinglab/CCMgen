@@ -1,7 +1,11 @@
 from Bio.Phylo.BaseTree import Tree, Clade
+import numpy as np
 
 
-def create_binary_tree(splits, depth, root_name=""):
+def create_binary_tree(nseqs, depth=1, root_name=""):
+
+    splits = np.ceil(np.log2(nseqs))
+
     depth_per_clade = float(depth) / splits
 
     def fill_tree_rec(parent, splits):
@@ -24,7 +28,7 @@ def create_binary_tree(splits, depth, root_name=""):
     return t
 
 
-def create_star_tree(leaves, depth, root_name=""):
+def create_star_tree(nseqs, depth=1, root_name=""):
 
     t = Tree(rooted=False)
     t.clade.name = root_name
@@ -32,7 +36,7 @@ def create_star_tree(leaves, depth, root_name=""):
 
     t.clade.clades = [
         Clade(name="C{0}".format(i), branch_length=depth)
-        for i in range(leaves)
+        for i in range(nseqs)
     ]
 
     return t

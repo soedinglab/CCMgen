@@ -46,6 +46,8 @@ def fit_neff_model(branch_lengths, n_children, n_vertices, n_leaves, ncol, x, se
         't': popt[2]
     }
 
+    print("Fit model a={a}, b={b}, t={t}".format(**mdl))
+
     return mdl
 
 
