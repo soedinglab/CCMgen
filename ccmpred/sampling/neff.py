@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 import scipy.optimize
+import functools
 
 import ccmpred.weighting
 import ccmpred.objfun.treecd as treecd
@@ -24,7 +25,12 @@ RFIT_PARAMETERS = {
 }
 
 
-def fit_neff_model(branch_lengths, n_children, n_vertices, n_leaves, ncol, x, seq0, n_reps=1, mr_samples=np.arange(0, 5.0, 1), start_parameters=RFIT_PARAMETERS):
+def model(x, a, b, t, n_leaves):
+    z = x - t
+    return 1 + (n_leaves - 1) / (1 + np.exp(-a * z ** 3 + b * z))
+
+
+def fit_neff_model(branch_lengths, n_children, n_vertices, n_leaves, ncol, x, seq0, n_reps=1, mr_samples=np.arange(0, 0.6, 0.01), start_parameters=RFIT_PARAMETERS):
     """Fit model parameters by computing Neff for some sample points"""
     ns = neff_sampler(branch_lengths, n_children, n_vertices, n_leaves, ncol, x, seq0)
 
@@ -34,11 +40,12 @@ def fit_neff_model(branch_lengths, n_children, n_vertices, n_leaves, ncol, x, se
 
     nfs = np.array([ns(mr) for mr in mrs])
 
-    def f(x, a, b, t):
-        z = x - t
-        return 1 + (n_leaves - 1) / (1 + np.exp(-a * z ** 3 + b * z))
+    f = functools.partial(model, n_leaves=n_leaves)
 
     popt, pcov = scipy.optimize.curve_fit(f, mrs, nfs, p0=(RFIT_PARAMETERS['a'], RFIT_PARAMETERS['b'], RFIT_PARAMETERS['t']))
+
+    for mr, nf in zip(mrs, nfs):
+        print("{0}\t{1}\t{2}".format(mr, nf, f(mr, *popt)))
 
     mdl = {
         'a': popt[0],
@@ -63,8 +70,10 @@ def evoldist_for_neff(target_neff, n_leaves, model_parameters=RFIT_PARAMETERS):
     neffratio = np.log((n_leaves - 1) / (target_neff - 1) - 1)
     roots = np.roots([model_parameters['a'], 0, -model_parameters['b'], neffratio])
 
+    dists = [np.real(r) + model_parameters['t'] for r in roots if np.abs(np.imag(r)) < 1e-5]
+
     # only keep real solution and resubstitute D = z + t
-    mutation_rate = np.real(roots[np.abs(np.imag(roots)) < 1e-5])[0] + model_parameters['t']
+    mutation_rate = min(dists)
 
     if mutation_rate < 0:
         raise Exception("Got negative mutation rate {0} for target Neff {1}! (a={a}, b={b}, t={t})".format(mutation_rate, target_neff, **model_parameters))
