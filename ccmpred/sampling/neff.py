@@ -20,8 +20,8 @@ parameters fitted from a regression.
 
 # starting parameters from a global fit of a few protein families
 RFIT_PARAMETERS = {
-    'a': 0.7513,
-    't': 1.6381
+    'a': 0.0358,
+    't': 0.3553
 }
 
 
@@ -29,7 +29,7 @@ def model(x, a, t, n_leaves):
     return 1 + (n_leaves - 1) / (1 + np.exp((t - x) / a))
 
 
-def fit_neff_model(branch_lengths, n_children, n_vertices, n_leaves, ncol, x, seq0, n_reps=10, start_parameters=RFIT_PARAMETERS):
+def fit_neff_model(branch_lengths, n_children, n_vertices, n_leaves, ncol, x, seq0, n_reps=10):
     """Fit model parameters by computing Neff for some sample points"""
     ns = neff_sampler(branch_lengths, n_children, n_vertices, n_leaves, ncol, x, seq0)
 
