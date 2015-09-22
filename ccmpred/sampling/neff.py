@@ -69,24 +69,7 @@ def fit_neff_model(branch_lengths, n_children, n_vertices, n_leaves, ncol, x, se
 
     f = functools.partial(model, n_leaves=n_leaves)
 
-    try:
-        popt, pcov = scipy.optimize.curve_fit(f, mrs, nfs, p0=(1.0, 1.0))
-        #popt, pcov = scipy.optimize.curve_fit(f, mrs, nfs, p0=(RFIT_PARAMETERS['a'], RFIT_PARAMETERS['b'], RFIT_PARAMETERS['t']))
-        #popt = [RFIT_PARAMETERS[p] for p in 'abt']
-
-        with open("test.tsv", "w") as fo:
-            fo.write("mutation_rate\tneff_sampled\tneff_fit\n")
-            for mr, nf in zip(mrs, nfs):
-                fo.write("{0}\t{1}\t{2}\n".format(mr, nf, f(mr, *popt)))
-
-    except Exception as e:
-
-        with open("test.tsv", "w") as fo:
-            fo.write("mutation_rate\tneff_sampled")
-            for mr, nf in zip(mrs, nfs):
-                fo.write("{0}\t{1}".format(mr, nf))
-
-        raise e
+    popt, pcov = scipy.optimize.curve_fit(f, mrs, nfs, p0=(1.0, 1.0))
 
     mdl = dict(zip('at', popt))
 
