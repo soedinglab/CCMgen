@@ -39,7 +39,7 @@ def cb_reg_l2(option, opt, value, parser):
     parser.values.regularization = lambda msa, centering: ccmpred.regularization.L2(lambda_single, lambda_pair * (msa.shape[1] - 1), centering)
 
 
-def main():
+def parse_args():
     parser = optparse.OptionParser(usage="%prog [options] alnfile matfile")
     parser.add_option("-n", "--num-iterations", dest="numiter", default=100, type=int, help="Specify the number of iterations [default: %default]")
 
@@ -76,6 +76,12 @@ def main():
 
     if opt.cd_alnfile and opt.objfun not in (cd.ContrastiveDivergence, treecd.TreeContrastiveDivergence):
         parser.error("--write-cd-alignment is only supported for (tree) contrastive divergence!")
+
+    return opt, args
+
+
+def main():
+    opt, args = parse_args()
 
     if opt.logo:
         ccmpred.logo.logo()
