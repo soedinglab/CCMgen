@@ -9,6 +9,7 @@ import ccmpred.objfun.pll.cext
 class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
 
     def __init__(self, msa, weights, regularization):
+        super(PseudoLikelihood, self).__init__()
 
         self.msa = msa
 
