@@ -22,8 +22,7 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         self.n_samples = n_samples
 
         # get constant alignment counts
-        self.msa_counts_single = ccmpred.counts.single_counts(msa)
-        self.msa_counts_pair = ccmpred.counts.pair_counts(msa)
+        self.msa_counts_single, self.msa_counts_pair = ccmpred.counts.both_counts(msa)
 
         # reset gap counts
         self.msa_counts_single[:, 20] = 0
@@ -62,8 +61,7 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
 
         self.msa_sampled = self.sample_sequences(x)
 
-        sample_counts_single = ccmpred.counts.single_counts(self.msa_sampled)
-        sample_counts_pair = ccmpred.counts.pair_counts(self.msa_sampled)
+        sample_counts_single, sample_counts_pair = ccmpred.counts.both_counts(self.msa_sampled)
 
         g_single = sample_counts_single - self.msa_counts_single
         g_pair = sample_counts_pair - self.msa_counts_pair

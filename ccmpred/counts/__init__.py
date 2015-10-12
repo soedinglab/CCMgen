@@ -47,6 +47,13 @@ def single_counts(msa, weights=None):
     return counts
 
 
+def both_counts(msa, weights=None):
+    pcs = pair_counts(msa, weights)
+    scs = np.sum(pcs[np.diag_indices(pcs.shape[0])], axis=1)
+
+    return scs, pcs
+
+
 def pwm(counts, ignore_gaps=False):
     singles = single_counts(counts)
 
