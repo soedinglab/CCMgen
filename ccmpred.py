@@ -16,10 +16,12 @@ import ccmpred.objfun.treecd as treecd
 
 import ccmpred.algorithm.gradient_descent
 import ccmpred.algorithm.conjugate_gradients
+import ccmpred.algorithm.numdiff
 
 ALGORITHMS = {
     "gradient_descent": lambda of, x0, opt: ccmpred.algorithm.gradient_descent.minimize(of, x0, opt.numiter, alpha0=5e-3, alpha_decay=1e1),
     "conjugate_gradients": lambda of, x0, opt: ccmpred.algorithm.conjugate_gradients.minimize(of, x0, opt.numiter, epsilon=1e-7),
+    "numerical_differentiation": lambda of, x0, opt: ccmpred.algorithm.numdiff.numdiff(of, x0),
 }
 
 
@@ -61,6 +63,7 @@ def parse_args():
     grp_al = parser.add_option_group("Algorithms")
     grp_al.add_option("--alg-gd", dest="algorithm", action="store_const", const=ALGORITHMS['gradient_descent'], default=ALGORITHMS['gradient_descent'], help='Use gradient descent (default)')
     grp_al.add_option("--alg-cg", dest="algorithm", action="store_const", const=ALGORITHMS['conjugate_gradients'], help='Use conjugate gradients')
+    grp_al.add_option("--alg-nd", dest="algorithm", action="store_const", const=ALGORITHMS['numerical_differentiation'], help='Debug gradients with numerical differentiation')
 
     grp_wt = parser.add_option_group("Weighting")
     grp_wt.add_option("--wt-simple", dest="weight", action="store_const", const=ccmpred.weighting.weights_simple, default=ccmpred.weighting.weights_simple, help='Use simple weighting (default)')

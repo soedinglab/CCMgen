@@ -33,6 +33,7 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         self.msa_sampled = self.init_sample_alignment()
 
         self.linear_to_structured = lambda x: linear_to_structured(x, self.ncol)
+        self.structured_to_linear = structured_to_linear
 
     def init_sample_alignment(self):
         return self.msa.copy()
