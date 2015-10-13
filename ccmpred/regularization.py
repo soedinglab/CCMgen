@@ -18,3 +18,6 @@ class L2(object):
         fx_reg = self.lambda_single * np.sum(x_ofs * x_ofs) + 0.5 * self.lambda_pair * np.sum(x_pair * x_pair)
 
         return fx_reg, g_single, g_pair
+
+    def __repr__(self):
+        return "L₂ regularization λsingle={0} λpair={1}".format(self.lambda_single, self.lambda_pair)

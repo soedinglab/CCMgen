@@ -83,6 +83,9 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         g = structured_to_linear(g_single[:, :20], g_pair)
         return -1, g
 
+    def __repr__(self):
+        return "PCD ({0})".format(self.regularization)
+
 
 def linear_to_structured(x, ncol, clip=False):
     """Convert linear vector of variables into multidimensional arrays.

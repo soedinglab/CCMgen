@@ -94,6 +94,8 @@ def main():
     msa = aln.read_msa(alnfile, opt.aln_format)
     weights = opt.weight(msa)
 
+    print("Reweighted {0} sequences to Neff={1:g} (min={2:g}, mean={3:g}, max={3:g})".format(msa.shape[0], np.sum(weights), np.min(weights), np.mean(weights), np.max(weights)))
+
     if not hasattr(opt, "objfun_args"):
         opt.objfun_args = []
 
@@ -116,6 +118,8 @@ def main():
         f.compare_raw = craw
 
     f.trajectory_file = opt.trajectoryfile
+
+    print("Will optimize {0} {1} variables with {2}\n".format(x0.size, x0.dtype, f))
 
     fx, x = opt.algorithm(f, x0, opt)
 
