@@ -39,6 +39,8 @@ def minimize(objfun, x, maxiter, linesearch_fn=linesearch, epsilon=1e-3, converg
     gnorm = np.sum(g * g)
     xnorm = np.sum(x * x)
 
+    objfun.progress(x, g, fx, 0, 0, 0)
+
     gprevnorm = None
     alpha_prev = None
     dg_prev = None

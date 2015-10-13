@@ -1,6 +1,7 @@
 import numpy as np
 import sys
 import ccmpred.raw
+import ccmpred.logo
 
 
 class ObjectiveFunction(object):
@@ -24,14 +25,42 @@ class ObjectiveFunction(object):
         raise NotImplemented()
 
     def begin_progress(self):
+
+        header_tokens = [('iter', 8), ('ls', 3), ('fx', 12), ('|x|', 12), ('|g|', 12)]
+
+        if self.linear_to_structured:
+            header_tokens += [('|x_single|', 12), ('|x_pair|', 12), ('|g_single|', 12), ('|g_pair|', 12)]
+
+        header_tokens += [('step', 12)]
+
         if self.compare_raw:
-            print("    iter  ls           fx          |x|          |g|         step  dist_single    dist_pair")
+            header_tokens += [('dist_single', 12), ('dist_pair', 12)]
+
+        headerline = (" ".join("{0:>{1}s}".format(ht, hw) for ht, hw in header_tokens))
+
+        if ccmpred.logo.is_tty:
+            print("\x1b[1;37m{0}\x1b[0m".format(headerline))
         else:
-            print("    iter  ls           fx          |x|          |g|         step")
+            print(headerline)
 
     def progress(self, x, g, fx, n_iter, n_ls, step):
         xnorm = np.sum(x * x)
         gnorm = np.sum(g * g)
+
+        data_tokens = [(n_iter, '8d'), (n_ls, '3d'), (fx, '12g'), (xnorm, '12g'), (gnorm, '12g')]
+
+        if self.linear_to_structured:
+            ox_single, ox_pair = self.linear_to_structured(x)
+            xnorm_single = np.sum(ox_single ** 2)
+            xnorm_pair = np.sum(ox_pair ** 2)
+
+            og_single, og_pair = self.linear_to_structured(g)
+            gnorm_single = np.sum(og_single ** 2)
+            gnorm_pair = np.sum(og_pair ** 2)
+
+            data_tokens += [(xnorm_single, '12g'), (xnorm_pair, '12g'), (gnorm_single, '12g'), (gnorm_pair, '12g')]
+
+        data_tokens += [(step, '12g')]
 
         if self.compare_raw and self.linear_to_structured:
             ox_single, ox_pair = self.linear_to_structured(x)
@@ -41,10 +70,9 @@ class ObjectiveFunction(object):
             dist_single = np.sqrt(np.sum(dx_single ** 2))
             dist_pair = np.sqrt(np.sum(dx_pair ** 2))
 
-            print("{n_iter:8d} {n_ls:3d} {fx:12g} {xnorm:12g} {gnorm:12g} {step: 12g} {dist_single: 12g} {dist_pair: 12g}".format(n_iter=n_iter, n_ls=n_ls, fx=fx, xnorm=xnorm, gnorm=gnorm, step=step, dist_single=dist_single, dist_pair=dist_pair))
+            data_tokens += [(dist_single, '12g'), (dist_pair, '12g')]
 
-        else:
-            print("{n_iter:8d} {n_ls:3d} {fx:12g} {xnorm:12g} {gnorm:12g} {step: 8g}".format(n_iter=n_iter, n_ls=n_ls, fx=fx, xnorm=xnorm, gnorm=gnorm, step=step))
+        print(" ".join("{0:{1}}".format(dt, df) for dt, df in data_tokens))
 
         if self.trajectory_file and self.linear_to_structured:
             x_single, x_pair = self.linear_to_structured(x)

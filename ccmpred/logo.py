@@ -2,11 +2,11 @@ import ccmpred
 import sys
 
 
-def logo(color=None):
-    version = ccmpred.__version__
+is_tty = (sys.stdin.isatty()) and (sys.stdout.isatty())
 
-    if color is None:
-        color = (sys.stdin.isatty()) and (sys.stdout.isatty())
+
+def logo(color=is_tty):
+    version = ccmpred.__version__
 
     if color:
         print(" _____ _____ _____               _")
