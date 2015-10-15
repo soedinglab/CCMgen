@@ -80,7 +80,9 @@ void calculate_weights(
 		}
 
 		if(my_ids > idthres) {
+			#pragma omp atomic
 			weights[i]++;
+			#pragma omp atomic
 			weights[j]++;
 		}
 
