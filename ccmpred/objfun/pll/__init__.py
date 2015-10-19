@@ -14,7 +14,7 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
         self.msa = msa
 
         self.nrow, self.ncol = msa.shape
-        self.nsingle = self.ncol * 20
+        self.nsingle = self.ncol * 21
         self.nsingle_padded = self.nsingle + 32 - (self.nsingle % 32)
         self.nvar = self.nsingle_padded + self.ncol * self.ncol * 21 * 32
 
@@ -79,14 +79,14 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
 def linear_to_structured(x, ncol, clip=False):
     """Convert linear vector of variables into multidimensional arrays.
 
-    in linear memory, memory order is v[a, j] and w[b, j, a, i] (dimensions 20xL + padding + 21xLx32xL)
-    output will have  memory order of v[j, a] and w[i, j, a, b] (dimensions Lx20     and     LxLx32x21)
+    in linear memory, memory order is v[a, j] and w[b, j, a, i] (dimensions 21xL + padding + 21xLx32xL)
+    output will have  memory order of v[j, a] and w[i, j, a, b] (dimensions Lx21     and     LxLx32x21)
     """
 
-    nsingle = ncol * 20
+    nsingle = ncol * 21
     nsingle_padded = nsingle + 32 - (nsingle % 32)
 
-    x_single = x[:nsingle].reshape((20, ncol)).T
+    x_single = x[:nsingle].reshape((21, ncol)).T
     x_pair = np.transpose(x[nsingle_padded:].reshape((21, ncol, 32, ncol)), (3, 1, 2, 0))
 
     if clip:
@@ -98,12 +98,12 @@ def linear_to_structured(x, ncol, clip=False):
 def structured_to_linear(x_single, x_pair):
     """Convert structured variables into linear array
 
-    with input arrays of memory order v[j, a] and w[i, j, a, b] (dimensions Lx20     and     LxLx32x21)
-    output will have  memory order of v[a, j] and w[b, j, a, i] (dimensions 20xL + padding + 21xLx32xL)
+    with input arrays of memory order v[j, a] and w[i, j, a, b] (dimensions Lx21     and     LxLx32x21)
+    output will have  memory order of v[a, j] and w[b, j, a, i] (dimensions 21xL + padding + 21xLx32xL)
     """
 
     ncol = x_single.shape[0]
-    nsingle = ncol * 20
+    nsingle = ncol * 21
     nsingle_padded = nsingle + 32 - (nsingle % 32)
     nvar = nsingle_padded + ncol * ncol * 21 * 32
 

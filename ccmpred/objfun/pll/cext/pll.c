@@ -17,7 +17,7 @@ double evaluate_pll(
 	const uint32_t ncol,
 	const uint32_t nrow
 ) {
-	uint32_t nsingle = ncol * (N_ALPHA - 1);
+	uint32_t nsingle = ncol * N_ALPHA;
 	uint32_t nsingle_padded = nsingle + N_ALPHA_PAD - (nsingle % N_ALPHA_PAD);
 	uint64_t nvar_padded = nsingle_padded + ncol * ncol * N_ALPHA * N_ALPHA_PAD;
 

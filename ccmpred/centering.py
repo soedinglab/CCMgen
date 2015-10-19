@@ -16,5 +16,7 @@ def calculate(msa, weights, tau=0.1):
     aafrac_pseudo = (1 - tau) * aafrac[:, :20] + tau * aa_global_frac[np.newaxis, :20]
     aafrac_logsum = np.sum(np.log(aafrac_pseudo), axis=1)
 
-    v_center = np.log(aafrac_pseudo) - aafrac_logsum[:, np.newaxis] / 20
+    v_center = np.zeros((ncol, 21))
+    v_center[:, :20] = np.log(aafrac_pseudo) - aafrac_logsum[:, np.newaxis] / 20
+
     return v_center
