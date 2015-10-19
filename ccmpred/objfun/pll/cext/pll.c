@@ -47,13 +47,17 @@ double evaluate_pll(
 
 			for(uint32_t i = 0; i < ncol; i++) {
 				unsigned char xni = X(n, i);
-				precomp[a] += W(a, j, xni, i);
+
+				if (xni < N_ALPHA - 1) {
+					precomp[a] += W(a, j, xni, i);
+				}
 			}
 
-			precomp_sum += expf(precomp[a]);
+			precomp_sum += exp(precomp[a]);
 		}
 		precomp[N_ALPHA - 1] = 0;
 		precomp_sum = log(precomp_sum);
+
 
 		for(int a = 0; a < N_ALPHA - 1; a++) {
 			precomp_norm[(n * N_ALPHA + a) * ncol + j] = exp(precomp[a] - precomp_sum);
@@ -62,7 +66,9 @@ double evaluate_pll(
 
 		unsigned char xnj = X(n,j);
 
-		fx += weight * (-precomp[xnj] + precomp_sum);
+		if(xnj < N_ALPHA - 1) {
+			fx += weight * (precomp_sum - precomp[xnj]);
+		}
 
 	} // nj
 
@@ -87,12 +93,6 @@ double evaluate_pll(
 			}
 		}
 
-		for(uint32_t i = 0; i < ncol; i++) {
-			unsigned char xni = X(n,i);
-			#pragma omp atomic
-			G2(xnj, j, xni, i) -= weight;
-		}
-
 	} // nj
 
 	#pragma omp parallel for
@@ -103,9 +103,18 @@ double evaluate_pll(
 		double weight = weights[n];
 		unsigned char xnj = X(n,j);
 
-		for(uint32_t ai = 0; ai < (N_ALPHA - 1) * ncol; ai++) {
+		for(uint32_t i = 0; i < ncol; i++) {
+			unsigned char xni = X(n,i);
+			#pragma omp atomic
+			G2(xnj, j, xni, i) -= weight;
+		}
+
+		for(uint8_t a = 0; a < N_ALPHA - 1; a++) {
+			for(uint32_t i = 0; i < ncol; i++) {
 				#pragma omp atomic
-				g2[((xnj * ncol + j) * N_ALPHA_PAD * ncol + ai)] += weight * precomp_norm[(n * N_ALPHA * ncol) + ai];
+				g2[((xnj * ncol + j) * N_ALPHA_PAD + a) * ncol + i ] += weight * precomp_norm[(n * N_ALPHA + a) * ncol + i];
+
+			}
 		}
 
 	} // nj
