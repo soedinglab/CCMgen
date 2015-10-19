@@ -1,11 +1,12 @@
 import numpy as np
 import random
+import sys
 
 
 random.seed(42)
 
 
-def numdiff(objfun, x, epsilon=1e-8):
+def numdiff(objfun, x, epsilon=1e-5):
 
     _, g0 = objfun.evaluate(x)
 
@@ -16,7 +17,7 @@ def numdiff(objfun, x, epsilon=1e-8):
     print("Pos                                    x                 g            DeltaG")
     while True:
 
-        if random.random() <= 0.0:
+        if random.random() <= 0.2:
             i = random.randint(0, ncol - 1)
             a = random.randint(0, 19)
 
@@ -68,3 +69,5 @@ def numdiff(objfun, x, epsilon=1e-8):
         print("gNumeric                                 {numdiff: .10e} {delta: .10e}".format(posstr=posstr, xval=xval, numdiff=numdiff, delta=symdiff - numdiff))
 
         print()
+
+    sys.exit(0)
