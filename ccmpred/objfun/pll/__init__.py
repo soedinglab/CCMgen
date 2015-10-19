@@ -13,7 +13,22 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
 
         self.msa = msa
 
+        # neff = np.sum(weights)
+        # freqs_single, freqs_pair = freqs
+        # freqs_single = ccmpred.pseudocounts.degap(freqs_single, keep_dims=True)
+
+        msa_counts_single, msa_counts_pair = ccmpred.counts.both_counts(msa, weights)
+        msa_counts_single[:, 20] = 0
+        msa_counts_pair[:, :, 20, :] = 0
+        msa_counts_pair[:, :, :, 20] = 0
+
         self.nrow, self.ncol = msa.shape
+
+        for i in range(self.ncol):
+            msa_counts_pair[i, i, :, :] = 0
+
+        self.g_init = structured_to_linear(msa_counts_single, 2 * msa_counts_pair)
+
         self.nsingle = self.ncol * 21
         self.nsingle_padded = self.nsingle + 32 - (self.nsingle % 32)
         self.nvar = self.nsingle_padded + self.ncol * self.ncol * 21 * 32
@@ -59,7 +74,9 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
         return ccmpred.raw.CCMRaw(self.ncol, x_single, x_pair, {})
 
     def evaluate(self, x):
+
         fx, g = ccmpred.objfun.pll.cext.evaluate(x, self.g, self.g2, self.weights, self.msa)
+        self.g -= self.g_init
 
         x_single, x_pair = linear_to_structured(x, self.ncol)
         g_single, g_pair = linear_to_structured(g, self.ncol)

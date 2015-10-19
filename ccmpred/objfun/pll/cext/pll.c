@@ -80,8 +80,6 @@ double evaluate_pll(
 		double weight = weights[n];
 
 		if(xnj < N_ALPHA - 1) {
-			#pragma omp atomic
-			G1(xnj, j) -= weight;
 
 			for(uint32_t a = 0; a < N_ALPHA - 1; a++) {
 				#pragma omp atomic
@@ -102,12 +100,6 @@ double evaluate_pll(
 		uint32_t j = nj % ncol;
 		double weight = weights[n];
 		unsigned char xnj = X(n,j);
-
-		for(uint32_t i = 0; i < ncol; i++) {
-			unsigned char xni = X(n,i);
-			#pragma omp atomic
-			G2(xnj, j, xni, i) -= weight;
-		}
 
 		for(uint8_t a = 0; a < N_ALPHA - 1; a++) {
 			for(uint32_t i = 0; i < ncol; i++) {
