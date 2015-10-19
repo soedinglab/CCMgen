@@ -9,7 +9,7 @@ import ccmpred.objfun.cd.cext
 
 class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
 
-    def __init__(self, msa, weights, regularization, n_samples):
+    def __init__(self, msa, freqs, weights, regularization, n_samples):
         super(ContrastiveDivergence, self).__init__()
 
         self.msa = msa
@@ -22,7 +22,10 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         self.n_samples = n_samples
 
         # get constant alignment counts
-        self.msa_counts_single, self.msa_counts_pair = ccmpred.counts.both_counts(msa)
+        neff = np.sum(weights)
+        freqs_single, freqs_pair = freqs
+        self.msa_counts_single = freqs_single * neff
+        self.msa_counts_pair = freqs_pair * neff
 
         # reset gap counts
         self.msa_counts_single[:, 20] = 0
@@ -39,10 +42,10 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         return self.msa.copy()
 
     @classmethod
-    def init_from_raw(cls, msa, weights, raw, regularization):
+    def init_from_raw(cls, msa, freqs, weights, raw, regularization):
         n_samples = msa.shape[0]
 
-        res = cls(msa, weights, regularization, n_samples)
+        res = cls(msa, freqs, weights, regularization, n_samples)
 
         if msa.shape[1] != raw.ncol:
             raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))

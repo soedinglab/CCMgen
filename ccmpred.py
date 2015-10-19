@@ -4,6 +4,7 @@ import numpy as np
 
 import ccmpred.weighting
 import ccmpred.scoring
+import ccmpred.pseudocounts
 import ccmpred.raw
 import ccmpred.logo
 import ccmpred.io.alignment as aln
@@ -72,6 +73,10 @@ def parse_args():
     grp_rg = parser.add_option_group("Regularization")
     grp_rg.add_option("--reg-l2", dest="regularization", action="callback", callback=cb_reg_l2, type=float, nargs=2, metavar="LAMBDA_SINGLE LAMBDA_PAIR", default=lambda msa, centering: ccmpred.regularization.L2(10, 0.2 * (msa.shape[1] - 1), centering), help='Use L2 regularization with coefficients LAMBDA_SINGLE, LAMBDA_PAIR * L (default: 10 0.2)')
 
+    grp_pc = parser.add_option_group("Pseudocounts")
+    grp_pc.add_option("--pc-constant", dest="pseudocounts", action="store_const", default=ccmpred.pseudocounts.constant_pseudocounts, const=ccmpred.pseudocounts.constant_pseudocounts, help="Use constant pseudocounts (default)")
+    grp_pc.add_option("--pc-submat", dest="pseudocounts", action="store_const", const=ccmpred.pseudocounts.substitution_matrix_pseudocounts, help="Use substitution matrix pseudocounts")
+
     opt, args = parser.parse_args()
 
     if len(args) != 2:
@@ -102,16 +107,18 @@ def main():
     if not hasattr(opt, "objfun_kwargs"):
         opt.objfun_kwargs = {}
 
+    freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, opt.pseudocounts)
+
     if opt.initrawfile:
         raw = ccmpred.raw.parse(opt.initrawfile)
         centering = raw.x_single.copy()
         regularization = opt.regularization(msa, centering)
-        x0, f = opt.objfun.init_from_raw(msa, weights, raw, regularization, *opt.objfun_args, **opt.objfun_kwargs)
+        x0, f = opt.objfun.init_from_raw(msa, freqs, weights, raw, regularization, *opt.objfun_args, **opt.objfun_kwargs)
 
     else:
         centering = ccmpred.centering.calculate(msa, weights)
         regularization = opt.regularization(msa, centering)
-        x0, f = opt.objfun.init_from_default(msa, weights, regularization, *opt.objfun_args, **opt.objfun_kwargs)
+        x0, f = opt.objfun.init_from_default(msa, freqs, weights, regularization, *opt.objfun_args, **opt.objfun_kwargs)
 
     if opt.comparerawfile:
         craw = ccmpred.raw.parse(opt.comparerawfile)

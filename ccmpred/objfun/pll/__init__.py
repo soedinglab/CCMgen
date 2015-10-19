@@ -8,7 +8,7 @@ import ccmpred.objfun.pll.cext
 
 class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
 
-    def __init__(self, msa, weights, regularization):
+    def __init__(self, msa, freqs, weights, regularization):
         super(PseudoLikelihood, self).__init__()
 
         self.msa = msa
@@ -45,8 +45,8 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
         self.structured_to_linear = structured_to_linear
 
     @classmethod
-    def init_from_default(cls, msa, weights, regularization):
-        res = cls(msa, weights, regularization)
+    def init_from_default(cls, msa, freqs, weights, regularization):
+        res = cls(msa, freqs, weights, regularization)
 
         if hasattr(regularization, "center_x_single"):
             ncol = msa.shape[1]
@@ -59,8 +59,8 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
         return x, res
 
     @classmethod
-    def init_from_raw(cls, msa, weights, raw, regularization):
-        res = cls(msa, weights, regularization)
+    def init_from_raw(cls, msa, freqs, weights, raw, regularization):
+        res = cls(msa, freqs, weights, regularization)
 
         if msa.shape[1] != raw.ncol:
             raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
