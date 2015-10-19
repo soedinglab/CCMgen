@@ -39,3 +39,7 @@ def constant_pseudocounts(single_freq):
 
 def substitution_matrix_pseudocounts(single_freq):
     raise Exception("Implement me!")
+
+
+def no_pseudocounts(single_freq):
+    return single_freq

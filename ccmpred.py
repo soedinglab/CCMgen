@@ -76,6 +76,7 @@ def parse_args():
     grp_pc = parser.add_option_group("Pseudocounts")
     grp_pc.add_option("--pc-constant", dest="pseudocounts", action="store_const", default=ccmpred.pseudocounts.constant_pseudocounts, const=ccmpred.pseudocounts.constant_pseudocounts, help="Use constant pseudocounts (default)")
     grp_pc.add_option("--pc-submat", dest="pseudocounts", action="store_const", const=ccmpred.pseudocounts.substitution_matrix_pseudocounts, help="Use substitution matrix pseudocounts")
+    grp_pc.add_option("--pc-none", dest="pseudocounts", action="store_const", const=ccmpred.pseudocounts.no_pseudocounts, help="Use no pseudocounts")
 
     opt, args = parser.parse_args()
 
