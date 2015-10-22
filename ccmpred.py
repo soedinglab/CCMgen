@@ -117,7 +117,7 @@ def main():
         x0, f = opt.objfun.init_from_raw(msa, freqs, weights, raw, regularization, *opt.objfun_args, **opt.objfun_kwargs)
 
     else:
-        centering = ccmpred.centering.calculate(msa, weights)
+        centering = ccmpred.centering.calculate(msa, freqs)
         regularization = opt.regularization(msa, centering)
         x0, f = opt.objfun.init_from_default(msa, freqs, weights, regularization, *opt.objfun_args, **opt.objfun_kwargs)
 
