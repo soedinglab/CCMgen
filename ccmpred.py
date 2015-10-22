@@ -45,10 +45,7 @@ def cb_reg_l2(option, opt, value, parser):
 def parse_args():
     parser = optparse.OptionParser(usage="%prog [options] alnfile matfile")
     parser.add_option("-n", "--num-iterations", dest="numiter", default=100, type=int, help="Specify the number of iterations [default: %default]")
-
     parser.add_option("-i", "--init-from-raw", dest="initrawfile", default=None, help="Init potentials from raw file")
-    parser.add_option("-c", "--compare-to-raw", dest="comparerawfile", default=None, help="Compare potentials to raw file")
-    parser.add_option("--write-trajectory", dest="trajectoryfile", default=None, help="Write trajectory to files with format expression")
     parser.add_option("-r", "--write-raw", dest="outrawfile", default=None, help="Write potentials to raw file")
     parser.add_option("-b", "--write-msgpack", dest="outmsgpackfile", default=None, help="Write potentials to MessagePack file")
     parser.add_option("--aln-format", dest="aln_format", default="psicov", help="File format for MSAs [default: \"%default\"]")
@@ -58,8 +55,6 @@ def parse_args():
     grp_of.add_option("--ofn-pll", dest="objfun", action="store_const", const=pll.PseudoLikelihood, default=pll.PseudoLikelihood, help="Use pseudo-log-likelihood (default)")
     grp_of.add_option("--ofn-pcd", dest="objfun", action="store_const", const=cd.ContrastiveDivergence, help="Use Persistent Contrastive Divergence")
     grp_of.add_option("--ofn-tree-cd", action="callback", metavar="TREEFILE ANCESTORFILE", callback=cb_treecd, nargs=2, type=str, help="Use Tree-controlled Contrastive Divergence, loading tree data from TREEFILE and ancestral sequence data from ANCESTORFILE")
-
-    grp_of.add_option("--write-cd-alignment", dest="cd_alnfile", default=None, metavar="ALNFILE", help="Write PSICOV-formatted sampled alignment to ALNFILE")
 
     grp_al = parser.add_option_group("Algorithms")
     grp_al.add_option("--alg-gd", dest="algorithm", action="store_const", const=ALGORITHMS['gradient_descent'], default=ALGORITHMS['gradient_descent'], help='Use gradient descent (default)')
@@ -77,6 +72,11 @@ def parse_args():
     grp_pc.add_option("--pc-constant", dest="pseudocounts", action="store_const", default=ccmpred.pseudocounts.constant_pseudocounts, const=ccmpred.pseudocounts.constant_pseudocounts, help="Use constant pseudocounts (default)")
     grp_pc.add_option("--pc-submat", dest="pseudocounts", action="store_const", const=ccmpred.pseudocounts.substitution_matrix_pseudocounts, help="Use substitution matrix pseudocounts")
     grp_pc.add_option("--pc-none", dest="pseudocounts", action="store_const", const=ccmpred.pseudocounts.no_pseudocounts, help="Use no pseudocounts")
+
+    grp_db = parser.add_option_group("Debug Options")
+    grp_db.add_option("--write-trajectory", dest="trajectoryfile", default=None, help="Write trajectory to files with format expression")
+    grp_db.add_option("--write-cd-alignment", dest="cd_alnfile", default=None, metavar="ALNFILE", help="Write PSICOV-formatted sampled alignment to ALNFILE")
+    grp_db.add_option("-c", "--compare-to-raw", dest="comparerawfile", default=None, help="Compare potentials to raw file")
 
     opt, args = parser.parse_args()
 
