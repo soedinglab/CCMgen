@@ -15,12 +15,7 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
 
         neff = np.sum(weights)
         freqs_single, freqs_pair = freqs
-        # freqs_single = ccmpred.pseudocounts.degap(freqs_single, keep_dims=True)
         msa_counts_single, msa_counts_pair = neff * freqs_single, neff * freqs_pair
-        # np.savetxt("msa_counts_single_freqs.txt", msa_counts_single)
-
-        # msa_counts_single2, msa_counts_pair2 = ccmpred.counts.both_counts(msa, weights)
-        # np.savetxt("msa_counts_single_msa.txt", msa_counts_single2)
 
         msa_counts_single[:, 20] = 0
         msa_counts_pair[:, :, 20, :] = 0
