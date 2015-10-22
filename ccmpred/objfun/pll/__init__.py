@@ -70,7 +70,7 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
 
     def finalize(self, x):
         x_single, x_pair = linear_to_structured(x, self.ncol, clip=True)
-        return ccmpred.raw.CCMRaw(self.ncol, x_single, x_pair, {})
+        return ccmpred.raw.CCMRaw(self.ncol, x_single[:, :20], x_pair, {})
 
     def evaluate(self, x):
 
