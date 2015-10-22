@@ -64,8 +64,8 @@ class ObjectiveFunction(object):
 
         if self.compare_raw and self.linear_to_structured:
             ox_single, ox_pair = self.linear_to_structured(x)
-            dx_single = ox_single - self.compare_raw.x_single
-            dx_pair = ox_pair - self.compare_raw.x_pair
+            dx_single = ox_single[:, :20] - self.compare_raw.x_single
+            dx_pair = ox_pair[:, :, :21, :21] - self.compare_raw.x_pair
 
             dist_single = np.sqrt(np.sum(dx_single ** 2))
             dist_pair = np.sqrt(np.sum(dx_pair ** 2))
