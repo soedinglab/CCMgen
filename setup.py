@@ -1,6 +1,10 @@
 import numpy.distutils.intelccompiler
 from setuptools import setup, Extension, find_packages
 
+
+def ext(name, sources=[], include_dirs=[], library_dirs=[], libraries=[], extra_compile_args=['-g -fopenmp -std=c99'], extra_link_args=['-g -fopenmp']):
+    return Extension(name, include_dirs=include_dirs, library_dirs=library_dirs, libraries=libraries, sources=sources, extra_compile_args=extra_compile_args, extra_link_args=extra_link_args)
+
 setup(
     name="CCMpred",
     version="1.0.0",
@@ -8,66 +12,39 @@ setup(
     license="AGPLv3",
     packages=find_packages(),
     ext_modules=[
-        Extension(
+        ext(
             'ccmpred.objfun.pll.cext.libpll',
-            include_dirs=[],
-            library_dirs=[],
-            libraries=[],
-            sources=['ccmpred/objfun/pll/cext/pll.c'],
-            extra_compile_args=['-g -fopenmp -std=c99'],
-            extra_link_args=['-g -fopenmp'],
+            sources=['ccmpred/objfun/pll/cext/pll.c']
         ),
-        Extension(
+        ext(
             'ccmpred.objfun.cd.cext.libcd',
-            include_dirs=[],
-            library_dirs=[],
-            libraries=[],
             sources=[
                 'ccmpred/objfun/cd/cext/cd.c',
                 'ccmpred/objfun/cd/cext/cdutil.c'
-            ],
-            extra_compile_args=['-g -fopenmp -std=c99'],
-            extra_link_args=['-g -fopenmp'],
+            ]
         ),
-        Extension(
+        ext(
             'ccmpred.objfun.treecd.cext.libtreecd',
             include_dirs=['ccmpred/objfun/cd/cext'],
-            library_dirs=[],
-            libraries=[],
             sources=[
                 'ccmpred/objfun/cd/cext/cd.c',
                 'ccmpred/objfun/cd/cext/cdutil.c',
                 'ccmpred/objfun/treecd/cext/treecd.c',
-            ],
-            extra_compile_args=['-g -fopenmp -std=c99'],
-            extra_link_args=['-g -fopenmp'],
+            ]
         ),
-        Extension(
+        ext(
             'ccmpred.counts.libmsacounts',
-            include_dirs=[],
-            library_dirs=[],
-            libraries=[],
-            sources=['ccmpred/counts/msacounts.c'],
-            extra_compile_args=['-g -fopenmp -std=c99'],
-            extra_link_args=['-g -fopenmp'],
+            sources=['ccmpred/counts/msacounts.c']
         ),
-        Extension(
+        ext(
             'ccmpred.gaps.cext.libgaps',
-            include_dirs=[],
-            library_dirs=[],
-            libraries=[],
             sources=['ccmpred/gaps/cext/gaps.c'],
             extra_compile_args=['-g -std=c99'],
             extra_link_args=['-g'],
         ),
-        Extension(
+        ext(
             'ccmpred.weighting.cext.libweighting',
-            include_dirs=[],
-            library_dirs=[],
-            libraries=[],
-            sources=['ccmpred/weighting/cext/weighting.c'],
-            extra_compile_args=['-g -fopenmp -std=c99'],
-            extra_link_args=['-g -fopenmp'],
+            sources=['ccmpred/weighting/cext/weighting.c']
         )
     ],
     scripts=['ccmpred.py']
