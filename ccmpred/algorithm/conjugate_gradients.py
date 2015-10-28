@@ -12,7 +12,6 @@ def linesearch(x0, fx, g, objfun, s, alpha, ftol=1e-4, max_linesearch=5, alpha_m
 
     while True:
         if n_linesearch >= max_linesearch:
-            print("MAX_LINESEARCH")
             return -1, fx, alpha, g, x
 
         n_linesearch += 1
@@ -39,16 +38,22 @@ def minimize(objfun, x, maxiter, linesearch_fn=linesearch, epsilon=1e-3, converg
     gnorm = np.sum(g * g)
     xnorm = np.sum(x * x)
 
-    objfun.progress(x, g, fx, 0, 0, 0)
+    objfun.progress(x, g, fx, 0, 1, 0)
 
     gprevnorm = None
     alpha_prev = None
     dg_prev = None
     s = None
 
+    ret = {
+        "message": "Unknown",
+        "code": -9999
+    }
+
     if gnorm / xnorm < epsilon:
-        print("ALREADY MINIMIZED")
-        return fx, x
+        ret['message'] = "Already minimized!"
+        ret['code'] = 1
+        return fx, x, ret
 
     lastfx = []
 
@@ -56,7 +61,8 @@ def minimize(objfun, x, maxiter, linesearch_fn=linesearch, epsilon=1e-3, converg
     iteration = 0
     while True:
         if iteration >= maxiter:
-            print("MAX ITER")
+            ret['message'] = "Reached maximum number of iterations"
+            ret['code'] = 2
             break
 
         if iteration > 0:
@@ -72,8 +78,8 @@ def minimize(objfun, x, maxiter, linesearch_fn=linesearch, epsilon=1e-3, converg
         n_linesearch, fx, alpha, g, x = linesearch_fn(x, fx, g, objfun, s, alpha)
 
         if n_linesearch < 0:
-            print("NO LINESEARCH")
-            # ret = n_linesearch
+            ret['message'] = "Cannot find appropriate line search distance -- this might indicate a numerical problem with the gradient!"
+            ret['code'] = -2
             break
 
         gprevnorm = gnorm
@@ -86,7 +92,8 @@ def minimize(objfun, x, maxiter, linesearch_fn=linesearch, epsilon=1e-3, converg
         if len(lastfx) >= convergence_prev:
             check_fx = lastfx[-convergence_prev]
             if (check_fx - fx) / check_fx < epsilon:
-                print("SUCCESS")
+                ret['message'] = 'Success!'
+                ret['code'] = 0
                 break
 
         lastfx.append(fx)
@@ -94,4 +101,4 @@ def minimize(objfun, x, maxiter, linesearch_fn=linesearch, epsilon=1e-3, converg
         iteration += 1
         objfun.progress(x, g, fx, iteration, n_linesearch, alpha)
 
-    return fx, x
+    return fx, x, ret

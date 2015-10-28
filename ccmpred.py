@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import optparse
 import numpy as np
+import sys
 
 import ccmpred.weighting
 import ccmpred.scoring
@@ -90,12 +91,10 @@ def parse_args():
 
 
 def main():
-    opt, args = parse_args()
+    opt, (alnfile, matfile) = parse_args()
 
     if opt.logo:
         ccmpred.logo.logo()
-
-    alnfile, matfile = args
 
     msa = aln.read_msa(alnfile, opt.aln_format)
     weights = opt.weight(msa)
@@ -129,7 +128,11 @@ def main():
 
     print("Will optimize {0} {1} variables with {2}\n".format(x0.size, x0.dtype, f))
 
-    fx, x = opt.algorithm(f, x0, opt)
+    fx, x, algret = opt.algorithm(f, x0, opt)
+
+    condition = "Finished" if algret['code'] >= 0 else "Exited"
+
+    print("\n{0} with code {code} -- {message}".format(condition, **algret))
 
     res = f.finalize(x)
 
@@ -141,14 +144,21 @@ def main():
             aln.write_msa_psicov(f, msa_sampled)
 
     if opt.outrawfile:
+        print("Writing raw-formatted potentials to {0}".format(opt.outrawfile))
         ccmpred.raw.write_oldraw(opt.outrawfile, res)
 
     if opt.outmsgpackfile:
+        print("Writing msgpack-formatted potentials to {0}".format(opt.outmsgpackfile))
         ccmpred.raw.write_msgpack(opt.outmsgpackfile, res)
 
+    print("Writing summed score matrix to {0}".format(matfile))
     mat = ccmpred.scoring.frobenius_score(res.x_pair)
-
     np.savetxt(matfile, mat)
+
+    print()
+
+    exitcode = 0 if algret['code'] > 0 else -algret['code']
+    sys.exit(exitcode)
 
 
 if __name__ == '__main__':
