@@ -69,8 +69,8 @@ def parse_args():
     grp_rg.add_option("--reg-l2", dest="regularization", action="callback", callback=cb_reg_l2, type=float, nargs=2, metavar="LAMBDA_SINGLE LAMBDA_PAIR", default=lambda msa, centering: ccmpred.regularization.L2(10, 0.2 * (msa.shape[1] - 1), centering), help='Use L2 regularization with coefficients LAMBDA_SINGLE, LAMBDA_PAIR * L (default: 10 0.2)')
 
     grp_pc = parser.add_option_group("Pseudocounts")
-    grp_pc.add_option("--pc-constant", dest="pseudocounts", action="store_const", default=ccmpred.pseudocounts.constant_pseudocounts, const=ccmpred.pseudocounts.constant_pseudocounts, help="Use constant pseudocounts (default)")
-    grp_pc.add_option("--pc-submat", dest="pseudocounts", action="store_const", const=ccmpred.pseudocounts.substitution_matrix_pseudocounts, help="Use substitution matrix pseudocounts")
+    grp_pc.add_option("--pc-submat", dest="pseudocounts", action="store_const", default=ccmpred.pseudocounts.substitution_matrix_pseudocounts, const=ccmpred.pseudocounts.substitution_matrix_pseudocounts, help="Use substitution matrix pseudocounts")
+    grp_pc.add_option("--pc-constant", dest="pseudocounts", action="store_const", const=ccmpred.pseudocounts.constant_pseudocounts, help="Use constant pseudocounts (default)")
     grp_pc.add_option("--pc-none", dest="pseudocounts", action="store_const", const=ccmpred.pseudocounts.no_pseudocounts, help="Use no pseudocounts")
 
     grp_db = parser.add_option_group("Debug Options")
