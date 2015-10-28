@@ -1,6 +1,7 @@
 import numpy as np
 
 import ccmpred.counts
+import ccmpred.substitution_matrices
 
 
 def calculate_frequencies(msa, weights, pseudocount_function, pseudocount_n=1):
@@ -37,8 +38,24 @@ def constant_pseudocounts(single_freq):
     return np.mean(single_freq, axis=0)[np.newaxis, :]
 
 
-def substitution_matrix_pseudocounts(single_freq):
-    raise Exception("Implement me!")
+def substitution_matrix_pseudocounts(single_freq, substitution_matrix=ccmpred.substitution_matrices.BLOSUM62):
+    """
+    Substitution matrix pseudocounts
+
+    $\tilde{q}(x_i = a) = \sum_{b=1}^{20} p(a | b) q_0(x_i = b)$
+    """
+    single_freq_degap = degap(single_freq)
+
+    # $p(b) = \sum{a=1}^{20} p(a, b)$
+    pb = np.sum(substitution_matrix, axis=0)
+
+    # p(a | b) = p(a, b) / p(b)
+    cond_prob = substitution_matrix / pb[np.newaxis, :]
+
+    freqs_pc = np.zeros_like(single_freq)
+    freqs_pc[:, :20] = np.sum(cond_prob[np.newaxis, :, :] * single_freq_degap[:, np.newaxis, :], axis=2)
+
+    return freqs_pc
 
 
 def no_pseudocounts(single_freq):
