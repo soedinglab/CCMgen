@@ -45,6 +45,18 @@ class RegL2Action(argparse.Action):
         namespace.regularization = lambda msa, centering: ccmpred.regularization.L2(lambda_single, lambda_pair * (msa.shape[1] - 1), centering)
 
 
+class StoreConstParametersAction(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, arg_default=None, default=None, **kwargs):
+        self.arg_default = arg_default
+        default = (default, arg_default)
+        super(StoreConstParametersAction, self).__init__(option_strings, dest, nargs=nargs, default=default, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        if values is None or values == self.const:
+            values = self.arg_default
+        setattr(namespace, self.dest, (self.const, values))
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
 
@@ -76,8 +88,8 @@ def parse_args():
     grp_rg.add_argument("--reg-l2", dest="regularization", action=RegL2Action, type=float, nargs=2, metavar="LAMBDA_SINGLE LAMBDA_PAIR", default=lambda msa, centering: ccmpred.regularization.L2(10, 0.2 * (msa.shape[1] - 1), centering), help='Use L2 regularization with coefficients LAMBDA_SINGLE, LAMBDA_PAIR * L (default: 10 0.2)')
 
     grp_pc = parser.add_argument_group("Pseudocounts")
-    grp_pc.add_argument("--pc-submat", dest="pseudocounts", action="store_const", default=ccmpred.pseudocounts.substitution_matrix_pseudocounts, const=ccmpred.pseudocounts.substitution_matrix_pseudocounts, help="Use substitution matrix pseudocounts (default)")
-    grp_pc.add_argument("--pc-constant", dest="pseudocounts", action="store_const", const=ccmpred.pseudocounts.constant_pseudocounts, help="Use constant pseudocounts")
+    grp_pc.add_argument("--pc-submat", dest="pseudocounts", action=StoreConstParametersAction, default=ccmpred.pseudocounts.substitution_matrix_pseudocounts, const=ccmpred.pseudocounts.substitution_matrix_pseudocounts, nargs="?", metavar="N", type=float, arg_default=1, help="Use N substitution matrix pseudocounts (default) (by default, N=1)")
+    grp_pc.add_argument("--pc-constant", dest="pseudocounts", action=StoreConstParametersAction, const=ccmpred.pseudocounts.constant_pseudocounts, metavar="N", nargs="?", type=float, arg_default=1, help="Use N constant pseudocounts (by default, N=1)")
     grp_pc.add_argument("--pc-none", dest="pseudocounts", action="store_const", const=ccmpred.pseudocounts.no_pseudocounts, help="Use no pseudocounts")
 
     grp_db = parser.add_argument_group("Debug Options")
@@ -111,7 +123,7 @@ def main():
     if not hasattr(opt, "objfun_kwargs"):
         opt.objfun_kwargs = {}
 
-    freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, opt.pseudocounts)
+    freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, opt.pseudocounts[0], pseudocount_n=opt.pseudocounts[1])
 
     if opt.initrawfile:
         raw = ccmpred.raw.parse(opt.initrawfile)
