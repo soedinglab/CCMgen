@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import optparse
+import argparse
 import numpy as np
 import sys
 
@@ -27,76 +27,80 @@ ALGORITHMS = {
 }
 
 
-def cb_treecd(option, opt, value, parser):
-    import Bio.Phylo
-    treefile, seq0file = value
+class TreeCDAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        import Bio.Phylo
+        treefile, seq0file = values
 
-    tree = Bio.Phylo.read(treefile, "newick")
-    seq0, id0 = aln.read_msa(seq0file, parser.values.aln_format, return_identifiers=True)
+        tree = Bio.Phylo.read(treefile, "newick")
+        seq0, id0 = aln.read_msa(seq0file, parser.values.aln_format, return_identifiers=True)
 
-    parser.values.objfun_args = [tree, seq0, id0]
-    parser.values.objfun = treecd.TreeContrastiveDivergence
+        namespace.objfun_args = [tree, seq0, id0]
+        namespace.objfun = treecd.TreeContrastiveDivergence
 
 
-def cb_reg_l2(option, opt, value, parser):
-    lambda_single, lambda_pair = value
-    parser.values.regularization = lambda msa, centering: ccmpred.regularization.L2(lambda_single, lambda_pair * (msa.shape[1] - 1), centering)
+class RegL2Action(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        lambda_single, lambda_pair = values
+        namespace.regularization = lambda msa, centering: ccmpred.regularization.L2(lambda_single, lambda_pair * (msa.shape[1] - 1), centering)
 
 
 def parse_args():
-    parser = optparse.OptionParser(usage="%prog [options] alnfile matfile")
-    parser.add_option("-n", "--num-iterations", dest="numiter", default=100, type=int, help="Specify the number of iterations [default: %default]")
-    parser.add_option("-i", "--init-from-raw", dest="initrawfile", default=None, help="Init potentials from raw file")
-    parser.add_option("-r", "--write-raw", dest="outrawfile", default=None, help="Write potentials to raw file")
-    parser.add_option("-b", "--write-msgpack", dest="outmsgpackfile", default=None, help="Write potentials to MessagePack file")
-    parser.add_option("--aln-format", dest="aln_format", default="psicov", help="File format for MSAs [default: \"%default\"]")
-    parser.add_option("--no-logo", dest="logo", default=True, action="store_false", help="Disable showing the CCMpred logo")
+    parser = argparse.ArgumentParser()
 
-    grp_of = parser.add_option_group("Objective Functions")
-    grp_of.add_option("--ofn-pll", dest="objfun", action="store_const", const=pll.PseudoLikelihood, default=pll.PseudoLikelihood, help="Use pseudo-log-likelihood (default)")
-    grp_of.add_option("--ofn-pcd", dest="objfun", action="store_const", const=cd.ContrastiveDivergence, help="Use Persistent Contrastive Divergence")
-    grp_of.add_option("--ofn-tree-cd", action="callback", metavar="TREEFILE ANCESTORFILE", callback=cb_treecd, nargs=2, type=str, help="Use Tree-controlled Contrastive Divergence, loading tree data from TREEFILE and ancestral sequence data from ANCESTORFILE")
+    parser.add_argument("-n", "--num-iterations", dest="numiter", default=100, type=int, help="Specify the number of iterations [default: %(default)s]")
+    parser.add_argument("-i", "--init-from-raw", dest="initrawfile", default=None, help="Init potentials from raw file")
+    parser.add_argument("-r", "--write-raw", dest="outrawfile", default=None, help="Write potentials to raw file")
+    parser.add_argument("-b", "--write-msgpack", dest="outmsgpackfile", default=None, help="Write potentials to MessagePack file")
+    parser.add_argument("--aln-format", dest="aln_format", default="psicov", help="File format for MSAs [default: \"%(default)s\"]")
+    parser.add_argument("--no-logo", dest="logo", default=True, action="store_false", help="Disable showing the CCMpred logo")
 
-    grp_al = parser.add_option_group("Algorithms")
-    grp_al.add_option("--alg-gd", dest="algorithm", action="store_const", const=ALGORITHMS['gradient_descent'], default=ALGORITHMS['gradient_descent'], help='Use gradient descent (default)')
-    grp_al.add_option("--alg-cg", dest="algorithm", action="store_const", const=ALGORITHMS['conjugate_gradients'], help='Use conjugate gradients')
-    grp_al.add_option("--alg-nd", dest="algorithm", action="store_const", const=ALGORITHMS['numerical_differentiation'], help='Debug gradients with numerical differentiation')
+    parser.add_argument("alnfile", help="Input alignment file to use")
+    parser.add_argument("matfile", help="Output matrix file to write")
 
-    grp_wt = parser.add_option_group("Weighting")
-    grp_wt.add_option("--wt-simple", dest="weight", action="store_const", const=ccmpred.weighting.weights_simple, default=ccmpred.weighting.weights_simple, help='Use simple weighting (default)')
-    grp_wt.add_option("--wt-uniform", dest="weight", action="store_const", const=ccmpred.weighting.weights_uniform, help='Use uniform weighting')
+    grp_of = parser.add_argument_group("Objective Functions")
+    grp_of.add_argument("--ofn-pll", dest="objfun", action="store_const", const=pll.PseudoLikelihood, default=pll.PseudoLikelihood, help="Use pseudo-log-likelihood (default)")
+    grp_of.add_argument("--ofn-pcd", dest="objfun", action="store_const", const=cd.ContrastiveDivergence, help="Use Persistent Contrastive Divergence")
+    grp_of.add_argument("--ofn-tree-cd", action=TreeCDAction, metavar="TREEFILE ANCESTORFILE", nargs=2, type=str, help="Use Tree-controlled Contrastive Divergence, loading tree data from TREEFILE and ancestral sequence data from ANCESTORFILE")
 
-    grp_rg = parser.add_option_group("Regularization")
-    grp_rg.add_option("--reg-l2", dest="regularization", action="callback", callback=cb_reg_l2, type=float, nargs=2, metavar="LAMBDA_SINGLE LAMBDA_PAIR", default=lambda msa, centering: ccmpred.regularization.L2(10, 0.2 * (msa.shape[1] - 1), centering), help='Use L2 regularization with coefficients LAMBDA_SINGLE, LAMBDA_PAIR * L (default: 10 0.2)')
+    grp_al = parser.add_argument_group("Algorithms")
+    grp_al.add_argument("--alg-gd", dest="algorithm", action="store_const", const=ALGORITHMS['gradient_descent'], default=ALGORITHMS['gradient_descent'], help='Use gradient descent (default)')
+    grp_al.add_argument("--alg-cg", dest="algorithm", action="store_const", const=ALGORITHMS['conjugate_gradients'], help='Use conjugate gradients')
+    grp_al.add_argument("--alg-nd", dest="algorithm", action="store_const", const=ALGORITHMS['numerical_differentiation'], help='Debug gradients with numerical differentiation')
 
-    grp_pc = parser.add_option_group("Pseudocounts")
-    grp_pc.add_option("--pc-submat", dest="pseudocounts", action="store_const", default=ccmpred.pseudocounts.substitution_matrix_pseudocounts, const=ccmpred.pseudocounts.substitution_matrix_pseudocounts, help="Use substitution matrix pseudocounts (default)")
-    grp_pc.add_option("--pc-constant", dest="pseudocounts", action="store_const", const=ccmpred.pseudocounts.constant_pseudocounts, help="Use constant pseudocounts")
-    grp_pc.add_option("--pc-none", dest="pseudocounts", action="store_const", const=ccmpred.pseudocounts.no_pseudocounts, help="Use no pseudocounts")
+    grp_wt = parser.add_argument_group("Weighting")
+    grp_wt.add_argument("--wt-simple", dest="weight", action="store_const", const=ccmpred.weighting.weights_simple, default=ccmpred.weighting.weights_simple, help='Use simple weighting (default)')
+    grp_wt.add_argument("--wt-uniform", dest="weight", action="store_const", const=ccmpred.weighting.weights_uniform, help='Use uniform weighting')
 
-    grp_db = parser.add_option_group("Debug Options")
-    grp_db.add_option("--write-trajectory", dest="trajectoryfile", default=None, help="Write trajectory to files with format expression")
-    grp_db.add_option("--write-cd-alignment", dest="cd_alnfile", default=None, metavar="ALNFILE", help="Write PSICOV-formatted sampled alignment to ALNFILE")
-    grp_db.add_option("-c", "--compare-to-raw", dest="comparerawfile", default=None, help="Compare potentials to raw file")
+    grp_rg = parser.add_argument_group("Regularization")
+    grp_rg.add_argument("--reg-l2", dest="regularization", action=RegL2Action, type=float, nargs=2, metavar="LAMBDA_SINGLE LAMBDA_PAIR", default=lambda msa, centering: ccmpred.regularization.L2(10, 0.2 * (msa.shape[1] - 1), centering), help='Use L2 regularization with coefficients LAMBDA_SINGLE, LAMBDA_PAIR * L (default: 10 0.2)')
 
-    opt, args = parser.parse_args()
+    grp_pc = parser.add_argument_group("Pseudocounts")
+    grp_pc.add_argument("--pc-submat", dest="pseudocounts", action="store_const", default=ccmpred.pseudocounts.substitution_matrix_pseudocounts, const=ccmpred.pseudocounts.substitution_matrix_pseudocounts, help="Use substitution matrix pseudocounts (default)")
+    grp_pc.add_argument("--pc-constant", dest="pseudocounts", action="store_const", const=ccmpred.pseudocounts.constant_pseudocounts, help="Use constant pseudocounts")
+    grp_pc.add_argument("--pc-none", dest="pseudocounts", action="store_const", const=ccmpred.pseudocounts.no_pseudocounts, help="Use no pseudocounts")
 
-    if len(args) != 2:
-        parser.error("Need exactly 2 positional arguments!")
+    grp_db = parser.add_argument_group("Debug Options")
+    grp_db.add_argument("--write-trajectory", dest="trajectoryfile", default=None, help="Write trajectory to files with format expression")
+    grp_db.add_argument("--write-cd-alignment", dest="cd_alnfile", default=None, metavar="ALNFILE", help="Write PSICOV-formatted sampled alignment to ALNFILE")
+    grp_db.add_argument("-c", "--compare-to-raw", dest="comparerawfile", default=None, help="Compare potentials to raw file")
 
-    if opt.cd_alnfile and opt.objfun not in (cd.ContrastiveDivergence, treecd.TreeContrastiveDivergence):
+    args = parser.parse_args()
+
+    if args.cd_alnfile and args.objfun not in (cd.ContrastiveDivergence, treecd.TreeContrastiveDivergence):
         parser.error("--write-cd-alignment is only supported for (tree) contrastive divergence!")
 
-    return opt, args
+    return args
 
 
 def main():
-    opt, (alnfile, matfile) = parse_args()
+
+    opt = parse_args()
 
     if opt.logo:
         ccmpred.logo.logo()
 
-    msa = aln.read_msa(alnfile, opt.aln_format)
+    msa = aln.read_msa(opt.alnfile, opt.aln_format)
     weights = opt.weight(msa)
 
     print("Reweighted {0} sequences to Neff={1:g} (min={2:g}, mean={3:g}, max={4:g})".format(msa.shape[0], np.sum(weights), np.min(weights), np.mean(weights), np.max(weights)))
@@ -151,9 +155,9 @@ def main():
         print("Writing msgpack-formatted potentials to {0}".format(opt.outmsgpackfile))
         ccmpred.raw.write_msgpack(opt.outmsgpackfile, res)
 
-    print("Writing summed score matrix to {0}".format(matfile))
+    print("Writing summed score matrix to {0}".format(opt.matfile))
     mat = ccmpred.scoring.frobenius_score(res.x_pair)
-    np.savetxt(matfile, mat)
+    np.savetxt(opt.matfile, mat)
 
     print()
 
