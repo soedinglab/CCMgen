@@ -20,6 +20,11 @@ import ccmpred.algorithm.gradient_descent
 import ccmpred.algorithm.conjugate_gradients
 import ccmpred.algorithm.numdiff
 
+EPILOG = """
+CCMpred is a fast python implementation of the maximum pseudo-likelihood class of contact prediction methods. From an alignment given as alnfile, it will maximize the likelihood of the pseudo-likelihood of a Potts model with 21 states for amino acids and gaps. The L2 norms of the pairwise coupling potentials will be written to the output matfile.
+"""
+
+
 ALGORITHMS = {
     "gradient_descent": lambda of, x0, opt: ccmpred.algorithm.gradient_descent.minimize(of, x0, opt.numiter, alpha0=5e-3, alpha_decay=1e1),
     "conjugate_gradients": lambda of, x0, opt: ccmpred.algorithm.conjugate_gradients.minimize(of, x0, opt.numiter, epsilon=1e-7),
@@ -58,7 +63,7 @@ class StoreConstParametersAction(argparse.Action):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="Recover direct couplings from a multiple sequence alignment", epilog=EPILOG)
 
     parser.add_argument("-n", "--num-iterations", dest="numiter", default=100, type=int, help="Specify the number of iterations [default: %(default)s]")
     parser.add_argument("-i", "--init-from-raw", dest="initrawfile", default=None, help="Init potentials from raw file")
