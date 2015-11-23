@@ -4,19 +4,24 @@ import ccmpred.counts
 import ccmpred.substitution_matrices
 
 
-def calculate_frequencies(msa, weights, pseudocount_function, pseudocount_n=1):
+def calculate_frequencies(msa, weights, pseudocount_function, pseudocount_n_single=1, pseudocount_n_pair=None):
+
+    if pseudocount_n_pair is None:
+        pseudocount_n_pair = pseudocount_n_single
+
     single_counts, pair_counts = ccmpred.counts.both_counts(msa, weights)
     nrow = np.sum(weights) if weights is not None else msa.shape[0]
 
-    pseudocount_ratio = pseudocount_n / (nrow + pseudocount_n)
+    pseudocount_ratio_single = pseudocount_n_single / (nrow + pseudocount_n_single)
+    pseudocount_ratio_pair = pseudocount_n_pair / (nrow + pseudocount_n_pair)
 
     single_freq = single_counts / nrow
     pair_freq = pair_counts / nrow
 
     pcounts = pseudocount_function(single_freq)
 
-    single_freq_pc = (1 - pseudocount_ratio) * single_freq + pseudocount_ratio * pcounts
-    pair_freq_pc = ((1 - pseudocount_ratio) ** 2) * (
+    single_freq_pc = (1 - pseudocount_ratio_single) * single_freq + pseudocount_ratio_single * pcounts
+    pair_freq_pc = ((1 - pseudocount_ratio_pair) ** 2) * (
         pair_freq - single_freq[:, np.newaxis, :, np.newaxis] * single_freq[np.newaxis, :, np.newaxis, :]
     ) + (single_freq_pc[:, np.newaxis, :, np.newaxis] * single_freq_pc[np.newaxis, :, np.newaxis, :])
 
