@@ -53,10 +53,10 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         x = structured_to_linear(raw.x_single, raw.x_pair)
         return x, res
 
-    def finalize(self, x):
+    def finalize(self, x, meta):
         x_single, x_pair = linear_to_structured(x, self.ncol, clip=True)
 
-        return ccmpred.raw.CCMRaw(self.ncol, x_single, x_pair, {})
+        return ccmpred.raw.CCMRaw(self.ncol, x_single, x_pair, meta)
 
     def sample_sequences(self, x):
         return ccmpred.objfun.cd.cext.sample_sequences(self.msa_sampled, x)

@@ -48,7 +48,7 @@ void count_ids(
 }
 
 
-void calculate_weights(
+void calculate_weights_simple(
 	const uint8_t *msa,
 	double *weights,
 	double cutoff,

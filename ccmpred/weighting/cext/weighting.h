@@ -10,7 +10,7 @@ void count_ids(
 	const uint64_t ncol
 );
 
-void calculate_weights(
+void calculate_weights_simple(
 	const uint8_t *msa,
 	double *weights,
 	double cutoff,

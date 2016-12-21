@@ -17,8 +17,8 @@ libweighting.count_ids.argtypes = [
     ctypes.c_uint64,    # ncol
 ]
 
-libweighting.calculate_weights.restype = None
-libweighting.calculate_weights.argtypes = [
+libweighting.calculate_weights_simple.restype = None
+libweighting.calculate_weights_simple.argtypes = [
     array_2d_char,      # *msa
     array_1d_double,    # *weights
     ctypes.c_double,    # cutoff
@@ -35,10 +35,10 @@ def count_ids(msa):
     return ids + ids.T - np.diag(ids.diagonal())
 
 
-def calculate_weights(msa, cutoff):
+def calculate_weights_simple(msa, cutoff):
     nrow = msa.shape[0]
     weights = np.zeros((nrow,), dtype='double')
-    libweighting.calculate_weights(msa, weights, cutoff, *msa.shape)
+    libweighting.calculate_weights_simple(msa, weights, cutoff, *msa.shape)
 
     return weights
 

@@ -2,7 +2,9 @@
 import argparse
 import numpy as np
 import sys
+import json
 
+import ccmpred.metadata
 import ccmpred.weighting
 import ccmpred.scoring
 import ccmpred.pseudocounts
@@ -11,6 +13,7 @@ import ccmpred.logo
 import ccmpred.io.alignment as aln
 import ccmpred.centering
 import ccmpred.regularization
+import ccmpred.model_probabilities
 
 import ccmpred.objfun.pll as pll
 import ccmpred.objfun.cd as cd
@@ -27,7 +30,7 @@ CCMpred is a fast python implementation of the maximum pseudo-likelihood class o
 
 ALGORITHMS = {
     "gradient_descent": lambda of, x0, opt: ccmpred.algorithm.gradient_descent.minimize(of, x0, opt.numiter, alpha0=5e-3, alpha_decay=1e1),
-    "conjugate_gradients": lambda of, x0, opt: ccmpred.algorithm.conjugate_gradients.minimize(of, x0, opt.numiter, epsilon=1e-7),
+    "conjugate_gradients": lambda of, x0, opt: ccmpred.algorithm.conjugate_gradients.minimize(of, x0, opt.numiter, epsilon=1e-5),
     "numerical_differentiation": lambda of, x0, opt: ccmpred.algorithm.numdiff.numdiff(of, x0),
 }
 
@@ -69,6 +72,8 @@ def parse_args():
     parser.add_argument("-i", "--init-from-raw", dest="initrawfile", default=None, help="Init potentials from raw file")
     parser.add_argument("-r", "--write-raw", dest="outrawfile", default=None, help="Write potentials to raw file")
     parser.add_argument("-b", "--write-msgpack", dest="outmsgpackfile", default=None, help="Write potentials to MessagePack file")
+    parser.add_argument("-m", "--write-modelprob-msgpack", dest="outmodelprobmsgpackfile", default=None, help="Write model probabilities as MessagePack file")
+    parser.add_argument("-A", "--disable_apc",  dest="disable_apc", action="store_true", default=False, help="Disable average product correction (APC)")
     parser.add_argument("--aln-format", dest="aln_format", default="psicov", help="File format for MSAs [default: \"%(default)s\"]")
     parser.add_argument("--no-logo", dest="logo", default=True, action="store_false", help="Disable showing the CCMpred logo")
 
@@ -86,17 +91,20 @@ def parse_args():
     grp_al.add_argument("--alg-nd", dest="algorithm", action="store_const", const=ALGORITHMS['numerical_differentiation'], help='Debug gradients with numerical differentiation')
 
     grp_wt = parser.add_argument_group("Weighting")
-    grp_wt.add_argument("--wt-simple", dest="weight", action="store_const", const=ccmpred.weighting.weights_simple, default=ccmpred.weighting.weights_simple, help='Use simple weighting (default)')
-    grp_wt.add_argument("--wt-uniform", dest="weight", action="store_const", const=ccmpred.weighting.weights_uniform, help='Use uniform weighting')
+    grp_wt.add_argument("--wt-simple",          dest="weight", action="store_const", const=ccmpred.weighting.weights_simple, default=ccmpred.weighting.weights_simple, help='Use simple weighting (default)')
+    grp_wt.add_argument("--wt-henikoff",        dest="weight", action="store_const", const=ccmpred.weighting.weights_henikoff, help='Use simple Henikoff weighting')
+    grp_wt.add_argument("--wt-henikoff_pair",   dest="weight", action="store_const", const=ccmpred.weighting.weights_henikoff_pair, help='Use Henikoff pair weighting ')
+    grp_wt.add_argument("--wt-uniform",         dest="weight", action="store_const", const=ccmpred.weighting.weights_uniform, help='Use uniform weighting')
 
     grp_rg = parser.add_argument_group("Regularization")
     grp_rg.add_argument("--reg-l2", dest="regularization", action=RegL2Action, type=float, nargs=2, metavar=("LAMBDA_SINGLE", "LAMBDA_PAIR"), default=lambda msa, centering: ccmpred.regularization.L2(10, 0.2 * (msa.shape[1] - 1), centering), help='Use L2 regularization with coefficients LAMBDA_SINGLE, LAMBDA_PAIR * L (default: 10 0.2)')
 
     grp_pc = parser.add_argument_group("Pseudocounts")
-    grp_pc.add_argument("--pc-submat", dest="pseudocounts", action=StoreConstParametersAction, default=ccmpred.pseudocounts.substitution_matrix_pseudocounts, const=ccmpred.pseudocounts.substitution_matrix_pseudocounts, nargs="?", metavar="N", type=float, arg_default=1, help="Use N substitution matrix pseudocounts (default) (by default, N=1)")
-    grp_pc.add_argument("--pc-constant", dest="pseudocounts", action=StoreConstParametersAction, const=ccmpred.pseudocounts.constant_pseudocounts, metavar="N", nargs="?", type=float, arg_default=1, help="Use N constant pseudocounts (by default, N=1)")
-    grp_pc.add_argument("--pc-none", dest="pseudocounts", action="store_const", const=ccmpred.pseudocounts.no_pseudocounts, help="Use no pseudocounts")
-    grp_pc.add_argument("--pc-pair-count", dest="pseudocount_pair_count", default=None, type=int, help="Specify a separate number of pseudocounts for pairwise frequencies (default: use same as single counts)")
+    grp_pc.add_argument("--pc-submat",      dest="pseudocounts", action=StoreConstParametersAction, default=ccmpred.pseudocounts.substitution_matrix_pseudocounts, const=ccmpred.pseudocounts.substitution_matrix_pseudocounts, nargs="?", metavar="N", type=float, arg_default=1, help="Use N substitution matrix pseudocounts (default) (by default, N=1)")
+    grp_pc.add_argument("--pc-constant",    dest="pseudocounts", action=StoreConstParametersAction, const=ccmpred.pseudocounts.constant_pseudocounts, metavar="N", nargs="?", type=float, arg_default=1, help="Use N constant pseudocounts (by default, N=1)")
+    grp_pc.add_argument("--pc-uniform",     dest="pseudocounts", action=StoreConstParametersAction, const=ccmpred.pseudocounts.uniform_pseudocounts, metavar="N", nargs="?", type=float, arg_default=1, help="Use N uniform pseudocounts, e.g 1/21 (by default, N=1)")
+    grp_pc.add_argument("--pc-none",        dest="pseudocounts", action="store_const", const=ccmpred.pseudocounts.no_pseudocounts, help="Use no pseudocounts")
+    grp_pc.add_argument("--pc-pair-count",  dest="pseudocount_pair_count", default=None, type=int, help="Specify a separate number of pseudocounts for pairwise frequencies (default: use same as single counts)")
 
     grp_db = parser.add_argument_group("Debug Options")
     grp_db.add_argument("--write-trajectory", dest="trajectoryfile", default=None, help="Write trajectory to files with format expression")
@@ -156,7 +164,8 @@ def main():
 
     print("\n{0} with code {code} -- {message}".format(condition, **algret))
 
-    res = f.finalize(x)
+    meta = ccmpred.metadata.create(opt, regularization, msa, weights, f, fx, algret)
+    res = f.finalize(x, meta)
 
     if opt.cd_alnfile and hasattr(f, 'msa_sampled'):
         print("Writing sampled alignment to {0}".format(opt.cd_alnfile))
@@ -173,11 +182,18 @@ def main():
         print("Writing msgpack-formatted potentials to {0}".format(opt.outmsgpackfile))
         ccmpred.raw.write_msgpack(opt.outmsgpackfile, res)
 
-    print("Writing summed score matrix to {0}".format(opt.matfile))
-    mat = ccmpred.scoring.frobenius_score(res.x_pair)
-    np.savetxt(opt.matfile, mat)
+    if opt.outmodelprobmsgpackfile:
+        print("Writing msgpack-formatted model probabilties to {0}".format(opt.outmodelprobmsgpackfile))
+        ccmpred.model_probabilities.write_msgpack(opt.outmodelprobmsgpackfile, res, msa, weights, freqs[1], regularization.lambda_pair)
 
-    print()
+    print("Writing summed score matrix (with APC={0}) to {1}".format(not opt.disable_apc, opt.matfile))
+    mat = ccmpred.scoring.frobenius_score(res.x_pair)
+    if not opt.disable_apc:
+        mat = ccmpred.scoring.apc(mat)
+    np.savetxt(opt.matfile, mat)
+    with open(opt.matfile,'a') as f:
+        f.write("#>META> ".encode("utf-8") + json.dumps(meta).encode("utf-8") + b"\n")
+
 
     exitcode = 0 if algret['code'] > 0 else -algret['code']
     sys.exit(exitcode)

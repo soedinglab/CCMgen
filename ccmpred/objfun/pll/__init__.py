@@ -68,9 +68,9 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
 
         return x, res
 
-    def finalize(self, x):
+    def finalize(self, x, meta):
         x_single, x_pair = linear_to_structured(x, self.ncol, clip=True)
-        return ccmpred.raw.CCMRaw(self.ncol, x_single[:, :20], x_pair, {})
+        return ccmpred.raw.CCMRaw(self.ncol, x_single[:, :20], x_pair, meta)
 
     def evaluate(self, x):
 
