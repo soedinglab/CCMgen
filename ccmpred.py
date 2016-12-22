@@ -27,6 +27,11 @@ EPILOG = """
 CCMpred is a fast python implementation of the maximum pseudo-likelihood class of contact prediction methods. From an alignment given as alnfile, it will maximize the likelihood of the pseudo-likelihood of a Potts model with 21 states for amino acids and gaps. The L2 norms of the pairwise coupling potentials will be written to the output matfile.
 """
 
+REG_L2_SCALING= {
+    "L" : lambda msa : msa.shape[1] - 1,
+    "diversity" : lambda msa: msa.shape[1] / np.sqrt(msa.shape[0]),
+    "1": lambda msa: 1
+}
 
 ALGORITHMS = {
     "gradient_descent": lambda of, x0, opt: ccmpred.algorithm.gradient_descent.minimize(of, x0, opt.numiter, alpha0=5e-3, alpha_decay=1e1),
@@ -50,7 +55,8 @@ class TreeCDAction(argparse.Action):
 class RegL2Action(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         lambda_single, lambda_pair = values
-        namespace.regularization = lambda msa, centering: ccmpred.regularization.L2(lambda_single, lambda_pair * (msa.shape[1] - 1), centering)
+
+        namespace.regularization = lambda msa, centering, scaling: ccmpred.regularization.L2(lambda_single, lambda_pair * scaling, centering)
 
 
 class StoreConstParametersAction(argparse.Action):
@@ -97,7 +103,11 @@ def parse_args():
     grp_wt.add_argument("--wt-uniform",         dest="weight", action="store_const", const=ccmpred.weighting.weights_uniform, help='Use uniform weighting')
 
     grp_rg = parser.add_argument_group("Regularization")
-    grp_rg.add_argument("--reg-l2", dest="regularization", action=RegL2Action, type=float, nargs=2, metavar=("LAMBDA_SINGLE", "LAMBDA_PAIR"), default=lambda msa, centering: ccmpred.regularization.L2(10, 0.2 * (msa.shape[1] - 1), centering), help='Use L2 regularization with coefficients LAMBDA_SINGLE, LAMBDA_PAIR * L (default: 10 0.2)')
+    grp_rg.add_argument("--reg-l2", dest="regularization", action=RegL2Action, type=float, nargs=2, metavar=("LAMBDA_SINGLE", "LAMBDA_PAIR"), default=lambda msa, centering, scaling: ccmpred.regularization.L2(10, 0.2 * scaling, centering), help='Use L2 regularization with coefficients LAMBDA_SINGLE, LAMBDA_PAIR * SCALING;  (default: 10 0.2)')
+    grp_rg.add_argument("--reg-l2-scale_by_L",      dest="scaling", action="store_const", const=REG_L2_SCALING["L"], default=REG_L2_SCALING["L"], help=" LAMBDA_PAIR * (L-1) (default)")
+    grp_rg.add_argument("--reg-l2-scale_by_div",    dest="scaling", action="store_const", const=REG_L2_SCALING["diversity"], help="LAMBDA_PAIR * (L/sqrt(N))")
+    grp_rg.add_argument("--reg-l2-noscaling",       dest="scaling", action="store_const", const=REG_L2_SCALING["1"], help="LAMBDA_PAIR")
+
 
     grp_pc = parser.add_argument_group("Pseudocounts")
     grp_pc.add_argument("--pc-submat",      dest="pseudocounts", action=StoreConstParametersAction, default=ccmpred.pseudocounts.substitution_matrix_pseudocounts, const=ccmpred.pseudocounts.substitution_matrix_pseudocounts, nargs="?", metavar="N", type=float, arg_default=1, help="Use N substitution matrix pseudocounts (default) (by default, N=1)")
@@ -142,12 +152,12 @@ def main():
     if opt.initrawfile:
         raw = ccmpred.raw.parse(opt.initrawfile)
         centering = raw.x_single.copy()
-        regularization = opt.regularization(msa, centering)
+        regularization = opt.regularization(msa, centering, opt.scaling(msa))
         x0, f = opt.objfun.init_from_raw(msa, freqs, weights, raw, regularization, *opt.objfun_args, **opt.objfun_kwargs)
 
     else:
         centering = ccmpred.centering.calculate(msa, freqs)
-        regularization = opt.regularization(msa, centering)
+        regularization = opt.regularization(msa, centering, opt.scaling(msa))
         x0, f = opt.objfun.init_from_default(msa, freqs, weights, regularization, *opt.objfun_args, **opt.objfun_kwargs)
 
     if opt.comparerawfile:
