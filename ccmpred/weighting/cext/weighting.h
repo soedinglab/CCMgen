@@ -14,6 +14,7 @@ void calculate_weights_simple(
 	const uint8_t *msa,
 	double *weights,
 	double cutoff,
+	bool count_gaps,
 	const uint64_t nrow,
 	const uint64_t ncol
 );

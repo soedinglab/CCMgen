@@ -52,11 +52,11 @@ void calculate_weights_simple(
 	const uint8_t *msa,
 	double *weights,
 	double cutoff,
+	bool count_gaps,
 	const uint64_t nrow,
 	const uint64_t ncol
 ) {
 	uint64_t nij = nrow * (nrow + 1) / 2;
-	uint64_t idthres = ceil(cutoff * ncol);
 
 	#pragma omp parallel
 	#pragma omp for nowait
@@ -72,12 +72,27 @@ void calculate_weights_simple(
 			j = ij - nrow * i + i * (i + 1) / 2;
 		}
 
+
 		uint64_t my_ids = 0;
-		for(uint64_t k = 0; k < ncol; k++) {
-			if(msa[i * ncol + k] == msa[j * ncol + k]) {
-				my_ids++;
+		uint64_t idthres = ceil(cutoff * ncol);
+
+		if (count_gaps){
+			for(uint64_t k = 0; k < ncol; k++) {
+				if(msa[i * ncol + k] == msa[j * ncol + k] ) {
+					my_ids++;
+				}
 			}
+		}else{
+			uint64_t ncol_ij = ncol;
+			for(uint64_t k = 0; k < ncol; k++) {
+				if(msa[i * ncol + k] == msa[j * ncol + k] ) {
+					if(msa[i * ncol + k] == 0) ncol_ij--;
+					else my_ids++;
+				}
+			}
+			idthres = ceil(cutoff * ncol_ij);
 		}
+
 
 		if(my_ids > idthres) {
 			#pragma omp atomic
@@ -85,6 +100,8 @@ void calculate_weights_simple(
 			#pragma omp atomic
 			weights[j]++;
 		}
+
+
 
 	}
 

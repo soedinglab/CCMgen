@@ -7,19 +7,21 @@ def weights_uniform(msa):
     return np.ones((msa.shape[0],), dtype="float64")
 
 
-def weights_simple(msa, cutoff=0.8):
+def weights_simple(msa, cutoff=0.8, count_gaps=False):
     """Simple sequence reweighting from the Morcos et al. 2011 DCA paper"""
 
     if cutoff >= 1:
         return weights_uniform(msa)
 
-    return calculate_weights_simple(msa, cutoff)
+    return calculate_weights_simple(msa, cutoff, count_gaps)
 
 
-def weights_henikoff(msa):
+def weights_henikoff(msa, count_gaps=False):
     """Henikoff weighting according to Henikoff, S and Henikoff, JG. Position-based sequence weights. 1994"""
 
     single_counts   = ccmpred.counts.single_counts(msa, None)
+    if not count_gaps:
+        single_counts[:,0] = 0
     unique_aa       = (single_counts != 0).sum(1)
     nrow, ncol = msa.shape
 
@@ -28,7 +30,12 @@ def weights_henikoff(msa):
     # for n in range(nrow):
     #     for l in range(ncol):
     #         henikoff[n] += 1/(single_counts[l, msa[n][l]] * unique_aa[l])
-    henikoff = np.array([sum(1.0/(single_counts[range(ncol), msa[n]] * unique_aa)) for n in range(nrow)])
+
+    cNi = np.array([single_counts[range(ncol), msa[n]] * unique_aa for n in range(nrow)])
+    cNi_nogaps = np.array( [np.delete(cNi[n], np.where(cNi[n] == 0)) for n in range(nrow)])
+    henikoff = sum(1/cNi_nogaps)
+
+    #henikoff = np.array([sum(1.0/(single_counts[range(ncol), msa[n]] * unique_aa)) for n in range(nrow)])
 
     #example from henikoff paper
     # msa=np.array([[0,1,3,0,6],[0,2,4,0,2],[0,1,4,0,2],[0,1,5,0,0]])

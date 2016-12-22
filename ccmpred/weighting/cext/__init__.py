@@ -35,10 +35,10 @@ def count_ids(msa):
     return ids + ids.T - np.diag(ids.diagonal())
 
 
-def calculate_weights_simple(msa, cutoff):
+def calculate_weights_simple(msa, cutoff, count_gaps=True):
     nrow = msa.shape[0]
     weights = np.zeros((nrow,), dtype='double')
-    libweighting.calculate_weights_simple(msa, weights, cutoff, *msa.shape)
+    libweighting.calculate_weights_simple(msa, weights, cutoff, count_gaps, *msa.shape)
 
     return weights
 
