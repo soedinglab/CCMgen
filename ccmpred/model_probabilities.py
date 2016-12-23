@@ -30,6 +30,12 @@ def stream_or_file(mode='r'):
 
     return inner
 
+def calculate_Ni(msa, weights):
+    single_counts = ccmpred.counts.single_counts(msa, weights)
+    single_counts = single_counts[:,:20]
+
+    return(single_counts.sum(1))
+
 def calculate_Nij(msa, weights):
     pair_counts = ccmpred.counts.pair_counts(msa, weights)
     pair_counts = pair_counts[:,:,:20,:20]
@@ -53,8 +59,8 @@ def write_msgpack(outmsgpackfile, res, msa, weights, pair_freq, lambda_pair):
         for j in range(i + 1, res.ncol):
 
             #row-wise flattening
-            pair_freq_ij = pair_freq[i,j,:20,:20].flatten()
-            x_pair_ij = res.x_pair[i, j, :20, :20].flatten()
+            pair_freq_ij = pair_freq[i, j, :20, :20].flatten()
+            x_pair_ij    = res.x_pair[i, j, :20, :20].flatten()
 
             #row-wise ij
             model_prob[i * res.ncol + j] = pair_freq_ij - (x_pair_ij * lambda_pair / Nij[i,j])

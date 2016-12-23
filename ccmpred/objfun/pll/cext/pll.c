@@ -131,6 +131,7 @@ double evaluate_pll(
 		}
 	}
 
+	// set gradients to zero for gap states
 	for(uint32_t j = 0; j < ncol; j++) {
 		for(uint32_t i = 0; i < ncol; i++) {
 			for(uint32_t a = 0; a < N_ALPHA; a++) {

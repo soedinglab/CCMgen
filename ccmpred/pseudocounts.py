@@ -3,7 +3,6 @@ import numpy as np
 import ccmpred.counts
 import ccmpred.substitution_matrices
 
-
 def calculate_frequencies(msa, weights, pseudocount_function, pseudocount_n_single=1, pseudocount_n_pair=None):
 
     if pseudocount_n_pair is None:
@@ -35,7 +34,6 @@ def calculate_frequencies(msa, weights, pseudocount_function, pseudocount_n_sing
         pair_freq - single_freq[:, np.newaxis, :, np.newaxis] * single_freq[np.newaxis, :, np.newaxis, :]
     ) + (single_freq_pc[:, np.newaxis, :, np.newaxis] * single_freq_pc[np.newaxis, :, np.newaxis, :])
 
-
     return single_freq_pc, pair_freq_pc
 
 
@@ -58,7 +56,7 @@ def degap(freq, keep_dims=False):
 
 
 def uniform_pseudocounts(single_freq):
-    uniform_pc = np.zeros(single_freq.shape)
+    uniform_pc = np.zeros_like(single_freq)
     uniform_pc.fill(1./20)
     return uniform_pc
 
