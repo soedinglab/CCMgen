@@ -54,7 +54,8 @@ def write_msgpack(outmsgpackfile, res, msa, weights, pair_freq, lambda_pair):
         'N_ij': Nij[np.tril_indices(res.ncol, k=-1)].tolist(), #rowwise
     }
 
-    model_prob = np.zeros((res.ncol *(res.ncol-1), 400))
+    model_prob = np.zeros((res.ncol * (res.ncol-1)/2, 400))
+    index=0
     for i in range(res.ncol-1):
         for j in range(i + 1, res.ncol):
 
@@ -63,16 +64,13 @@ def write_msgpack(outmsgpackfile, res, msa, weights, pair_freq, lambda_pair):
             x_pair_ij    = res.x_pair[i, j, :20, :20].flatten()
 
             #row-wise ij
-            model_prob[i * res.ncol + j] = pair_freq_ij - (x_pair_ij * lambda_pair / Nij[i,j])
+            model_prob[index,:] = pair_freq_ij - (x_pair_ij * lambda_pair / Nij[i,j])
+
+            index += 1
 
 
-    print( pair_freq[0, 1,0,0] - (res.x_pair[0, 1, 0,0] * lambda_pair / Nij[0,1]))
-    print( pair_freq[0, 1,0,0])
-    print(res.x_pair[0, 1, 0,0])
-    print(lambda_pair)
-    print(Nij[0,1])
+    model_prob_flat = model_prob.flatten()#row-wise
 
-    model_prob_flat = model_prob.flatten()
 
     if any(qijab < 0 for qijab in model_prob_flat):
         print("Warning: there are "+str(sum(model_prob_flat < 0))+" negative model probabilites")
@@ -81,7 +79,6 @@ def write_msgpack(outmsgpackfile, res, msa, weights, pair_freq, lambda_pair):
         model_prob_flat[model_prob_flat < 0] = 0
 
     out['q_ij'] = model_prob_flat.tolist()
-
 
 
     outmsgpackfile.write(msgpack.packb(out))
