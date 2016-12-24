@@ -52,7 +52,7 @@ void calculate_weights_simple(
 	const uint8_t *msa,
 	double *weights,
 	double cutoff,
-	bool count_gaps,
+	bool ignore_gaps,
 	const uint64_t nrow,
 	const uint64_t ncol
 ) {
@@ -76,13 +76,7 @@ void calculate_weights_simple(
 		uint64_t my_ids = 0;
 		uint64_t idthres = ceil(cutoff * ncol);
 
-		if (count_gaps){
-			for(uint64_t k = 0; k < ncol; k++) {
-				if(msa[i * ncol + k] == msa[j * ncol + k] ) {
-					my_ids++;
-				}
-			}
-		}else{
+		if (ignore_gaps){
 			uint64_t ncol_ij = ncol;
 			for(uint64_t k = 0; k < ncol; k++) {
 				if(msa[i * ncol + k] == msa[j * ncol + k] ) {
@@ -91,6 +85,14 @@ void calculate_weights_simple(
 				}
 			}
 			idthres = ceil(cutoff * ncol_ij);
+
+		}else{
+			for(uint64_t k = 0; k < ncol; k++) {
+				if(msa[i * ncol + k] == msa[j * ncol + k] ) {
+					my_ids++;
+				}
+			}
+
 		}
 
 

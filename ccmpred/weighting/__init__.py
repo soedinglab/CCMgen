@@ -7,23 +7,23 @@ def weights_uniform(msa):
     return np.ones((msa.shape[0],), dtype="float64")
 
 
-def weights_simple(msa, cutoff=0.8, count_gaps=False):
+def weights_simple(msa, ignore_gaps=False, cutoff=0.8):
     """Simple sequence reweighting from the Morcos et al. 2011 DCA paper"""
 
     if cutoff >= 1:
         return weights_uniform(msa)
 
-    return calculate_weights_simple(msa, cutoff, count_gaps)
+    return calculate_weights_simple(msa, cutoff, ignore_gaps)
 
 
-def weights_henikoff(msa, count_gaps=False):
+def weights_henikoff(msa, ignore_gaps=False):
     """
     Henikoff weighting according to Henikoff, S and Henikoff, JG. Position-based sequence weights. 1994
     Henikoff weights always sum up to ncol
     """
 
     single_counts   = ccmpred.counts.single_counts(msa, None)
-    if not count_gaps:
+    if ignore_gaps:
         single_counts[:,0] = 0
 
     unique_aa       = (single_counts != 0).sum(1)
@@ -53,7 +53,7 @@ def weights_henikoff(msa, count_gaps=False):
     return henikoff
 
 
-def weights_henikoff_pair(msa, count_gaps=False):
+def weights_henikoff_pair(msa, ignore_gaps=False):
     """
     Henikoff pair weighting
 
@@ -61,7 +61,7 @@ def weights_henikoff_pair(msa, count_gaps=False):
     """
 
     pair_counts   = ccmpred.counts.pair_counts(msa, None)
-    if not count_gaps:
+    if ignore_gaps:
         pair_counts[:, :, 0, :] = 0
         pair_counts[:, :, :, 0] = 0
 
