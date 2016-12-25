@@ -101,6 +101,7 @@ def parse_args():
     grp_wt.add_argument("--wt-henikoff",        dest="weight", action="store_const", const=ccmpred.weighting.weights_henikoff, help='Use simple Henikoff weighting')
     grp_wt.add_argument("--wt-henikoff_pair",   dest="weight", action="store_const", const=ccmpred.weighting.weights_henikoff_pair, help='Use Henikoff pair weighting ')
     grp_wt.add_argument("--wt-uniform",         dest="weight", action="store_const", const=ccmpred.weighting.weights_uniform, help='Use uniform weighting')
+    grp_wt.add_argument("--ignore_gaps", dest="ignore_gaps", action="store_true", default=False, help="Do not count gaps as identical amino acids.")
 
     grp_rg = parser.add_argument_group("Regularization")
     grp_rg.add_argument("--reg-l2", dest="regularization", action=RegL2Action, type=float, nargs=2, metavar=("LAMBDA_SINGLE", "LAMBDA_PAIR"), default=lambda msa, centering, scaling: ccmpred.regularization.L2(10, 0.2 * scaling, centering), help='Use L2 regularization with coefficients LAMBDA_SINGLE, LAMBDA_PAIR * SCALING;  (default: 10 0.2)')
@@ -137,9 +138,10 @@ def main():
         ccmpred.logo.logo()
 
     msa = aln.read_msa(opt.alnfile, opt.aln_format)
-    weights = opt.weight(msa)
+    weights = opt.weight(msa, opt.ignore_gaps)
 
-    print("Reweighted {0} sequences to Neff={1:g} (min={2:g}, mean={3:g}, max={4:g})".format(msa.shape[0], np.sum(weights), np.min(weights), np.mean(weights), np.max(weights)))
+
+    print("Reweighted {0} sequences to Neff={1:g} (min={2:g}, mean={3:g}, max={4:g}) using {5} and ignore_gaps={6}".format(msa.shape[0], np.sum(weights), np.min(weights), np.mean(weights), np.max(weights), opt.weight.__name__, opt.ignore_gaps))
 
     if not hasattr(opt, "objfun_args"):
         opt.objfun_args = []

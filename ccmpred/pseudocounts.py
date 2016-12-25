@@ -16,7 +16,7 @@ def calculate_frequencies(msa, weights, pseudocount_function, pseudocount_n_sing
 
     print("Calculating AA Frequencies with " +
           str(np.round(pseudocount_ratio_single, decimals=5)) +
-          " percent pseudocounts (" + pseudocount_function.__name__+")")
+          " percent pseudocounts (" + pseudocount_function.__name__+ " " + str(pseudocount_n_single)+")")
 
     #normalized with gaps
     single_freq = single_counts / nrow
