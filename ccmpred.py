@@ -203,6 +203,8 @@ def main():
 
     if opt.outmodelprobmsgpackfile:
         print("Writing msgpack-formatted model probabilties to {0}".format(opt.outmodelprobmsgpackfile))
+        if opt.max_gap_ratio < 100:
+            msa = aln.read_msa(opt.alnfile, opt.aln_format)
         ccmpred.model_probabilities.write_msgpack(opt.outmodelprobmsgpackfile, res, msa, weights, freqs[1], regularization.lambda_pair)
 
     print("Writing summed score matrix (with APC={0}) to {1}".format(not opt.disable_apc, opt.matfile))
