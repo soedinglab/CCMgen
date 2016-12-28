@@ -2,6 +2,8 @@ import numpy as np
 
 import ccmpred.counts
 import ccmpred.substitution_matrices
+import ccmpred.model_probabilities
+
 
 def calculate_frequencies(msa, weights, pseudocount_function, pseudocount_n_single=1, pseudocount_n_pair=None):
 
@@ -34,6 +36,7 @@ def calculate_frequencies(msa, weights, pseudocount_function, pseudocount_n_sing
         pair_freq - single_freq[:, np.newaxis, :, np.newaxis] * single_freq[np.newaxis, :, np.newaxis, :]
     ) + (single_freq_pc[:, np.newaxis, :, np.newaxis] * single_freq_pc[np.newaxis, :, np.newaxis, :])
 
+
     return single_freq_pc, pair_freq_pc
 
 
@@ -41,7 +44,8 @@ def degap(freq, keep_dims=False):
     if len(freq.shape) == 2 :
         out = freq[:, :20] / (1 - freq[:, 20])[:, np.newaxis]
     else:
-        out = freq[:, :, :20, :20] / freq[:,:,:20, :20].sum(3).sum(2)[:, :,  np.newaxis, np.newaxis]
+        freq_sum = freq[:,:,:20, :20].sum(3).sum(2)[:, :,  np.newaxis, np.newaxis]
+        out = freq[:, :, :20, :20] / (freq_sum + 1e-10)
 
     if keep_dims:
         if len(freq.shape) == 2 :

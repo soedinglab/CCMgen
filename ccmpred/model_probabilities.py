@@ -75,8 +75,14 @@ def write_msgpack(outmsgpackfile, res, msa, weights, pair_freq, lambda_pair):
     if any(qijab < 0 for qijab in model_prob_flat):
         print("Warning: there are "+str(sum(model_prob_flat < 0))+" negative model probabilites")
 
-        #hack: zet all negative model probabilities to zero
+        #hack: set all negative model probabilities to zero
         model_prob_flat[model_prob_flat < 0] = 0
+
+    if any(np.isnan(qijab) for qijab in model_prob_flat):
+        print("Warning: there are "+str(sum(np.isnan(model_prob)))+" nan model probabilites")
+
+        #hack: set nan (due to Nij=0) model probabilities to zero
+        model_prob_flat[np.isnan(model_prob)] = 0
 
     out['q_ij'] = model_prob_flat.tolist()
 
