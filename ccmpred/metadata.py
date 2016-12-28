@@ -29,6 +29,10 @@ def create(opt, regularization, msa, weights, f, fx, algret):
     meta['workflow'][0]['parameters']['msafile']['ncol'] = msa.shape[1]
     meta['workflow'][0]['parameters']['msafile']['file'] = opt.alnfile
 
+    meta['workflow'][0]['parameters']['gaps'] = {}
+    meta['workflow'][0]['parameters']['gaps']["msa-max_gap_ratio"] = opt.max_gap_ratio
+    meta['workflow'][0]['parameters']['gaps']["wt-ignore_gaps"] = opt.ignore_gaps
+
 
     meta['workflow'][0]['parameters']['pseudocounts'] = {}
     meta['workflow'][0]['parameters']['pseudocounts']['type'] = opt.pseudocounts[0].__name__
@@ -61,6 +65,8 @@ def create(opt, regularization, msa, weights, f, fx, algret):
         meta['workflow'][0]['results']['rawfile'] = opt.outrawfile
     if opt.outmsgpackfile:
         meta['workflow'][0]['results']['msgpackfile'] = opt.outmsgpackfile
+    if opt.outmodelprobmsgpackfile:
+        meta['workflow'][0]['results']['modelprobmsgpackfile'] = opt.outmodelprobmsgpackfile
 
     return meta
 

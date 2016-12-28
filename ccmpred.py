@@ -14,6 +14,7 @@ import ccmpred.io.alignment as aln
 import ccmpred.centering
 import ccmpred.regularization
 import ccmpred.model_probabilities
+import ccmpred.gaps
 
 import ccmpred.objfun.pll as pll
 import ccmpred.objfun.cd as cd
@@ -101,7 +102,6 @@ def parse_args():
     grp_wt.add_argument("--wt-henikoff",        dest="weight", action="store_const", const=ccmpred.weighting.weights_henikoff, help='Use simple Henikoff weighting')
     grp_wt.add_argument("--wt-henikoff_pair",   dest="weight", action="store_const", const=ccmpred.weighting.weights_henikoff_pair, help='Use Henikoff pair weighting ')
     grp_wt.add_argument("--wt-uniform",         dest="weight", action="store_const", const=ccmpred.weighting.weights_uniform, help='Use uniform weighting')
-    grp_wt.add_argument("--ignore_gaps", dest="ignore_gaps", action="store_true", default=False, help="Do not count gaps as identical amino acids.")
 
     grp_rg = parser.add_argument_group("Regularization")
     grp_rg.add_argument("--reg-l2", dest="regularization", action=RegL2Action, type=float, nargs=2, metavar=("LAMBDA_SINGLE", "LAMBDA_PAIR"), default=lambda msa, centering, scaling: ccmpred.regularization.L2(10, 0.2 * scaling, centering), help='Use L2 regularization with coefficients LAMBDA_SINGLE, LAMBDA_PAIR * SCALING;  (default: 10 0.2)')
@@ -109,6 +109,9 @@ def parse_args():
     grp_rg.add_argument("--reg-l2-scale_by_div",    dest="scaling", action="store_const", const=REG_L2_SCALING["diversity"], help="LAMBDA_PAIR * (L/sqrt(N))")
     grp_rg.add_argument("--reg-l2-noscaling",       dest="scaling", action="store_const", const=REG_L2_SCALING["1"], help="LAMBDA_PAIR")
 
+    grp_gp = parser.add_argument_group("Gap Treatment")
+    grp_gp.add_argument("--max_gap_ratio",  dest="max_gap_ratio", default=100, type=int, help="Remove alignment positions with >x% gaps [default: %(default)s  = no removal]")
+    grp_gp.add_argument("--wt-ignore-gaps", dest="ignore_gaps", action="store_true", default=False, help="Do not count gaps as identical amino acids during reweighting of sequences.")
 
     grp_pc = parser.add_argument_group("Pseudocounts")
     grp_pc.add_argument("--pc-submat",      dest="pseudocounts", action=StoreConstParametersAction, default=ccmpred.pseudocounts.substitution_matrix_pseudocounts, const=ccmpred.pseudocounts.substitution_matrix_pseudocounts, nargs="?", metavar="N", type=float, arg_default=1, help="Use N substitution matrix pseudocounts (default) (by default, N=1)")
@@ -138,8 +141,9 @@ def main():
         ccmpred.logo.logo()
 
     msa = aln.read_msa(opt.alnfile, opt.aln_format)
-    weights = opt.weight(msa, opt.ignore_gaps)
+    msa, gapped_positions = ccmpred.gaps.remove_gapped_positions(msa, opt.max_gap_ratio)
 
+    weights = opt.weight(msa, opt.ignore_gaps)
 
     print("Reweighted {0} sequences to Neff={1:g} (min={2:g}, mean={3:g}, max={4:g}) using {5} and ignore_gaps={6}".format(msa.shape[0], np.sum(weights), np.min(weights), np.mean(weights), np.max(weights), opt.weight.__name__, opt.ignore_gaps))
 
@@ -185,6 +189,9 @@ def main():
 
         with open(opt.cd_alnfile, "w") as f:
             aln.write_msa_psicov(f, msa_sampled)
+
+    if opt.max_gap_ratio < 100:
+        ccmpred.gaps.backinsert_gapped_positions(res, gapped_positions)
 
     if opt.outrawfile:
         print("Writing raw-formatted potentials to {0}".format(opt.outrawfile))

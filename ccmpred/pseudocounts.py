@@ -2,7 +2,6 @@ import numpy as np
 
 import ccmpred.counts
 import ccmpred.substitution_matrices
-import ccmpred.model_probabilities
 
 
 def calculate_frequencies(msa, weights, pseudocount_function, pseudocount_n_single=1, pseudocount_n_pair=None):
