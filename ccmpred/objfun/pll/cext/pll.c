@@ -42,6 +42,9 @@ double evaluate_pll(
 		double weight = weights[n];
 		double precomp[N_ALPHA];
 		double precomp_sum = 0;
+
+		// compute 	precomp(a) = V_j(a) + sum(i \in V_j) w_{ij}(a, X^n_i)
+		//			precomp_sum = log( sum(a=1..20) exp(precomp(a)) ) --> log Z^n_j
 		for(int a = 0; a < N_ALPHA - 1; a++) {
 			precomp[a] = V(a, j);
 
@@ -55,10 +58,10 @@ double evaluate_pll(
 
 			precomp_sum += exp(precomp[a]);
 		}
-		precomp[N_ALPHA - 1] = 0;
+		precomp[N_ALPHA - 1] = 0;	// set precomp(gap) to zero
 		precomp_sum = log(precomp_sum);
 
-
+		// compute exp(V_j(a) + sum(i \in V_j) w_{ij}(a, X^n_i)) / Z^n_j  [--> exp(precomp) / exp(log(Z))]
 		for(int a = 0; a < N_ALPHA - 1; a++) {
 			precomp_norm[(n * N_ALPHA + a) * ncol + j] = exp(precomp[a] - precomp_sum);
 		}
@@ -66,12 +69,17 @@ double evaluate_pll(
 
 		unsigned char xnj = X(n,j);
 
+		// function value for sequence n and column j:
+		//							weight(n) * (precomp( xnj ) - log Z^n_j)
+		//							weight(n) * ( V_j(xnj) + sum(i \in V_j) w_{ij}(xnj, Xni) - log Z^n_j)
 		if(xnj < N_ALPHA - 1) {
 			fx += weight * (precomp_sum - precomp[xnj]);
 		}
 
 	} // nj
 
+
+	//compute gradients for single emissions
 	#pragma omp parallel for
 	for(uint32_t nj = 0; nj < nrow * ncol; nj++) {
 		uint32_t n = nj / ncol;
@@ -79,6 +87,7 @@ double evaluate_pll(
 		unsigned char xnj = X(n,j);
 		double weight = weights[n];
 
+		//if xnj is not a gap: add second part of gradient
 		if(xnj < N_ALPHA - 1) {
 
 			for(uint32_t a = 0; a < N_ALPHA - 1; a++) {
@@ -86,6 +95,7 @@ double evaluate_pll(
 				G1(a, j) += weight * precomp_norm[(n * N_ALPHA + a) * ncol + j];
 			}
 		} else {
+			//otherwise set precomp_norm to zero so that no count will be added to G2
 			for(uint32_t a = 0; a < N_ALPHA; a++) {
 				precomp_norm[(n * N_ALPHA + a) * ncol + j] = 0;
 			}
@@ -93,6 +103,7 @@ double evaluate_pll(
 
 	} // nj
 
+	//compute gradients for pair emissions
 	#pragma omp parallel for
 	for(uint32_t nj = 0; nj < nrow * ncol; nj++) {
 
@@ -101,6 +112,8 @@ double evaluate_pll(
 		double weight = weights[n];
 		unsigned char xnj = X(n,j);
 
+		//in case xnj is a gap g2 will be set to zero for gap states later on
+		//in case xni is s gap, precomp_norm will be zero
 		for(uint8_t a = 0; a < N_ALPHA - 1; a++) {
 			for(uint32_t i = 0; i < ncol; i++) {
 				#pragma omp atomic

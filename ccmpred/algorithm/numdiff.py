@@ -5,69 +5,93 @@ import sys
 
 random.seed(42)
 
+class numDiff():
+    """Debug Gradients with numerical differentiation"""
 
-def numdiff(objfun, x, epsilon=1e-5):
+    def __init__(self, maxiter=100, epsilon=1e-5):
+        self.epsilon = epsilon
+        self.maxiter = maxiter
 
-    _, g0 = objfun.evaluate(x)
 
-    x0_single, x0_pair = objfun.linear_to_structured(x)
-    g0_single, g0_pair = objfun.linear_to_structured(g0)
-    ncol = x0_single.shape[0]
+    def minimize(self, objfun, x):
+        """
+        Compute analytical and numerical gradient for objfun
 
-    print("Pos                                    x                 g            DeltaG")
-    while True:
+        :param objfun:
+        :param x:
+        :return:
+        """
 
-        if random.random() <= 0.2:
-            i = random.randint(0, ncol - 1)
-            a = random.randint(0, 19)
+        _, g0 = objfun.evaluate(x)
 
-            xA = np.copy(x0_single)
-            xB = np.copy(x0_single)
-            xA[i, a] -= epsilon
-            xB[i, a] += epsilon
+        x0_single, x0_pair = objfun.linear_to_structured(x)
+        g0_single, g0_pair = objfun.linear_to_structured(g0)
+        ncol = x0_single.shape[0]
 
-            fxA, _ = objfun.evaluate(objfun.structured_to_linear(xA, x0_pair))
-            fxB, _ = objfun.evaluate(objfun.structured_to_linear(xB, x0_pair))
+        print("Comparing analytical gradient to numerical gradient with stepsize 2 * {0}".format(self.epsilon))
+        print("Pos                                    x                 g            DeltaG")
 
-            symdiff = g0_single[i, a]
-            symdiff2 = None
-            numdiff = (fxB - fxA) / (2 * epsilon)
+        iteration = 0
+        while True:
+            iteration += 1
+            if iteration >= self.maxiter:
+                break
 
-            xval = x0_single[i, a]
-            symmval = None
-            posstr = "v[{i:3d}, {a:2d}]".format(i=i, a=a)
+            if random.random() <= 0.2:
+                i = random.randint(0, ncol - 1)
+                a = random.randint(0, 19)
 
-        else:
-            i = random.randint(0, ncol - 1)
-            j = random.randint(0, ncol - 1)
-            a = random.randint(0, 20)
-            b = random.randint(0, 20)
+                xA = np.copy(x0_single)
+                xB = np.copy(x0_single)
+                xA[i, a] -= self.epsilon
+                xB[i, a] += self.epsilon
 
-            xA = np.copy(x0_pair)
-            xB = np.copy(x0_pair)
-            xA[i, j, a, b] -= epsilon
-            xA[j, i, b, a] -= epsilon
-            xB[i, j, a, b] += epsilon
-            xB[j, i, b, a] += epsilon
+                fxA, _ = objfun.evaluate(objfun.structured_to_linear(xA, x0_pair))
+                fxB, _ = objfun.evaluate(objfun.structured_to_linear(xB, x0_pair))
 
-            fxA, _ = objfun.evaluate(objfun.structured_to_linear(x0_single, xA))
-            fxB, _ = objfun.evaluate(objfun.structured_to_linear(x0_single, xB))
+                symdiff = g0_single[i, a]
+                symdiff2 = None
+                numdiff = (fxB - fxA) / (2 * self.epsilon)
 
-            symdiff = g0_pair[i, j, a, b]
-            symdiff2 = g0_pair[j, i, b, a]
-            numdiff = (fxB - fxA) / (2 * epsilon)
+                xval = x0_single[i, a]
+                symmval = None
+                posstr = "v[{i:3d}, {a:2d}]".format(i=i, a=a)
 
-            xval = x0_pair[i, j, a, b]
-            symmval = x0_pair[j, i, b, a]
-            posstr = "w[{i:3d}, {j:3d}, {a:2d}, {b:2d}]".format(i=i, j=j, a=a, b=b)
+            else:
+                i = random.randint(0, ncol - 1)
+                j = random.randint(0, ncol - 1)
+                a = random.randint(0, 20)
+                b = random.randint(0, 20)
 
-        print("{posstr:20s}   {xval: .10e} {symdiff: .10e}".format(posstr=posstr, xval=xval, symdiff=symdiff,))
+                xA = np.copy(x0_pair)
+                xB = np.copy(x0_pair)
+                xA[i, j, a, b] -= self.epsilon
+                xA[j, i, b, a] -= self.epsilon
+                xB[i, j, a, b] += self.epsilon
+                xB[j, i, b, a] += self.epsilon
 
-        if symdiff2 is not None and symmval is not None:
-            print("                       {0: .10e} {1: .10e}".format(symmval, symdiff2))
+                #numerical differentiation for value at x+eps and x-eps
+                fxA, _ = objfun.evaluate(objfun.structured_to_linear(x0_single, xA))
+                fxB, _ = objfun.evaluate(objfun.structured_to_linear(x0_single, xB))
+                numdiff = (fxB - fxA) / (2 * self.epsilon)
 
-        print("gNumeric                                 {numdiff: .10e} {delta: .10e}".format(posstr=posstr, xval=xval, numdiff=numdiff, delta=symdiff - numdiff))
+                #actual value (and its symmetric counterpart)
+                xval = x0_pair[i, j, a, b]
+                symmval = x0_pair[j, i, b, a]
+                #analytical gradient
+                symdiff = g0_pair[i, j, a, b]
+                symdiff2 = g0_pair[j, i, b, a]
 
-        print()
+                posstr = "w[{i:3d}, {j:3d}, {a:2d}, {b:2d}]".format(i=i, j=j, a=a, b=b)
 
-    sys.exit(0)
+            print("{posstr:20s}   {xval: .10e} {symdiff: .10e}".format(posstr=posstr, xval=xval, symdiff=symdiff,))
+
+            #print symmetrical value and gradient for pair emissions
+            if symdiff2 is not None and symmval is not None:
+                print("                       {0: .10e} {1: .10e}".format(symmval, symdiff2))
+
+            print("gNumeric                                 {numdiff: .10e} {delta: .10e}".format(posstr=posstr, xval=xval, numdiff=numdiff, delta=symdiff - numdiff))
+
+            print("")
+
+        sys.exit(0)

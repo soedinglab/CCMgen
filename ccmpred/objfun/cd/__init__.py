@@ -6,6 +6,8 @@ import ccmpred.counts
 import ccmpred.objfun
 import ccmpred.objfun.cd.cext
 
+import ccmpred.pseudocounts
+import ccmpred.weighting
 
 class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
 

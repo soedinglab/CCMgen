@@ -4,7 +4,7 @@ import json
 import datetime
 
 
-def create(opt, regularization, msa, weights, f, fx, algret):
+def create(opt, regularization, msa, weights, f, fx, algret, alg):
     meta={}
 
     meta['version'] = ccmpred.__version__
@@ -45,6 +45,14 @@ def create(opt, regularization, msa, weights, f, fx, algret):
     meta['workflow'][0]['parameters']['optimization']={}
     meta['workflow'][0]['parameters']['optimization']['method'] = opt.algorithm.__name__
     meta['workflow'][0]['parameters']['optimization']['objfun'] = opt.objfun.__name__
+
+    if (opt.algorithm.__name__) == 'conjugateGradient':
+        meta['workflow'][0]['parameters']['optimization']['wolfe'] = alg.wolfe
+        meta['workflow'][0]['parameters']['optimization']['alpha_mul'] = alg.alpha_mul
+        meta['workflow'][0]['parameters']['optimization']['max_linesearch'] = alg.max_linesearch
+        meta['workflow'][0]['parameters']['optimization']['ftol'] = alg.ftol
+        meta['workflow'][0]['parameters']['optimization']['epsilon'] = alg.epsilon
+        meta['workflow'][0]['parameters']['optimization']['convergence_prev'] = alg.convergence_prev
 
 
     meta['workflow'][0]['parameters']['apc']  = not opt.disable_apc

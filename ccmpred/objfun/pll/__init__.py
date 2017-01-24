@@ -4,7 +4,7 @@ import ccmpred.raw
 import ccmpred.regularization
 import ccmpred.objfun
 import ccmpred.objfun.pll.cext
-
+import ccmpred.counts
 
 class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
 
@@ -12,16 +12,18 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
         super(PseudoLikelihood, self).__init__()
 
         self.msa = msa
+        self.nrow, self.ncol = msa.shape
 
-        neff = np.sum(weights)
-        freqs_single, freqs_pair = freqs
-        msa_counts_single, msa_counts_pair = neff * freqs_single, neff * freqs_pair
+        #use msa counts with pseudo counts - numerically more stable?? but gradient does not fit ll fct!!
+        #neff = np.sum(weights)
+        #freqs_single, freqs_pair = freqs
+        #msa_counts_single, msa_counts_pair = neff * freqs_single, neff * freqs_pair
+        #use msa counts without pseudo counts
+        msa_counts_single, msa_counts_pair = ccmpred.counts.both_counts(msa, weights)
 
         msa_counts_single[:, 20] = 0
         msa_counts_pair[:, :, 20, :] = 0
         msa_counts_pair[:, :, :, 20] = 0
-
-        self.nrow, self.ncol = msa.shape
 
         for i in range(self.ncol):
             msa_counts_pair[i, i, :, :] = 0
@@ -64,6 +66,11 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
         if msa.shape[1] != raw.ncol:
             raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
 
+        if raw.x_single.shape[1] == 20:
+            temp = np.zeros((raw.ncol, 21))
+            temp[:,:20] = raw.x_single
+            raw.x_single = temp
+
         x = structured_to_linear(raw.x_single, raw.x_pair)
 
         return x, res
@@ -74,6 +81,7 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
 
     def evaluate(self, x):
 
+        #pointer to g == self.g
         fx, g = ccmpred.objfun.pll.cext.evaluate(x, self.g, self.g2, self.weights, self.msa)
         self.g -= self.g_init
 

@@ -3,40 +3,82 @@ import numpy as np
 import ccmpred.counts
 import ccmpred.substitution_matrices
 
+def get_neff(msa):
+    single_counts = ccmpred.counts.single_counts(msa)
+    single_freqs = (single_counts + 1e-3) / np.sum(single_counts, axis=1)[:, np.newaxis]
 
-def calculate_frequencies(msa, weights, pseudocount_function, pseudocount_n_single=1, pseudocount_n_pair=None):
+    single_freqs = single_freqs[:20]
 
-    if pseudocount_n_pair is None:
-        pseudocount_n_pair = pseudocount_n_single
+    entropies = - np.sum(single_freqs * np.log2(single_freqs), axis=1)
+
+    neff = 2 ** np.mean(entropies)
+
+    return neff
+
+def calculate_frequencies_dev_center_v(msa, weights):
+
 
     single_counts, pair_counts = ccmpred.counts.both_counts(msa, weights)
     nrow = np.sum(weights) if weights is not None else msa.shape[0]
 
-    pseudocount_ratio_single = pseudocount_n_single / (nrow + pseudocount_n_single)
-    pseudocount_ratio_pair = pseudocount_n_pair / (nrow + pseudocount_n_pair)
+    pseudocount_ratio = 0.1
 
-    print("Calculating AA Frequencies with " +
-          str(np.round(pseudocount_ratio_single, decimals=5)) +
-          " percent pseudocounts (" + pseudocount_function.__name__+ " " + str(pseudocount_n_single)+")")
+    print("Calculating AA Frequencies as in dev-center-v: " +
+          str(np.round(pseudocount_ratio, decimals=5)) +
+          " percent pseudocounts for single freq (constant pseudocounts from global frequencies with gaps)")
 
     #normalized with gaps
     single_freq = single_counts / nrow
     pair_freq = pair_counts / nrow
 
-    #normalized with gaps
-    pcounts = pseudocount_function(single_freq)
+    #pseudocounts from global aa frequencies with gaps
+    pcounts = constant_pseudocounts(single_freq)
 
-    #remove gaps and renormalize
+    #single freq counts normalized without gaps
     single_freq = degap(single_freq, True)
-    pair_freq   = degap(pair_freq, True)
+    pair_freq = degap(pair_freq, True)
 
-    single_freq_pc = (1 - pseudocount_ratio_single) * single_freq + pseudocount_ratio_single * pcounts
-    pair_freq_pc = ((1 - pseudocount_ratio_pair) * (1 - pseudocount_ratio_pair)) * (
-        pair_freq - single_freq[:, np.newaxis, :, np.newaxis] * single_freq[np.newaxis, :, np.newaxis, :]
-    ) + (single_freq_pc[:, np.newaxis, :, np.newaxis] * single_freq_pc[np.newaxis, :, np.newaxis, :])
-
+    single_freq_pc = (1 - pseudocount_ratio) * single_freq + pseudocount_ratio * pcounts
+    pair_freq_pc = ((1 - pseudocount_ratio) ** 2) * \
+                   (pair_freq - single_freq[:, np.newaxis, :, np.newaxis] * single_freq[np.newaxis, :, np.newaxis, :]) + \
+                   (single_freq_pc[:, np.newaxis, :, np.newaxis] * single_freq_pc[np.newaxis, :, np.newaxis, :])
 
     return single_freq_pc, pair_freq_pc
+
+
+def calculate_frequencies(msa, weights, pseudocount_function, pseudocount_n_single=1, pseudocount_n_pair=None, remove_gaps=False):
+
+    if pseudocount_n_pair is None:
+        pseudocount_n_pair = pseudocount_n_single
+
+    single_counts, pair_counts = ccmpred.counts.both_counts(msa, weights)
+    neff = np.sum(weights) if weights is not None else msa.shape[0]
+
+    pseudocount_ratio_single = pseudocount_n_single / (neff + pseudocount_n_single)
+    pseudocount_ratio_pair = pseudocount_n_pair / (neff + pseudocount_n_pair)
+
+    print("Calculating AA Frequencies with {0} percent pseudocounts ({1} {2} {3})".format(np.round(pseudocount_ratio_single, decimals=5),
+                                                                                                                     pseudocount_function.__name__,
+                                                                                                                     pseudocount_n_single,
+                                                                                                                     pseudocount_n_pair))
+
+    #frequencies are normalized WITH gaps
+    single_freq = single_counts / neff
+    pair_freq = pair_counts / neff
+
+    pcounts = pseudocount_function(single_freq)
+
+    if (remove_gaps):
+        single_freq = degap(single_freq,True)
+        pair_freq = degap(pair_freq, True)
+
+    single_freq_pc = (1 - pseudocount_ratio_single) * single_freq + pseudocount_ratio_single * pcounts
+    pair_freq_pc = ((1 - pseudocount_ratio_pair) ** 2) * \
+                   (pair_freq - single_freq[:, np.newaxis, :, np.newaxis] * single_freq[np.newaxis, :, np.newaxis, :]) + \
+                   (single_freq_pc[:, np.newaxis, :, np.newaxis] * single_freq_pc[np.newaxis, :, np.newaxis, :])
+
+    return single_freq_pc, pair_freq_pc
+
 
 
 def degap(freq, keep_dims=False):
@@ -60,7 +102,7 @@ def degap(freq, keep_dims=False):
 
 def uniform_pseudocounts(single_freq):
     uniform_pc = np.zeros_like(single_freq)
-    uniform_pc.fill(1./20)
+    uniform_pc.fill(1./21)
     return uniform_pc
 
 def constant_pseudocounts(single_freq):

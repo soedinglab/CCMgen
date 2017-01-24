@@ -1,27 +1,36 @@
 import numpy as np
 
 
-def minimize(objfun, x, maxiter, alpha0=None, alpha_decay=10):
+class gradientDescent():
+    """Optimize objective function using gradient descent"""
 
-    objfun.begin_progress()
+    def __init__(self, maxiter=100, alpha0=None, alpha_decay=10):
+        self.maxiter = maxiter
+        self.alpha0 = alpha0
+        self.alpha_decay = alpha_decay
 
-    fx, g = objfun.evaluate(x)
-    objfun.progress(x, g, fx, 0, 1, 0)
 
-    if not alpha0:
-        alpha0 = 1 / np.sqrt(np.sum(g * g))
+    def minimize(self, objfun, x):
 
-    for i in range(maxiter):
-        alpha = alpha0 / (1 + i / alpha_decay)
+        objfun.begin_progress()
+
         fx, g = objfun.evaluate(x)
+        objfun.progress(x, g, fx, 0, 1, 0)
 
-        objfun.progress(x, g, fx, i + 1, 1, alpha)
+        if not self.alpha0:
+            self.alpha0 = 1 / np.sqrt(np.sum(g * g))
 
-        x -= alpha * g
+        for i in range(self.maxiter):
+            alpha = self.alpha0 / (1 + i / self.alpha_decay)
+            fx, g = objfun.evaluate(x)
 
-    ret = {
-        "code": 2,
-        "message": "Reached number of iterations"
-    }
+            objfun.progress(x, g, fx, i + 1, 1, alpha)
 
-    return fx, x, ret
+            x -= alpha * g
+
+        ret = {
+            "code": 2,
+            "message": "Reached number of iterations"
+        }
+
+        return fx, x, ret
