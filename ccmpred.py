@@ -38,11 +38,8 @@ REG_L2_SCALING= {
 ALGORITHMS = {
     "conjugate_gradients": lambda opt: cg.conjugateGradient(maxiter=opt.numiter, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev),
     "gradient_descent": lambda opt: gd.gradientDescent(maxiter=opt.numiter, alpha0=opt.alpha0, alpha_decay=opt.alpha0),
-    "numerical_differentiation": lambda of, x0, opt: nd.numdiff(of, x0)
+    "numerical_differentiation": lambda opt: nd.numDiff(maxiter=opt.numiter, epsilon=opt.epsilon)
 }
-
-
-
 
 
 class TreeCDAction(argparse.Action):
@@ -62,20 +59,6 @@ class RegL2Action(argparse.Action):
         lambda_single, lambda_pair = values
 
         namespace.regularization = lambda msa, centering, scaling: ccmpred.regularization.L2(lambda_single, lambda_pair * scaling, centering)
-
-# class AlgorithmAction(argparse.Action):
-#
-#     def __call__(self, parser, namespace, values, option_string=None):
-#
-#         print values
-#
-#         ALGORITHMS = {
-#             #"--alg-gd": lambda of, x0, opt: ccmpred.algorithm.gradient_descent.gradientDescent(alpha0=values[0], alpha_decay=values[1]),
-#             "--alg-cg": ccmpred.algorithm.conjugate_gradients.conjugateGradient(epsilon=values[0], convergence_prev=values[1]),
-#             "--alg-nd": lambda of, x0, opt: ccmpred.algorithm.numdiff.numdiff(of, x0),
-#         }
-#
-#         setattr(namespace, 'algorithm', ALGORITHMS[option_string])
 
 class StoreConstParametersAction(argparse.Action):
     def __init__(self, option_strings, dest, nargs=None, arg_default=None, default=None, **kwargs):
@@ -214,6 +197,7 @@ def main():
 
     print("Will optimize {0} {1} variables of {2} with {3} \n".format(x0.size, x0.dtype, f, alg))
     fx, x, algret = alg.minimize(f, x0)
+
 
     condition = "Finished" if algret['code'] >= 0 else "Exited"
 
