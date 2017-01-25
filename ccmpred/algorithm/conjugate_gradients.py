@@ -80,6 +80,7 @@ class conjugateGradient():
             # convergence check
             if len(lastfx) >= self.convergence_prev:
                 check_fx = lastfx[-self.convergence_prev]
+                #print("check_fx: {0} (check_fx - fx) / check_fx: {1}".format(check_fx, (check_fx - fx) / check_fx))
                 if (check_fx - fx) / check_fx < self.epsilon:
                     ret['message'] = 'Success!'
                     ret['code'] = 0
@@ -93,7 +94,7 @@ class conjugateGradient():
         return fx, x, ret
 
     def linesearch(self, x0, fx, g, objfun, s, alpha):
-        dg_init = np.sum(g * g)
+        dg_init = np.sum(g * s) #!!!!!!!!!!!!!!!!!!!! this was formerly dg_init = np.sum(g * g)
         dg_test = dg_init * self.ftol
 
         n_linesearch = 0
@@ -113,7 +114,10 @@ class conjugateGradient():
 
             # armijo condition
             if fx_step < fx_init + alpha * dg_test:
+                #print("fx_step: {0} fx_init + alpha * dg_test: {1} alpha * dg_test: {2} alpha {3}".format(fx_step, fx_init + alpha * dg_test, alpha * dg_test, alpha))
+
                 dg = np.sum(s * g)
+                #print("dg: {0} self.wolfe * dg_init: {1} dg_init: {2}".format(dg, self.wolfe * dg_init,  dg_init))
                 if dg < self.wolfe * dg_init:
                     fx = fx_step
                     return n_linesearch, fx, alpha, g, x
