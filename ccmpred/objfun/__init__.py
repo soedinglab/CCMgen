@@ -10,6 +10,8 @@ class ObjectiveFunction(object):
         self.trajectory_file = None
         self.linear_to_structured = None
 
+        self.xnorm = []
+
     @classmethod
     def init_from_default(cls, msa):
         raise NotImplemented()
@@ -46,6 +48,7 @@ class ObjectiveFunction(object):
     def progress(self, x, g, fx, n_iter, n_ls, step):
         xnorm = np.sum(x * x)
         gnorm = np.sum(g * g)
+        self.xnorm.append(xnorm)
 
         data_tokens = [(n_iter, '8d'), (n_ls, '3d'), (fx, '12g'), (xnorm, '12g'), (gnorm, '12g')]
 
