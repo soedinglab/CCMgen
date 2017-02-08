@@ -11,7 +11,7 @@ import ccmpred.scoring
 import ccmpred.pseudocounts
 import ccmpred.raw
 import ccmpred.logo
-import ccmpred.io.alignment as aln
+import ccmpred.io
 import ccmpred.centering
 import ccmpred.regularization
 import ccmpred.model_probabilities
@@ -93,9 +93,9 @@ def parse_args():
     grp_of.add_argument("--ofn-tree-cd", action=TreeCDAction, metavar=("TREEFILE", "ANCESTORFILE"), nargs=2, type=str, help="Use Tree-controlled Contrastive Divergence, loading tree data from TREEFILE and ancestral sequence data from ANCESTORFILE")
 
     grp_al = parser.add_argument_group("Algorithms")
-    grp_al.add_argument("--alg-cg", dest="algorithm", action="store_const", const=ALGORITHMS['conjugate_gradients'], default=ALGORITHMS['conjugate_gradients'], help='Use conjugate gradients (default)')
-    grp_al.add_argument("--alg-gd", dest="algorithm", action="store_const", const=ALGORITHMS['gradient_descent'], help='Use gradient descent')
-    grp_al.add_argument("--alg-nd", dest="algorithm", action="store_const", const=ALGORITHMS['numerical_differentiation'], help='Debug gradients with numerical differentiation')
+    grp_al.add_argument("--alg-cg", dest="algorithm", action="store_const", const='conjugate_gradients', default=ALGORITHMS['conjugate_gradients'], help='Use conjugate gradients (default)')
+    grp_al.add_argument("--alg-gd", dest="algorithm", action="store_const", const='gradient_descent', help='Use gradient descent')
+    grp_al.add_argument("--alg-nd", dest="algorithm", action="store_const", const='numerical_differentiation', help='Debug gradients with numerical differentiation')
 
     grp_al.add_argument("--cg-epsilon",             dest="epsilon",             default=1e-2,   type=float, help="Set convergence criterion for minimum decrease in the last convergence_prev iterations to EPSILON [default: 0.01]")
     grp_al.add_argument("--cg-convergence_prev",    dest="convergence_prev",    default=5,      type=int, help="Set convergence_prev parameter for convergence criterion [default: 5]")
@@ -110,9 +110,9 @@ def parse_args():
 
     grp_rg = parser.add_argument_group("Regularization")
     grp_rg.add_argument("--reg-l2", dest="regularization", action=RegL2Action, type=float, nargs=2, metavar=("LAMBDA_SINGLE", "LAMBDA_PAIR"), default=lambda msa, centering, scaling: ccmpred.regularization.L2(10, 0.2 * scaling, centering), help='Use L2 regularization with coefficients LAMBDA_SINGLE, LAMBDA_PAIR * SCALING;  (default: 10 0.2)')
-    grp_rg.add_argument("--reg-l2-scale_by_L",      dest="scaling", action="store_const", const=REG_L2_SCALING["L"], default=REG_L2_SCALING["L"], help=" LAMBDA_PAIR * (L-1) (default)")
-    grp_rg.add_argument("--reg-l2-scale_by_div",    dest="scaling", action="store_const", const=REG_L2_SCALING["diversity"], help="LAMBDA_PAIR * (L/sqrt(N))")
-    grp_rg.add_argument("--reg-l2-noscaling",       dest="scaling", action="store_const", const=REG_L2_SCALING["1"], help="LAMBDA_PAIR")
+    grp_rg.add_argument("--reg-l2-scale_by_L",      dest="scaling", action="store_const", const="L", default="L", help=" LAMBDA_PAIR * (L-1) (default)")
+    grp_rg.add_argument("--reg-l2-scale_by_div",    dest="scaling", action="store_const", const="diversity", help="LAMBDA_PAIR * (L/sqrt(N))")
+    grp_rg.add_argument("--reg-l2-noscaling",       dest="scaling", action="store_const", const="1", help="LAMBDA_PAIR")
 
     grp_gp = parser.add_argument_group("Gap Treatment")
     grp_gp.add_argument("--max_gap_ratio",  dest="max_gap_ratio", default=100, type=int, help="Remove alignment positions with >x% gaps [default: %(default)s  = no removal]")
@@ -147,11 +147,10 @@ def main():
     if opt.logo:
         ccmpred.logo.logo()
 
-    msa = aln.read_msa(opt.alnfile, opt.aln_format)
+    msa = ccmpred.io.alignment.read_msa(opt.alnfile, opt.aln_format)
     msa, gapped_positions = ccmpred.gaps.remove_gapped_positions(msa, opt.max_gap_ratio)
 
     weights = opt.weight(msa, opt.ignore_gaps)
-
 
     protein=os.path.basename(opt.alnfile).split(".")[0]
     print("Alignment for protein {0} (L={1}) has {2} sequences and Neff(HHsuite-like)={3}".format(protein, msa.shape[1], msa.shape[0], ccmpred.pseudocounts.get_neff(msa)))
@@ -175,7 +174,7 @@ def main():
     if opt.initrawfile:
         raw = ccmpred.raw.parse(opt.initrawfile)
         centering = raw.x_single.copy()
-        regularization = opt.regularization(msa, centering, opt.scaling(msa))
+        regularization = opt.regularization(msa, centering, REG_L2_SCALING[opt.scaling](msa))
         x0, f = opt.objfun.init_from_raw(msa, freqs, weights, raw, regularization, *opt.objfun_args, **opt.objfun_kwargs)
         #only compute model frequencies and exit
         if opt.outmodelprobmsgpackfile :
@@ -193,7 +192,7 @@ def main():
 
     f.trajectory_file = opt.trajectoryfile
 
-    alg = opt.algorithm(opt)
+    alg = ALGORITHMS[opt.algorithm](opt)
 
     print("Will optimize {0} {1} variables of {2} with {3} \n".format(x0.size, x0.dtype, f, alg))
     fx, x, algret = alg.minimize(f, x0)
@@ -211,7 +210,7 @@ def main():
         msa_sampled = f.msa_sampled
 
         with open(opt.cd_alnfile, "w") as f:
-            aln.write_msa_psicov(f, msa_sampled)
+            ccmpred.io.alignment.write_msa_psicov(f, msa_sampled)
 
     if opt.max_gap_ratio < 100:
         ccmpred.gaps.backinsert_gapped_positions(res, gapped_positions)
@@ -227,20 +226,15 @@ def main():
     if opt.outmodelprobmsgpackfile:
         print("Writing msgpack-formatted model probabilties to {0}".format(opt.outmodelprobmsgpackfile))
         if opt.max_gap_ratio < 100:
-            msa = aln.read_msa(opt.alnfile, opt.aln_format)
+            msa = ccmpred.io.alignment.read_msa(opt.alnfile, opt.aln_format)
             freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, opt.pseudocounts[0], pseudocount_n_single=opt.pseudocounts[1], pseudocount_n_pair=opt.pseudocount_pair_count)
         if opt.dev_center_v:
             freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, ccmpred.pseudocounts.constant_pseudocounts, pseudocount_n_single=1, pseudocount_n_pair=1, remove_gaps=True)
 
         ccmpred.model_probabilities.write_msgpack(opt.outmodelprobmsgpackfile, res, weights, msa, freqs, regularization.lambda_pair)
 
-    print("Writing summed score matrix (with APC={0}) to {1}".format(not opt.disable_apc, opt.matfile))
-    mat = ccmpred.scoring.frobenius_score(res.x_pair)
-    if not opt.disable_apc:
-        mat = ccmpred.scoring.apc(mat)
-    np.savetxt(opt.matfile, mat)
-    with open(opt.matfile,'a') as f:
-        f.write("#>META> ".encode("utf-8") + json.dumps(meta).encode("utf-8") + b"\n")
+    #write contact map and meta data info matfile
+    ccmpred.io.contactmatrix.write_matrix(opt.matfile, res, meta, disable_apc=opt.disable_apc)
 
 
     exitcode = 0 if algret['code'] > 0 else -algret['code']

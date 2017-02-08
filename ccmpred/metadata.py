@@ -17,7 +17,8 @@ def create(opt, regularization, msa, weights, f, fx, algret, alg):
 
     meta['workflow'][0]['parameters'] = {}
     meta['workflow'][0]['parameters']['regularization'] = {}
-    meta['workflow'][0]['parameters']['regularization']['type'] = 'l2_centered_v'
+    meta['workflow'][0]['parameters']['regularization']['regularization_type'] = 'l2_centered_v'
+    meta['workflow'][0]['parameters']['regularization']['regularization_scaling'] = opt.scaling
     meta['workflow'][0]['parameters']['regularization']['lambda_single'] = regularization.lambda_single
     meta['workflow'][0]['parameters']['regularization']['lambda_pair'] = regularization.lambda_pair
     meta['workflow'][0]['parameters']['regularization']['lambda_pair_factor'] = regularization.lambda_pair / (msa.shape[1] - 1)
@@ -35,7 +36,7 @@ def create(opt, regularization, msa, weights, f, fx, algret, alg):
 
 
     meta['workflow'][0]['parameters']['pseudocounts'] = {}
-    meta['workflow'][0]['parameters']['pseudocounts']['type'] = opt.pseudocounts[0].__name__
+    meta['workflow'][0]['parameters']['pseudocounts']['pseudocount_type'] = opt.pseudocounts[0].__name__
     meta['workflow'][0]['parameters']['pseudocounts']['pseudocount_n_single'] = opt.pseudocounts[1]
     if opt.pseudocount_pair_count:
         meta['workflow'][0]['parameters']['pseudocounts']['pseudocount_n_pair'] = opt.pseudocount_pair_count
@@ -43,10 +44,10 @@ def create(opt, regularization, msa, weights, f, fx, algret, alg):
         meta['workflow'][0]['parameters']['pseudocounts']['pseudocount_n_pair'] = opt.pseudocounts[1]
 
     meta['workflow'][0]['parameters']['optimization']={}
-    meta['workflow'][0]['parameters']['optimization']['method'] = opt.algorithm.__name__
+    meta['workflow'][0]['parameters']['optimization']['method'] = opt.algorithm
     meta['workflow'][0]['parameters']['optimization']['objfun'] = opt.objfun.__name__
 
-    if (opt.algorithm.__name__) == 'conjugateGradient':
+    if (opt.algorithm) == 'conjugate_gradients':
         meta['workflow'][0]['parameters']['optimization']['wolfe'] = alg.wolfe
         meta['workflow'][0]['parameters']['optimization']['alpha_mul'] = alg.alpha_mul
         meta['workflow'][0]['parameters']['optimization']['max_linesearch'] = alg.max_linesearch
