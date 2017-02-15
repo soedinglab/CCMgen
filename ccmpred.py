@@ -24,6 +24,7 @@ import ccmpred.objfun.treecd as treecd
 import ccmpred.algorithm.gradient_descent as gd
 import ccmpred.algorithm.conjugate_gradients as cg
 import ccmpred.algorithm.numdiff as nd
+import ccmpred.algorithm.adam as ad
 
 EPILOG = """
 CCMpred is a fast python implementation of the maximum pseudo-likelihood class of contact prediction methods. From an alignment given as alnfile, it will maximize the likelihood of the pseudo-likelihood of a Potts model with 21 states for amino acids and gaps. The L2 norms of the pairwise coupling potentials will be written to the output matfile.
@@ -37,9 +38,24 @@ REG_L2_SCALING= {
 
 ALGORITHMS = {
     "conjugate_gradients": lambda opt: cg.conjugateGradient(maxiter=opt.numiter, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev),
-    "gradient_descent": lambda opt: gd.gradientDescent(maxiter=opt.numiter, alpha0=opt.alpha0, alpha_decay=opt.alpha0),
+    "gradient_descent": lambda opt: gd.gradientDescent(maxiter=opt.numiter, alpha0=opt.alpha0, alpha_decay=opt.alpha_decay),
+    "adam": lambda opt: ad.Adam(maxiter=opt.numiter, learning_rate=opt.learning_rate, momentum_estimate1=opt.mom1, momentum_estimate2=opt.mom2, noise=1e-7),
     "numerical_differentiation": lambda opt: nd.numDiff(maxiter=opt.numiter, epsilon=opt.epsilon)
 }
+
+
+class CDAction(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, arg_default=None, **kwargs):
+        self.arg_default = arg_default
+        super(CDAction, self).__init__(option_strings, dest, nargs=nargs, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+
+        if values is None:
+            values  = self.arg_default
+
+        namespace.objfun_args = [values]
+        namespace.objfun = cd.ContrastiveDivergence
 
 
 class TreeCDAction(argparse.Action):
@@ -48,7 +64,7 @@ class TreeCDAction(argparse.Action):
         treefile, seq0file = values
 
         tree = Bio.Phylo.read(treefile, "newick")
-        seq0, id0 = aln.read_msa(seq0file, parser.values.aln_format, return_identifiers=True)
+        seq0, id0 = ccmpred.io.alignment.read_msa(seq0file, parser.values.aln_format, return_identifiers=True)
 
         namespace.objfun_args = [tree, seq0, id0]
         namespace.objfun = treecd.TreeContrastiveDivergence
@@ -89,18 +105,23 @@ def parse_args():
 
     grp_of = parser.add_argument_group("Objective Functions")
     grp_of.add_argument("--ofn-pll", dest="objfun", action="store_const", const=pll.PseudoLikelihood, default=pll.PseudoLikelihood, help="Use pseudo-log-likelihood (default)")
-    grp_of.add_argument("--ofn-pcd", dest="objfun", action="store_const", const=cd.ContrastiveDivergence, help="Use Persistent Contrastive Divergence")
+    grp_of.add_argument("--ofn-cd",  dest="objfun", action=CDAction, metavar="gibbs_steps", type=int, nargs="?", arg_default=1, help="Use Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences")
     grp_of.add_argument("--ofn-tree-cd", action=TreeCDAction, metavar=("TREEFILE", "ANCESTORFILE"), nargs=2, type=str, help="Use Tree-controlled Contrastive Divergence, loading tree data from TREEFILE and ancestral sequence data from ANCESTORFILE")
 
     grp_al = parser.add_argument_group("Algorithms")
     grp_al.add_argument("--alg-cg", dest="algorithm", action="store_const", const='conjugate_gradients', default=ALGORITHMS['conjugate_gradients'], help='Use conjugate gradients (default)')
     grp_al.add_argument("--alg-gd", dest="algorithm", action="store_const", const='gradient_descent', help='Use gradient descent')
     grp_al.add_argument("--alg-nd", dest="algorithm", action="store_const", const='numerical_differentiation', help='Debug gradients with numerical differentiation')
+    grp_al.add_argument("--alg-ad", dest="algorithm", action="store_const", const='adam', help='Use Adam')
 
     grp_al.add_argument("--cg-epsilon",             dest="epsilon",             default=1e-2,   type=float, help="Set convergence criterion for minimum decrease in the last convergence_prev iterations to EPSILON [default: 0.01]")
     grp_al.add_argument("--cg-convergence_prev",    dest="convergence_prev",    default=5,      type=int, help="Set convergence_prev parameter for convergence criterion [default: 5]")
     grp_al.add_argument("--gd-alpha0",              dest="alpha0",              default=5e-3,   type=float, help="alpha0 parameter for gradient descent")
-    grp_al.add_argument("--gd-alpha_decay",         dest="alpha_decay",         default=1e1,   type=float, help="alpha_decay for gradient descent")
+    grp_al.add_argument("--gd-alpha_decay",         dest="alpha_decay",         default=1e1,    type=float, help="alpha_decay for gradient descent")
+    grp_al.add_argument("--ad-learning_rate",       dest="learning_rate",       default=1e-3,   type=float, help="learning rate for adam")
+    grp_al.add_argument("--ad-mom1",                dest="mom1",                default=0.9,    type=float, help="momentum 1 for adam")
+    grp_al.add_argument("--ad-mom2",                dest="mom2",                default=0.999,  type=float, help="momentum 2 for adam")
+
 
     grp_wt = parser.add_argument_group("Weighting")
     grp_wt.add_argument("--wt-simple",          dest="weight", action="store_const", const=ccmpred.weighting.weights_simple, default=ccmpred.weighting.weights_simple, help='Use simple weighting (default)')
@@ -119,9 +140,9 @@ def parse_args():
     grp_gp.add_argument("--wt-ignore-gaps", dest="ignore_gaps", action="store_true", default=False, help="Do not count gaps as identical amino acids during reweighting of sequences.")
 
     grp_pc = parser.add_argument_group("Pseudocounts")
-    grp_pc.add_argument("--pc-submat",      dest="pseudocounts", action=StoreConstParametersAction, default=ccmpred.pseudocounts.substitution_matrix_pseudocounts, const=ccmpred.pseudocounts.substitution_matrix_pseudocounts, nargs="?", metavar="N", type=float, arg_default=1, help="Use N substitution matrix pseudocounts (default) (by default, N=1)")
-    grp_pc.add_argument("--pc-constant",    dest="pseudocounts", action=StoreConstParametersAction, const=ccmpred.pseudocounts.constant_pseudocounts,   metavar="N", nargs="?", type=float, arg_default=1, help="Use N constant pseudocounts (by default, N=1)")
-    grp_pc.add_argument("--pc-uniform",     dest="pseudocounts", action=StoreConstParametersAction, const=ccmpred.pseudocounts.uniform_pseudocounts,    metavar="N", nargs="?", type=float, arg_default=1, help="Use N uniform pseudocounts, e.g 1/21 (by default, N=1)")
+    grp_pc.add_argument("--pc-submat",      dest="pseudocounts", action=StoreConstParametersAction, default=ccmpred.pseudocounts.substitution_matrix_pseudocounts, const=ccmpred.pseudocounts.substitution_matrix_pseudocounts, nargs="?", metavar="N", type=int, arg_default=1, help="Use N substitution matrix pseudocounts (default) (by default, N=1)")
+    grp_pc.add_argument("--pc-constant",    dest="pseudocounts", action=StoreConstParametersAction, const=ccmpred.pseudocounts.constant_pseudocounts,   metavar="N", nargs="?", type=int, arg_default=1, help="Use N constant pseudocounts (by default, N=1)")
+    grp_pc.add_argument("--pc-uniform",     dest="pseudocounts", action=StoreConstParametersAction, const=ccmpred.pseudocounts.uniform_pseudocounts,    metavar="N", nargs="?", type=int, arg_default=1, help="Use N uniform pseudocounts, e.g 1/21 (by default, N=1)")
     grp_pc.add_argument("--pc-none",        dest="pseudocounts", action="store_const", const=[ccmpred.pseudocounts.no_pseudocounts, 0], help="Use no pseudocounts")
     grp_pc.add_argument("--pc-pair-count",  dest="pseudocount_pair_count", default=None, type=int, help="Specify a separate number of pseudocounts for pairwise frequencies (default: use same as single counts)")
 
@@ -168,22 +189,27 @@ def main():
     if opt.dev_center_v:
         freqs = ccmpred.pseudocounts.calculate_frequencies_dev_center_v(msa, weights)
     else:
-        freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, opt.pseudocounts[0], pseudocount_n_single=opt.pseudocounts[1], pseudocount_n_pair=opt.pseudocount_pair_count, remove_gaps=True)
+        freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, opt.pseudocounts[0], pseudocount_n_single=opt.pseudocounts[1], pseudocount_n_pair=opt.pseudocount_pair_count, remove_gaps=False)
 
+    #setup regularization properties
+    scaling = REG_L2_SCALING[opt.scaling](msa)
+    centering = ccmpred.centering.calculate(freqs)
 
     if opt.initrawfile:
         raw = ccmpred.raw.parse(opt.initrawfile)
-        centering = raw.x_single.copy()
-        regularization = opt.regularization(msa, centering, REG_L2_SCALING[opt.scaling](msa))
+        #centering = raw.x_single.copy() #shape Lx20 #should it not be recomputed????
+        centering= centering[:, :20]    #shape Lx20 instead of Lx21
+        regularization = opt.regularization(msa, centering, scaling)
         x0, f = opt.objfun.init_from_raw(msa, freqs, weights, raw, regularization, *opt.objfun_args, **opt.objfun_kwargs)
         #only compute model frequencies and exit
         if opt.outmodelprobmsgpackfile :
             print("Writing msgpack-formatted model probabilties to {0}".format(opt.outmodelprobmsgpackfile))
+            if opt.dev_center_v:
+                freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, ccmpred.pseudocounts.constant_pseudocounts, pseudocount_n_single=1, pseudocount_n_pair=1, remove_gaps=True)
             ccmpred.model_probabilities.write_msgpack(opt.outmodelprobmsgpackfile, raw, weights, msa, freqs, regularization.lambda_pair)
             sys.exit(0)
     else:
-        centering = ccmpred.centering.calculate(freqs)
-        regularization = opt.regularization(msa, centering, opt.scaling(msa))
+        regularization = opt.regularization(msa, centering, scaling)
         x0, f = opt.objfun.init_from_default(msa, freqs, weights, regularization, *opt.objfun_args, **opt.objfun_kwargs)
 
     if opt.comparerawfile:
@@ -194,12 +220,12 @@ def main():
 
     alg = ALGORITHMS[opt.algorithm](opt)
 
-    print("Will optimize {0} {1} variables of {2} with {3} \n".format(x0.size, x0.dtype, f, alg))
+    print("Will optimize {0} {1} variables wrt {2} and {3}".format(x0.size, x0.dtype, f, f.regularization))
+    print("Optimizer: {0}".format(alg))
     fx, x, algret = alg.minimize(f, x0)
 
 
     condition = "Finished" if algret['code'] >= 0 else "Exited"
-
     print("\n{0} with code {code} -- {message}".format(condition, **algret))
 
     meta = ccmpred.metadata.create(opt, regularization, msa, weights, f, fx, algret, alg)
