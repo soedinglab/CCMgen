@@ -7,6 +7,7 @@ def calculate(freqs):
     #single_freqs either normalized with or without gaps --> same result due to subtraction of mean
     lsingle_freqs = np.log(single_freqs)
 
+    #subtract mean of non_gapped frequencies
     v_center = lsingle_freqs - np.mean(lsingle_freqs[:, :20], axis=1)[:, np.newaxis]
     v_center[:, 20] = 0
 
