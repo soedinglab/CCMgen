@@ -21,4 +21,4 @@ class L2(object):
         return fx_reg, g_single, g_pair
 
     def __repr__(self):
-        return "L₂ regularization λsingle={0} λpair={1}".format(self.lambda_single, self.lambda_pair)
+        return "L₂ regularization (λsingle={0} λpair={1})".format(self.lambda_single, self.lambda_pair)
