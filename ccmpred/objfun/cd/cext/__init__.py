@@ -16,7 +16,19 @@ libcd.sample_sequences.argtypes = [
     ctypes.c_uint32,    # ncol
 ]
 
+libcd.gibbs_sample_sequences.restype = None
+libcd.gibbs_sample_sequences.argtypes = [
+    array_2d_char,     # *msa
+    array_1d_float,    # *x
+    ctypes.c_uint32,    # steps
+    ctypes.c_uint64,    # nrow
+    ctypes.c_uint32,    # ncol
+]
 
 def sample_sequences(msa, x):
     libcd.sample_sequences(msa, x, *msa.shape)
+    return msa
+
+def gibbs_sample_sequences(msa, x, steps):
+    libcd.gibbs_sample_sequences(msa, x, steps, *msa.shape)
     return msa

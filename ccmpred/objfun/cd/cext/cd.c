@@ -12,7 +12,7 @@
 
 /**
  * Compute conditional probabilities
- * $P(X_i = a |  X^n_0, ... X^n_L \setminus X^n_i)$
+ * $P(X_i = a |  X^n_0, ... X^n_L \setminus X^n_i, v, w)$
  *
  * @param[in] i Index of the column to compute probabilities for
  * @param[out] cond_probs Returns a 20-field array of conditional probabilities
@@ -87,8 +87,51 @@ void sample_sequences(
 
 			compute_conditional_probs(i, pcondcurr, x, &seq[k * ncol], ncol);
 			seq[k * ncol + i] = pick_random_weighted(pcondcurr, N_ALPHA - 1);
+
 		}
 		fl_free(pcondcurr);
+	}
+}
+
+
+void gibbs_sample_sequences(
+	unsigned char *seq,
+	const flt *const x,
+	const int steps,
+	const unsigned long n_samples,
+	const int ncol
+){
+
+	seed_rng();
+
+	for (int s=0; s < steps; s++ ){
+
+		#pragma omp parallel
+		{
+			int i;
+			unsigned long k;
+			flt *pcondcurr = fl_malloc(N_ALPHA);
+
+			//int array with elements 1..L
+			unsigned int sequence_position_vector[ncol];
+			for (unsigned int p=0; p < ncol; p++) sequence_position_vector[p] = p;
+
+
+			#pragma omp for
+			for (k = 0; k < n_samples; k++) {
+
+			  	shuffle(sequence_position_vector, ncol);
+
+			  	for (i=0; i < ncol; i++){
+					if (seq[k * ncol + sequence_position_vector[i]] != GAP){
+						compute_conditional_probs(sequence_position_vector[i], pcondcurr, x, &seq[k * ncol], ncol);
+						seq[k * ncol + sequence_position_vector[i]] = pick_random_weighted(pcondcurr, N_ALPHA - 1);
+					}
+
+				}
+			}
+			fl_free(pcondcurr);
+		}
 	}
 }
 

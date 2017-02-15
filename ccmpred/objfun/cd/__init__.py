@@ -11,7 +11,7 @@ import ccmpred.weighting
 
 class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
 
-    def __init__(self, msa, freqs, weights, regularization, n_samples):
+    def __init__(self, msa, freqs, weights, regularization, n_samples,  gibbs_steps):
         super(ContrastiveDivergence, self).__init__()
 
         self.msa = msa
@@ -22,12 +22,14 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         self.nsingle = self.ncol * 20
         self.nvar = self.nsingle + self.ncol * self.ncol * 21 * 21
         self.n_samples = n_samples
+        self.gibbs_steps = gibbs_steps
 
         # get constant alignment counts
         neff = np.sum(weights)
         freqs_single, freqs_pair = freqs
         self.msa_counts_single = freqs_single * neff
         self.msa_counts_pair = freqs_pair * neff
+        # self.msa_counts_single, self.msa_counts_pair = ccmpred.counts.both_counts(msa, self.weights)
 
         # reset gap counts
         self.msa_counts_single[:, 20] = 0
@@ -44,14 +46,16 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         return self.msa.copy()
 
     @classmethod
-    def init_from_raw(cls, msa, freqs, weights, raw, regularization):
+    def init_from_raw(cls, msa, freqs, weights, raw, regularization, gibbs_steps=1):
         n_samples = msa.shape[0]
 
-        res = cls(msa, freqs, weights, regularization, n_samples)
+        res = cls(msa, freqs, weights, regularization, n_samples, gibbs_steps)
 
         if msa.shape[1] != raw.ncol:
             raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
 
+        # raw.x_single is of shape L x 20
+        # raw.x_pair   is of shape L x L x 21 x 21
         x = structured_to_linear(raw.x_single, raw.x_pair)
         return x, res
 
@@ -60,23 +64,36 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
 
         return ccmpred.raw.CCMRaw(self.ncol, x_single, x_pair, meta)
 
+    def gibbs_sample_sequences(self, x):
+
+        #for CD start from the input data
+        return ccmpred.objfun.cd.cext.gibbs_sample_sequences(self.msa.copy(),  x, self.gibbs_steps)
+
     def sample_sequences(self, x):
+        #for PERSISTENT CD continue the markov chain
         return ccmpred.objfun.cd.cext.sample_sequences(self.msa_sampled, x)
 
     def evaluate(self, x):
 
-        self.msa_sampled = self.sample_sequences(x)
+        self.msa_sampled = self.gibbs_sample_sequences(x)
 
-        sample_counts_single, sample_counts_pair = ccmpred.counts.both_counts(self.msa_sampled)
+        sample_counts_single, sample_counts_pair = ccmpred.counts.both_counts(self.msa_sampled, self.weights)
+        #no need to set gap counts to zero as we set gradient for gaps to zero anyway
 
         g_single = sample_counts_single - self.msa_counts_single
         g_pair = sample_counts_pair - self.msa_counts_pair
 
+        #sanity check
+        # if(np.abs(np.sum(sample_counts_single[0,:20]) - np.sum(self.msa_counts_single[0,:20])) > 1e-10):
+        #     print("Warning: sample aa counts ({0}) do not equal input msa aa counts ({1})!".format(np.sum(sample_counts_single[0,:20]), np.sum(self.msa_counts_single[0,:20])))
+
         x_single, x_pair = linear_to_structured(x, self.ncol)
         _, g_single_reg, g_pair_reg = self.regularization(x_single, x_pair)
 
-        g_single[:, :20] += g_single_reg
+        g_single[:, :20] += g_single_reg   #g_single_reg is of dim Lx20 as x_single is of dim Lx20
         g_pair += g_pair_reg
+
+        #no need to set g_single[:, 20]  to 0  as we return only g_single[:, :20]
 
         # set gradients for gap states to 0
         g_pair[:, :, :, 20] = 0
@@ -85,11 +102,12 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         for i in range(self.ncol):
             g_pair[i, i, :, :] = 0
 
+        #gradient for x_single only L x 20
         g = structured_to_linear(g_single[:, :20], g_pair)
         return -1, g
 
     def __repr__(self):
-        return "PCD ({0})".format(self.regularization)
+        return "contrastive divergence using {0} Gibbs sampling steps".format(self.gibbs_steps)
 
 
 def linear_to_structured(x, ncol, clip=False):

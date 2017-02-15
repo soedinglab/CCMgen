@@ -3,6 +3,7 @@
 
 void seed_rng(void);
 
+void shuffle(unsigned int *array, size_t n);
 int pick_random_uniform(int max);
 int pick_random_weighted(flt *probs, int n);
 
