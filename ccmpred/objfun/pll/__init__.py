@@ -97,7 +97,7 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
         return fx, g
 
     def __repr__(self):
-        return "PLL ({0})".format(self.regularization)
+        return "PLL "
 
 
 def linear_to_structured(x, ncol, clip=False):

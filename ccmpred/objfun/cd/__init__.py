@@ -11,8 +11,9 @@ import ccmpred.weighting
 
 class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
 
-    def __init__(self, msa, freqs, weights, regularization, n_samples,  gibbs_steps):
+    def __init__(self, msa, freqs, weights, regularization, n_samples,  gibbs_steps, persistent):
         super(ContrastiveDivergence, self).__init__()
+
 
         self.msa = msa
         self.weights = weights
@@ -23,6 +24,7 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         self.nvar = self.nsingle + self.ncol * self.ncol * 21 * 21
         self.n_samples = n_samples
         self.gibbs_steps = gibbs_steps
+        self.persistent = persistent
 
         # get constant alignment counts
         neff = np.sum(weights)
@@ -46,10 +48,10 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         return self.msa.copy()
 
     @classmethod
-    def init_from_raw(cls, msa, freqs, weights, raw, regularization, gibbs_steps=1):
+    def init_from_raw(cls, msa, freqs, weights, raw, regularization, gibbs_steps=1, persistent=False):
         n_samples = msa.shape[0]
 
-        res = cls(msa, freqs, weights, regularization, n_samples, gibbs_steps)
+        res = cls(msa, freqs, weights, regularization, n_samples, gibbs_steps, persistent)
 
         if msa.shape[1] != raw.ncol:
             raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
@@ -66,8 +68,11 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
 
     def gibbs_sample_sequences(self, x):
 
-        #for CD start from the input data
-        return ccmpred.objfun.cd.cext.gibbs_sample_sequences(self.msa.copy(),  x, self.gibbs_steps)
+        if self.persistent:
+            return ccmpred.objfun.cd.cext.gibbs_sample_sequences(self.msa_sampled,  x, self.gibbs_steps)
+        else:
+            #for CD start from the input data
+            return ccmpred.objfun.cd.cext.gibbs_sample_sequences(self.msa.copy(),  x, self.gibbs_steps)
 
     def sample_sequences(self, x):
         #for PERSISTENT CD continue the markov chain
@@ -107,8 +112,9 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         return -1, g
 
     def __repr__(self):
-        return "contrastive divergence using {0} Gibbs sampling steps".format(self.gibbs_steps)
-
+        return "{0} contrastive divergence using {1} Gibbs sampling steps".format(
+            "PERSISTENT" if (self.persistent) else " ",  self.gibbs_steps
+        )
 
 def linear_to_structured(x, ncol, clip=False):
     """Convert linear vector of variables into multidimensional arrays.
