@@ -15,7 +15,7 @@ class gradientDescent():
             self.alpha0, self.alpha_decay, self.maxiter)
 
 
-    def begin_process(self):
+    def begin_progress(self):
 
         header_tokens = [('iter', 8),
                          ('|x|', 12), ('|x_single|', 12), ('|x_pair|', 12),
