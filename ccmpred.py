@@ -39,7 +39,7 @@ REG_L2_SCALING= {
 ALGORITHMS = {
     "conjugate_gradients": lambda opt: cg.conjugateGradient(maxiter=opt.numiter, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev),
     "gradient_descent": lambda opt: gd.gradientDescent(maxiter=opt.numiter, alpha0=opt.alpha0, alpha_decay=opt.alpha_decay),
-    "adam": lambda opt: ad.Adam(maxiter=opt.numiter, learning_rate=opt.learning_rate, momentum_estimate1=opt.mom1, momentum_estimate2=opt.mom2, noise=1e-7),
+    "adam": lambda opt: ad.Adam(maxiter=opt.numiter, learning_rate=opt.learning_rate, momentum_estimate1=opt.mom1, momentum_estimate2=opt.mom2, noise=1e-7, early_stopping=opt.early_stopping),
     "numerical_differentiation": lambda opt: nd.numDiff(maxiter=opt.numiter, epsilon=opt.epsilon)
 }
 
@@ -116,6 +116,7 @@ def parse_args():
     grp_al.add_argument("--ad-learning_rate",       dest="learning_rate",       default=1e-3,   type=float, help="learning rate for adam")
     grp_al.add_argument("--ad-mom1",                dest="mom1",                default=0.9,    type=float, help="momentum 1 for adam")
     grp_al.add_argument("--ad-mom2",                dest="mom2",                default=0.999,  type=float, help="momentum 2 for adam")
+    grp_al.add_argument("--ad-early_stopping",      dest="early_stopping",      default=False,  type=bool, help="apply early stopping criteria (experimental)")
 
 
     grp_wt = parser.add_argument_group("Weighting")
