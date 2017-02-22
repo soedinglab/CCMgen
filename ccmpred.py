@@ -116,7 +116,7 @@ def parse_args():
     grp_al.add_argument("--ad-learning_rate",       dest="learning_rate",       default=1e-3,   type=float, help="learning rate for adam")
     grp_al.add_argument("--ad-mom1",                dest="mom1",                default=0.9,    type=float, help="momentum 1 for adam")
     grp_al.add_argument("--ad-mom2",                dest="mom2",                default=0.999,  type=float, help="momentum 2 for adam")
-    grp_al.add_argument("--ad-early_stopping",      dest="early_stopping",      default=False,  type=bool, help="apply early stopping criteria (experimental)")
+    grp_al.add_argument("--ad-early_stopping",      dest="early_stopping",      action='store_true', default=False,  help="apply early stopping criteria (experimental)")
 
 
     grp_wt = parser.add_argument_group("Weighting")

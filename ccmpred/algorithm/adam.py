@@ -31,8 +31,8 @@ class Adam():
         self.early_stopping = early_stopping
 
     def __repr__(self):
-        return "Adam stochastic optimization (learning_rate={0} momentum_estimate1={1} momentum_estimate2={2} noise={3} maxiter={4})".format(
-            self.learning_rate, self.momentum_estimate1, self.momentum_estimate2, self.noise, self.maxiter)
+        return "Adam stochastic optimization (learning_rate={0} momentum_estimate1={1} momentum_estimate2={2} noise={3} maxiter={4} early_stopping={5})".format(
+            self.learning_rate, self.momentum_estimate1, self.momentum_estimate2, self.noise, self.maxiter, self.early_stopping)
 
     def begin_process(self):
 
