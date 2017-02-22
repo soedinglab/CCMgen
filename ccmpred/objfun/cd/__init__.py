@@ -98,6 +98,8 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         g_single[:, :20] += g_single_reg   #g_single_reg is of dim Lx20 as x_single is of dim Lx20
         g_pair += g_pair_reg
 
+        #print(g_single[0, :20])
+
         #no need to set g_single[:, 20]  to 0  as we return only g_single[:, :20]
 
         # set gradients for gap states to 0

@@ -40,7 +40,7 @@ class Adam():
                          ('|x|', 12), ('|x_single|', 12), ('|x_pair|', 12),
                          ('|g|', 12), ('|g_single|', 12), ('|g_pair|', 12),
                          #('|first moment|', 12), ('|second moment|', 12),
-                         ('sign_g_t8', 12), ('sign_g_t7', 12), ('sign_g_t6', 12), ('sign_g_t5', 12)#, ('gnorm diff', 12), ('xnorm diff', 12)
+                         ('sign_g_t10', 12), ('sign_g_t8', 12), ('sign_g_t7', 12), ('sign_g_t6', 12)
                          ]
 
 
@@ -51,13 +51,12 @@ class Adam():
         else:
             print(headerline)
 
-    def progress(self, n_iter, x, x_single, x_pair, g, g_single, g_pair, first_moment, second_moment):
+    def progress(self, n_iter, x_single, x_pair, g, g_single, g_pair, first_moment, second_moment):
 
-        xnorm = np.sum(x * x)
-        gnorm = np.sum(g * g)
-
-        first_moment_norm = np.sum(first_moment * first_moment)
-        second_moment_norm = np.sum(second_moment * second_moment)
+        # xnorm = np.sum(x * x)
+        # gnorm = np.sum(g * g)
+        # first_moment_norm = np.sum(first_moment * first_moment)
+        # second_moment_norm = np.sum(second_moment * second_moment)
 
         xnorm_single = np.sum(x_single * x_single)
         xnorm_pair = np.sum(x_pair * x_pair)
@@ -67,23 +66,17 @@ class Adam():
 
         #========================
         #possible stopping criteria
-
-        #self.g_hist.append(g.copy())
-        #self.x_hist.append(x.copy())
-        if len(self.lastg) == len(g):
+        if len(self.lastg) != 0:
             self.g_sign.append(np.sum(np.sign(self.lastg * g.copy())))
         self.lastg = g.copy()
 
-        sign_g_t8, sign_g_t7, sign_g_t6, sign_g_t5 = [0,0,0,0]
-        if len(self.g_sign) > 8:
+        sign_g_t10, sign_g_t8, sign_g_t7, sign_g_t6 = [0,0,0,0]
+        if len(self.g_sign) > 10:
             self.g_sign.popleft()
-            #self.x_hist.popleft()
-            #gnorm_prev = np.sum(self.g_hist[0] * self.g_hist[0])
-            #xnorm_prev = np.sum(self.x_hist[0] * self.x_hist[0])
-            sign_g_t8 = np.sum(self.g_sign)
-            sign_g_t7 = np.sum(list(self.g_sign)[1:])
-            sign_g_t6 = np.sum(list(self.g_sign)[2:])
-            sign_g_t5 = np.sum(list(self.g_sign)[3:])
+            sign_g_t10 = np.sum(self.g_sign)
+            sign_g_t8 = np.sum(list(self.g_sign)[1:])
+            sign_g_t7 = np.sum(list(self.g_sign)[2:])
+            sign_g_t6 = np.sum(list(self.g_sign)[3:])
 
         # g_norm_diff = (gnorm_prev - gnorm) / gnorm_prev
         # x_norm_diff = (xnorm_prev - xnorm) / xnorm_prev
@@ -96,10 +89,10 @@ class Adam():
 
 
         data_tokens = [(n_iter, '8d'),
-                       (xnorm, '12g'), (xnorm_single, '12g'), (xnorm_pair, '12g'),
-                       (gnorm, '12g'), (gnorm_single, '12g'), (gnorm_pair, '12g'),
+                       (xnorm_single+xnorm_pair, '12g'), (xnorm_single, '12g'), (xnorm_pair, '12g'),
+                       (gnorm_single+gnorm_pair, '12g'), (gnorm_single, '12g'), (gnorm_pair, '12g'),
                        #(first_moment_norm, '12g'), (second_moment_norm, '12g'),
-                       (sign_g_t8, '12g'), (sign_g_t7, '12g'), (sign_g_t6, '12g'), (sign_g_t5, '12g')#, (g_norm_diff, '12g') , (x_norm_diff, '12g')
+                       (sign_g_t10, '12g'), (sign_g_t8, '12g'), (sign_g_t7, '12g'), (sign_g_t6, '12g')
                        ]
 
 
@@ -120,7 +113,7 @@ class Adam():
         fx, g = objfun.evaluate(x)
         x_single, x_pair = objfun.linear_to_structured(x)
         g_single, g_pair = objfun.linear_to_structured(g)
-        self.progress(0, x, x_single, x_pair, g, g_single, g_pair, first_moment, second_moment)
+        self.progress(0, x_single, x_pair, g, g_single, g_pair, first_moment, second_moment)
         #objfun.progress(x, g, fx, 0, 1, 0)
 
         for i in range(self.maxiter):
@@ -140,7 +133,7 @@ class Adam():
             x_single, x_pair = objfun.linear_to_structured(x)
             g_single, g_pair = objfun.linear_to_structured(g)
             #objfun.progress(x, g, fx, i + 1, 1, self.learning_rate)
-            self.progress(i + 1, x, x_single, x_pair, g, g_single, g_pair, first_moment_corrected, second_moment_corrected)
+            self.progress(i + 1, x_single, x_pair, g, g_single, g_pair, first_moment_corrected, second_moment_corrected)
 
 
             #stop condition
