@@ -37,10 +37,10 @@ REG_L2_SCALING= {
 }
 
 ALGORITHMS = {
-    "conjugate_gradients": lambda opt: cg.conjugateGradient(maxiter=opt.numiter, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev),
-    "gradient_descent": lambda opt: gd.gradientDescent(maxiter=opt.numiter, alpha0=opt.alpha0, alpha_decay=opt.alpha_decay),
-    "adam": lambda opt: ad.Adam(maxiter=opt.numiter, learning_rate=opt.learning_rate, momentum_estimate1=opt.mom1, momentum_estimate2=opt.mom2, noise=1e-7, early_stopping=opt.early_stopping),
-    "numerical_differentiation": lambda opt: nd.numDiff(maxiter=opt.numiter, epsilon=opt.epsilon)
+    "conjugate_gradients": lambda opt: cg.conjugateGradient(maxit=opt.maxit, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev),
+    "gradient_descent": lambda opt: gd.gradientDescent(maxit=opt.maxit, alpha0=opt.alpha0, alpha_decay=opt.alpha_decay, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping),
+    "adam": lambda opt: ad.Adam(maxit=opt.maxit, learning_rate=opt.learning_rate, momentum_estimate1=opt.mom1, momentum_estimate2=opt.mom2, noise=1e-7, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping),
+    "numerical_differentiation": lambda opt: nd.numDiff(maxit=opt.maxit, epsilon=opt.epsilon)
 }
 
 
@@ -86,7 +86,6 @@ class StoreConstParametersAction(argparse.Action):
 def parse_args():
     parser = argparse.ArgumentParser(description="Recover direct couplings from a multiple sequence alignment", epilog=EPILOG)
 
-    parser.add_argument("-n", "--num-iterations", dest="numiter", default=100, type=int, help="Specify the number of iterations [default: %(default)s]")
     parser.add_argument("-i", "--init-from-raw", dest="initrawfile", default=None, help="Init potentials from raw file")
     parser.add_argument("-r", "--write-raw", dest="outrawfile", default=None, help="Write potentials to raw file")
     parser.add_argument("-b", "--write-msgpack", dest="outmsgpackfile", default=None, help="Write potentials to MessagePack file")
@@ -108,15 +107,17 @@ def parse_args():
     grp_al.add_argument("--alg-gd", dest="algorithm", action="store_const", const='gradient_descent', help='Use gradient descent')
     grp_al.add_argument("--alg-nd", dest="algorithm", action="store_const", const='numerical_differentiation', help='Debug gradients with numerical differentiation')
     grp_al.add_argument("--alg-ad", dest="algorithm", action="store_const", const='adam', help='Use Adam')
-
-    grp_al.add_argument("--cg-epsilon",             dest="epsilon",             default=1e-2,   type=float, help="Set convergence criterion for minimum decrease in the last convergence_prev iterations to EPSILON [default: 0.01]")
-    grp_al.add_argument("--cg-convergence_prev",    dest="convergence_prev",    default=5,      type=int, help="Set convergence_prev parameter for convergence criterion [default: 5]")
     grp_al.add_argument("--gd-alpha0",              dest="alpha0",              default=5e-3,   type=float, help="alpha0 parameter for gradient descent")
     grp_al.add_argument("--gd-alpha_decay",         dest="alpha_decay",         default=1e1,    type=float, help="alpha_decay for gradient descent")
     grp_al.add_argument("--ad-learning_rate",       dest="learning_rate",       default=1e-3,   type=float, help="learning rate for adam")
     grp_al.add_argument("--ad-mom1",                dest="mom1",                default=0.9,    type=float, help="momentum 1 for adam")
     grp_al.add_argument("--ad-mom2",                dest="mom2",                default=0.999,  type=float, help="momentum 2 for adam")
-    grp_al.add_argument("--ad-early_stopping",      dest="early_stopping",      action='store_true', default=False,  help="apply early stopping criteria (experimental)")
+
+    grp_con = parser.add_argument_group("Convergence Criteria")
+    grp_con.add_argument("--epsilon",                dest="epsilon",             default=1e-5,   type=float, help="Set convergence criterion: converged when relative change in f (or xnorm) in last CONVERGENCE_PREV iterations < EPSILON [default: 0.01]")
+    grp_con.add_argument("--convergence_prev",       dest="convergence_prev",    default=5,      type=int,   help="Set convergence_prev parameter for convergence criterion [default: 5]")
+    grp_con.add_argument("--early_stopping",         dest="early_stopping",      default=False,  action="store_true",  help="Apply convergence criteria instead of only maxit")
+    grp_con.add_argument("--maxit",                   dest="maxit",               default=500,    type=int, help="Specify the maximum number of iterations [default: %(default)s]")
 
 
     grp_wt = parser.add_argument_group("Weighting")

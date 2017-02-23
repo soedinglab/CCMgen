@@ -6,8 +6,8 @@ import sys
 class conjugateGradient():
     """Optimize objective function usign conjugate gradients"""
 
-    def __init__(self, maxiter=100, ftol=1e-4, max_linesearch=5, alpha_mul=0.5, wolfe=0.2, epsilon=1e-3, convergence_prev=5):
-        self.maxiter = maxiter
+    def __init__(self, maxit=100, ftol=1e-4, max_linesearch=5, alpha_mul=0.5, wolfe=0.2, epsilon=1e-3, convergence_prev=5):
+        self.maxit = maxit
         self.ftol = ftol
         self.max_linesearch = max_linesearch
         self.alpha_mul = alpha_mul
@@ -16,9 +16,9 @@ class conjugateGradient():
         self.convergence_prev = convergence_prev
 
     def __repr__(self):
-        return "conjugate gradient optimization (epsilon={0} convergence_prev={1} maxiter={2} " \
-               "ftol={3} max_linesearch={4} alpha_mul={5} wolfe={6})".format(
-            self.epsilon, self.convergence_prev, self.maxiter, self.ftol, self.max_linesearch, self.alpha_mul, self.wolfe)
+        return "conjugate gradient optimization (ftol={0} max_linesearch={1} alpha_mul={2} wolfe={3}) \n" \
+               "convergence criteria: maxit={4} epsilon={5} convergence_prev={6} ".format(
+            self.ftol, self.max_linesearch, self.alpha_mul, self.wolfe, self.maxit, self.epsilon, self.convergence_prev)
 
 
     def begin_progress(self):
@@ -61,9 +61,9 @@ class conjugateGradient():
         fx, g = objfun.evaluate(x)
         gnorm = np.sum(g * g)
         xnorm = np.sum(x * x)
-        x_single, x_pair = objfun.linear_to_structured(x, objfun.ncol)
-        g_single, g_pair = objfun.linear_to_structured(g, objfun.ncol)
-        #objfun.progress(x, g, fx, iteration, n_linesearch, alpha)
+        x_single, x_pair = objfun.linear_to_structured(x)
+        g_single, g_pair = objfun.linear_to_structured(g)
+
         self.progress(xnorm, x_single, x_pair, gnorm, g_single, g_pair, fx, 0, 0, 0)
 
         gprevnorm = None
@@ -86,7 +86,7 @@ class conjugateGradient():
         alpha = 1 / np.sqrt(gnorm)
         iteration = 0
         while True:
-            if iteration >= self.maxiter:
+            if iteration >= self.maxit:
                 ret['message'] = "Reached maximum number of iterations"
                 ret['code'] = 2
                 break
@@ -128,8 +128,8 @@ class conjugateGradient():
             iteration += 1
 
             #objfun.progress(x, g, fx, iteration, n_linesearch, alpha)
-            x_single, x_pair = objfun.linear_to_structured(x, objfun.ncol)
-            g_single, g_pair = objfun.linear_to_structured(g, objfun.ncol)
+            x_single, x_pair = objfun.linear_to_structured(x)
+            g_single, g_pair = objfun.linear_to_structured(g)
             self.progress(xnorm, x_single, x_pair, gnorm, g_single, g_pair, fx, iteration, n_linesearch, alpha)
 
         return fx, x, ret
