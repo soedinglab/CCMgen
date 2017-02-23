@@ -52,8 +52,23 @@ def create(opt, regularization, msa, weights, f, fx, algret, alg):
         meta['workflow'][0]['parameters']['optimization']['alpha_mul'] = alg.alpha_mul
         meta['workflow'][0]['parameters']['optimization']['max_linesearch'] = alg.max_linesearch
         meta['workflow'][0]['parameters']['optimization']['ftol'] = alg.ftol
-        meta['workflow'][0]['parameters']['optimization']['epsilon'] = alg.epsilon
-        meta['workflow'][0]['parameters']['optimization']['convergence_prev'] = alg.convergence_prev
+
+    if (opt.algorithm) == 'gradient_descent':
+        meta['workflow'][0]['parameters']['optimization']['alpha0'] = opt.alpha0
+        meta['workflow'][0]['parameters']['optimization']['alpha_decay'] = opt.alpha_decay
+
+    if (opt.algorithm) == 'adam':
+        meta['workflow'][0]['parameters']['optimization']['learning_rate'] = opt.learning_rate
+        meta['workflow'][0]['parameters']['optimization']['momentum1'] = opt.mom1
+        meta['workflow'][0]['parameters']['optimization']['momentum2'] = opt.mom2
+
+
+
+    meta['workflow'][0]['parameters']['optimization']['convergence']={}
+    meta['workflow'][0]['parameters']['optimization']['early_stopping'] = opt.early_stopping
+    meta['workflow'][0]['parameters']['optimization']['convergence_prev'] = opt.convergence_prev
+    meta['workflow'][0]['parameters']['optimization']['epsilon'] = opt.epsilon
+    meta['workflow'][0]['parameters']['optimization']['maxit'] = opt.maxit
 
 
     meta['workflow'][0]['parameters']['apc']  = not opt.disable_apc
