@@ -2,7 +2,7 @@ import numpy as np
 from ccmpred.weighting.cext import count_ids, calculate_weights_simple
 import ccmpred.counts
 
-def weights_uniform(msa):
+def weights_uniform(msa, ignore_gaps=False):
     """Uniform weights"""
     return np.ones((msa.shape[0],), dtype="float64")
 
