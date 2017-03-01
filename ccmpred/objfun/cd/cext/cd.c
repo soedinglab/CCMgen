@@ -104,25 +104,25 @@ void gibbs_sample_sequences(
 
 	seed_rng();
 
-	for (int s=0; s < steps; s++ ){
+	#pragma omp parallel
+	{
+		int i;
+		unsigned long k;
+		flt *pcondcurr = fl_malloc(N_ALPHA);
 
-		#pragma omp parallel
-		{
-			int i;
-			unsigned long k;
-			flt *pcondcurr = fl_malloc(N_ALPHA);
-
-			//int array with elements 1..L
-			unsigned int sequence_position_vector[ncol];
-			for (unsigned int p=0; p < ncol; p++) sequence_position_vector[p] = p;
+		//int array with elements 1..L
+		unsigned int sequence_position_vector[ncol];
+		for (unsigned int p=0; p < ncol; p++) sequence_position_vector[p] = p;
 
 
-			#pragma omp for
-			for (k = 0; k < n_samples; k++) {
+		#pragma omp for
+		for (k = 0; k < n_samples; k++) {
 
-			  	shuffle(sequence_position_vector, ncol);
+			for (int s=0; s < steps; s++){
 
-			  	for (i=0; i < ncol; i++){
+				shuffle(sequence_position_vector, ncol);
+
+				for (i=0; i < ncol; i++){
 					if (seq[k * ncol + sequence_position_vector[i]] != GAP){
 						compute_conditional_probs(sequence_position_vector[i], pcondcurr, x, &seq[k * ncol], ncol);
 						seq[k * ncol + sequence_position_vector[i]] = pick_random_weighted(pcondcurr, N_ALPHA - 1);
@@ -130,8 +130,9 @@ void gibbs_sample_sequences(
 
 				}
 			}
-			fl_free(pcondcurr);
 		}
+		fl_free(pcondcurr);
 	}
+
 }
 

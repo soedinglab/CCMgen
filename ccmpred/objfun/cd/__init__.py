@@ -27,29 +27,45 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         self.persistent = persistent
 
         # get constant alignment counts
-        neff = np.sum(weights)
+        self.neff = np.sum(weights)
         freqs_single, freqs_pair = freqs
-        self.msa_counts_single = freqs_single * neff
-        self.msa_counts_pair = freqs_pair * neff
-        # self.msa_counts_single, self.msa_counts_pair = ccmpred.counts.both_counts(msa, self.weights)
+        self.msa_counts_single = freqs_single * self.neff
+        self.msa_counts_pair = freqs_pair * self.neff
+        # self.msa_counts_single, self.msa_counts_pair = ccmpred.counts.both_counts(msa, None)
 
         # reset gap counts
         self.msa_counts_single[:, 20] = 0
         self.msa_counts_pair[:, :, :, 20] = 0
         self.msa_counts_pair[:, :, 20, :] = 0
 
+        #non_gapped counts
+        self.Ni = self.msa_counts_single.sum(1)
+        self.Nij = self.msa_counts_pair.sum(3).sum(2)
+
         # init sample alignment
-        self.msa_sampled = self.init_sample_alignment()
+        self.init_sample_alignment()
 
         self.linear_to_structured = lambda x: linear_to_structured(x, self.ncol)
         self.structured_to_linear = structured_to_linear
 
     def init_sample_alignment(self):
-        return self.msa.copy()
+
+        if self.n_samples == 0:
+            self.msa_sampled = self.msa.copy()
+            self.weights_msa_sampled = self.weights
+        else:
+
+            #pick random sequences from original alignment
+            random_sequence_ids =  np.random.randint(0, self.nrow, self.n_samples)
+
+            self.msa_sampled = self.msa[random_sequence_ids]
+            self.weights_msa_sampled = self.weights[random_sequence_ids]
+
 
     @classmethod
-    def init_from_raw(cls, msa, freqs, weights, raw, regularization, gibbs_steps=1, persistent=False):
-        n_samples = msa.shape[0]
+    def init_from_raw(cls, msa, freqs, weights, raw, regularization, gibbs_steps=1, persistent=False, n_samples=0):
+
+        #n_samples = msa.shape[0]
 
         res = cls(msa, freqs, weights, regularization, n_samples, gibbs_steps, persistent)
 
@@ -72,7 +88,8 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
             return ccmpred.objfun.cd.cext.gibbs_sample_sequences(self.msa_sampled,  x, self.gibbs_steps)
         else:
             #for CD start from the input data
-            return ccmpred.objfun.cd.cext.gibbs_sample_sequences(self.msa.copy(),  x, self.gibbs_steps)
+            self.init_sample_alignment()
+            return ccmpred.objfun.cd.cext.gibbs_sample_sequences(self.msa_sampled,  x, self.gibbs_steps)
 
     def sample_sequences(self, x):
         #for PERSISTENT CD continue the markov chain
@@ -82,8 +99,26 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
 
         self.msa_sampled = self.gibbs_sample_sequences(x)
 
-        sample_counts_single, sample_counts_pair = ccmpred.counts.both_counts(self.msa_sampled, self.weights)
-        #no need to set gap counts to zero as we set gradient for gaps to zero anyway
+        #careful with the weights: sum(sample_counts) should equal sum(msa_counts) !
+        sample_counts_single, sample_counts_pair = ccmpred.counts.both_counts(self.msa_sampled, self.weights_msa_sampled)
+
+        # reset gap counts for sampled msa
+        sample_counts_single[:, 20] = 0
+        sample_counts_pair[:, :, :, 20] = 0
+        sample_counts_pair[:, :, 20, :] = 0
+
+        #non_gapped counts per position / pair
+        Ni_sampled = sample_counts_single.sum(1)
+        Nij_sampled = sample_counts_pair.sum(3).sum(2)
+
+
+        #normalize counts: divide single counts of sampled msa by sum of non_gapped REAL counts
+        normalization_single_counts = self.Ni / (Ni_sampled + 1e-10)
+        normalization_pair_counts   = self.Nij / (Nij_sampled + 1e-10)
+
+        sample_counts_single *= normalization_single_counts[:, np.newaxis]
+        sample_counts_pair   *= normalization_pair_counts[:, :,  np.newaxis, np.newaxis]
+
 
         g_single = sample_counts_single - self.msa_counts_single
         g_pair = sample_counts_pair - self.msa_counts_pair
@@ -98,10 +133,7 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         g_single[:, :20] += g_single_reg   #g_single_reg is of dim Lx20 as x_single is of dim Lx20
         g_pair += g_pair_reg
 
-        #print(g_single[0, :20])
-
         #no need to set g_single[:, 20]  to 0  as we return only g_single[:, :20]
-
         # set gradients for gap states to 0
         g_pair[:, :, :, 20] = 0
         g_pair[:, :, 20, :] = 0
@@ -114,8 +146,10 @@ class ContrastiveDivergence(ccmpred.objfun.ObjectiveFunction):
         return -1, g
 
     def __repr__(self):
-        return "{0} contrastive divergence using {1} Gibbs sampling steps".format(
-            "PERSISTENT" if (self.persistent) else " ",  self.gibbs_steps
+        return "{0} contrastive divergence using {1} Gibbs sampling steps for sampling {2} sequences ".format(
+            "PERSISTENT" if (self.persistent) else " ",
+            self.gibbs_steps,
+            self.n_samples if self.n_samples > 0 else self.nrow
         )
 
 def linear_to_structured(x, ncol, clip=False):

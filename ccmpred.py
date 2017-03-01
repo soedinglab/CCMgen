@@ -46,9 +46,9 @@ ALGORITHMS = {
 
 class CDAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
-        gibbs_steps, persistence = values
+        gibbs_steps, persistence, n_samples = values
 
-        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': bool(persistence)}
+        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': bool(persistence), 'n_samples': n_samples}
         namespace.objfun = cd.ContrastiveDivergence
 
 
@@ -99,7 +99,7 @@ def parse_args():
 
     grp_of = parser.add_argument_group("Objective Functions")
     grp_of.add_argument("--ofn-pll", dest="objfun", action="store_const", const=pll.PseudoLikelihood, default=pll.PseudoLikelihood, help="Use pseudo-log-likelihood (default)")
-    grp_of.add_argument("--ofn-cd",  dest="objfun", action=CDAction, metavar=("GIBBS_STEPS", "PERSISTENCE"), nargs=2, type=int, help="Use (PERSISTENT) Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences")
+    grp_of.add_argument("--ofn-cd",  dest="objfun", action=CDAction, metavar=("GIBBS_STEPS", "PERSISTENCE", "N_SAMPLES"), nargs=3, type=int, help="Use (PERSISTENT) Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences and sample an alignment with N_SAMPLES sequences")
     grp_of.add_argument("--ofn-tree-cd", action=TreeCDAction, metavar=("TREEFILE", "ANCESTORFILE"), nargs=2, type=str, help="Use Tree-controlled Contrastive Divergence, loading tree data from TREEFILE and ancestral sequence data from ANCESTORFILE")
 
     grp_al = parser.add_argument_group("Algorithms")
