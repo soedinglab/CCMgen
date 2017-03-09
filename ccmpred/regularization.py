@@ -11,7 +11,7 @@ class L2(object):
         self.center_x_single = center_x_single
 
     def __call__(self, x_single, x_pair):
-        x_ofs = x_single - self.center_x_single
+        x_ofs = x_single - self.center_x_single[:, :x_single.shape[1]]
 
         g_single = 2 * self.lambda_single * x_ofs
         g_pair = 2 * self.lambda_pair * x_pair
