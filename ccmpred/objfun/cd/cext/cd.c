@@ -64,7 +64,7 @@ void compute_conditional_probs(
  * @param[in] ncol The number of columns in the MSA
  * @param[in] n_samples The number of samples to generate (also the number of rows in the MSA)
  */
-void sample_sequences(
+void sample_position_in_sequences(
 	unsigned char *seq,
 	const flt *const x,
 	const unsigned long n_samples,
