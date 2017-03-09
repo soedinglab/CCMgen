@@ -80,7 +80,7 @@ void calculate_weights_simple(
 			uint64_t ncol_ij = ncol;
 			for(uint64_t k = 0; k < ncol; k++) {
 				if(msa[i * ncol + k] == msa[j * ncol + k] ) {
-					if(msa[i * ncol + k] == 0) ncol_ij--;
+					if(msa[i * ncol + k] == GAP) ncol_ij--;
 					else my_ids++;
 				}
 			}

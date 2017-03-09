@@ -2,6 +2,7 @@
 #define WEIGHTING_H
 
 #include <stdint.h>
+#define GAP 20
 
 void count_ids(
 	const uint8_t *msa,
