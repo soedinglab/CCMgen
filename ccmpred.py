@@ -46,11 +46,25 @@ ALGORITHMS = {
 
 class CDAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
-        gibbs_steps, persistence, n_samples = values
+        gibbs_steps, n_samples = values
 
-        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': bool(persistence), 'n_samples': n_samples}
+        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': False, 'n_samples': n_samples}
         namespace.objfun = cd.ContrastiveDivergence
 
+
+class CDPLLAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        gibbs_steps, n_samples = values
+
+        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': False, 'n_samples': n_samples, 'pll': True}
+        namespace.objfun = cd.ContrastiveDivergence
+
+class PCDAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        gibbs_steps, n_samples = values
+
+        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': True, 'n_samples': n_samples}
+        namespace.objfun = cd.ContrastiveDivergence
 
 class TreeCDAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
@@ -99,11 +113,13 @@ def parse_args():
 
     grp_of = parser.add_argument_group("Objective Functions")
     grp_of.add_argument("--ofn-pll", dest="objfun", action="store_const", const=pll.PseudoLikelihood, default=pll.PseudoLikelihood, help="Use pseudo-log-likelihood (default)")
-    grp_of.add_argument("--ofn-cd",  dest="objfun", action=CDAction, metavar=("GIBBS_STEPS", "PERSISTENCE", "N_SAMPLES"), nargs=3, type=int, help="Use (PERSISTENT) Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences and sample an alignment with N_SAMPLES sequences")
+    grp_of.add_argument("--ofn-cd",  dest="objfun", action=CDAction, metavar=("GIBBS_STEPS", "N_SAMPLES"), nargs=2, type=int, help="Use Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences and sample an alignment with N_SAMPLES sequences")
+    grp_of.add_argument("--ofn-cdpll",  dest="objfun", action=CDPLLAction, metavar=("GIBBS_STEPS", "N_SAMPLES"), nargs=2, type=int, help="Use Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences and sample an alignment with N_SAMPLES sequences")
+    grp_of.add_argument("--ofn-pcd", dest="objfun", action=PCDAction, metavar=("GIBBS_STEPS", "N_SAMPLES"), nargs=2, type=int, help="Use PERSISTENT Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences and sample an alignment with N_SAMPLES sequences")
     grp_of.add_argument("--ofn-tree-cd", action=TreeCDAction, metavar=("TREEFILE", "ANCESTORFILE"), nargs=2, type=str, help="Use Tree-controlled Contrastive Divergence, loading tree data from TREEFILE and ancestral sequence data from ANCESTORFILE")
 
     grp_al = parser.add_argument_group("Algorithms")
-    grp_al.add_argument("--alg-cg", dest="algorithm", action="store_const", const='conjugate_gradients', default=ALGORITHMS['conjugate_gradients'], help='Use conjugate gradients (default)')
+    grp_al.add_argument("--alg-cg", dest="algorithm", action="store_const", const='conjugate_gradients', default='conjugate_gradients', help='Use conjugate gradients (default)')
     grp_al.add_argument("--alg-gd", dest="algorithm", action="store_const", const='gradient_descent', help='Use gradient descent')
     grp_al.add_argument("--alg-nd", dest="algorithm", action="store_const", const='numerical_differentiation', help='Debug gradients with numerical differentiation')
     grp_al.add_argument("--alg-ad", dest="algorithm", action="store_const", const='adam', help='Use Adam')
@@ -117,7 +133,7 @@ def parse_args():
     grp_con.add_argument("--epsilon",                dest="epsilon",             default=1e-5,   type=float, help="Set convergence criterion: converged when relative change in f (or xnorm) in last CONVERGENCE_PREV iterations < EPSILON [default: 0.01]")
     grp_con.add_argument("--convergence_prev",       dest="convergence_prev",    default=5,      type=int,   help="Set convergence_prev parameter for convergence criterion [default: 5]")
     grp_con.add_argument("--early_stopping",         dest="early_stopping",      default=False,  action="store_true",  help="Apply convergence criteria instead of only maxit")
-    grp_con.add_argument("--maxit",                   dest="maxit",               default=500,    type=int, help="Specify the maximum number of iterations [default: %(default)s]")
+    grp_con.add_argument("--maxit",                   dest="maxit",              default=500,    type=int, help="Specify the maximum number of iterations [default: %(default)s]")
 
 
     grp_wt = parser.add_argument_group("Weighting")
@@ -148,6 +164,7 @@ def parse_args():
     grp_db.add_argument("--write-cd-alignment", dest="cd_alnfile", default=None, metavar="ALNFILE", help="Write PSICOV-formatted sampled alignment to ALNFILE")
     grp_db.add_argument("-c", "--compare-to-raw", dest="comparerawfile", default=None, help="Compare potentials to raw file")
     grp_db.add_argument("--dev-center-v", dest="dev_center_v", action="store_true", default=False, help="Use same settings as in c++ dev-center-v version")
+    grp_db.add_argument("--only_model_prob", dest="only_model_prob", action="store_true", default=False, help="Only compute model probabilties and do not optimize (-i must be specified!).")
 
     args = parser.parse_args()
 
@@ -167,6 +184,7 @@ def main():
 
     msa = ccmpred.io.alignment.read_msa(opt.alnfile, opt.aln_format)
     msa, gapped_positions = ccmpred.gaps.remove_gapped_positions(msa, opt.max_gap_ratio)
+
 
     weights = opt.weight(msa, opt.ignore_gaps)
 
@@ -191,22 +209,19 @@ def main():
     #setup regularization properties
     scaling = REG_L2_SCALING[opt.scaling](msa)
     centering = ccmpred.centering.calculate(freqs)
+    regularization = opt.regularization(msa, centering, scaling)
 
     if opt.initrawfile:
         raw = ccmpred.raw.parse(opt.initrawfile)
-        #centering = raw.x_single.copy() #shape Lx20 #should it not be recomputed????
-        centering= centering[:, :20]    #shape Lx20 instead of Lx21
-        regularization = opt.regularization(msa, centering, scaling)
         x0, f = opt.objfun.init_from_raw(msa, freqs, weights, raw, regularization, *opt.objfun_args, **opt.objfun_kwargs)
         #only compute model frequencies and exit
-        if opt.outmodelprobmsgpackfile :
+        if opt.only_model_prob and opt.outmodelprobmsgpackfile:
             print("Writing msgpack-formatted model probabilties to {0}".format(opt.outmodelprobmsgpackfile))
             if opt.dev_center_v:
                 freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, ccmpred.pseudocounts.constant_pseudocounts, pseudocount_n_single=1, pseudocount_n_pair=1, remove_gaps=True)
             ccmpred.model_probabilities.write_msgpack(opt.outmodelprobmsgpackfile, raw, weights, msa, freqs, regularization.lambda_pair)
             sys.exit(0)
     else:
-        regularization = opt.regularization(msa, centering, scaling)
         x0, f = opt.objfun.init_from_default(msa, freqs, weights, regularization, *opt.objfun_args, **opt.objfun_kwargs)
 
     if opt.comparerawfile:
