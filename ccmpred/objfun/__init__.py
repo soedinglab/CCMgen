@@ -17,7 +17,7 @@ class ObjectiveFunction(object):
         raise NotImplemented()
 
     @classmethod
-    def init_from_parfile(cls, msa, f):
+    def init_from_raw(cls, msa, f):
         raise NotImplemented()
 
     def write_parfile(self, f, x):
