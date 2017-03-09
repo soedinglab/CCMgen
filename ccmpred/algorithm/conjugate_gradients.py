@@ -31,7 +31,7 @@ class conjugateGradient():
         headerline = (" ".join("{0:>{1}s}".format(ht, hw) for ht, hw in header_tokens))
 
         if ccmpred.logo.is_tty:
-            print("\x1b[1;37m{0}\x1b[0m".format(headerline))
+            print("\x1b[1;77m{0}\x1b[0m".format(headerline))
         else:
             print(headerline)
 

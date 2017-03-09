@@ -88,8 +88,8 @@ class gradientDescent():
             alpha = self.alpha0 / (1 + i / self.alpha_decay)
 
             # ========================================================================================
-            x_single, x_pair = objfun.linear_to_structured(x)
-            g_single, g_pair = objfun.linear_to_structured(g)
+            x_single, x_pair = objfun.linear_to_structured(x, objfun.ncol)
+            g_single, g_pair = objfun.linear_to_structured(g, objfun.ncol)
 
             xnorm_single = np.sum(x_single * x_single)
             xnorm_pair = np.sum(x_pair * x_pair)

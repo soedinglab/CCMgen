@@ -47,7 +47,7 @@ class Adam():
                          ('|x|', 12), ('|x_single|', 12), ('|x_pair|', 12),
                          ('|g|', 12), ('|g_single|', 12), ('|g_pair|', 12),
                          #('|first moment|', 12), ('|second moment|', 12),
-                         ('xnorm_diff', 12), ('gnorm_diff', 12),
+                         ('xnorm_diff', 12), ('max_g', 12), ('gnorm_diff', 12),
                          ('sign_g_t10', 12), ('sign_g_t8', 12)
                          ]
 
@@ -59,15 +59,17 @@ class Adam():
         else:
             print(headerline)
 
-    def progress(self, n_iter, xnorm_single, xnorm_pair, gnorm_single, gnorm_pair, xnorm_diff, gnorm_diff, sign_g_t10, sign_g_t8 ):
+    def progress(self, n_iter, xnorm_single, xnorm_pair, g, gnorm_single, gnorm_pair, xnorm_diff, gnorm_diff, sign_g_t10, sign_g_t8 ):
 
         xnorm = xnorm_single + xnorm_pair
         gnorm = gnorm_single+gnorm_pair
 
+        max_g = np.max(np.abs(g))
+
         data_tokens = [(n_iter, '8d'),
                        (xnorm, '12g'), (xnorm_single, '12g'), (xnorm_pair, '12g'),
                        (gnorm, '12g'), (gnorm_single, '12g'), (gnorm_pair, '12g'),
-                       (xnorm_diff, '12g'), (gnorm_diff, '12g'),
+                       (xnorm_diff, '12g'), (max_g, '12g'), (gnorm_diff, '12g'),
                        (sign_g_t10, '12g'), (sign_g_t8, '12g')
                        ]
 
@@ -94,6 +96,7 @@ class Adam():
 
         for i in range(self.maxit):
 
+
             fx, g = objfun.evaluate(x)
 
             #update moment vectors
@@ -105,8 +108,8 @@ class Adam():
             second_moment_corrected = second_moment / (1 - np.power(self.momentum_estimate2, i+1))
 
             # ========================================================================================
-            x_single, x_pair = objfun.linear_to_structured(x)
-            g_single, g_pair = objfun.linear_to_structured(g)
+            x_single, x_pair = objfun.linear_to_structured(x, objfun.ncol)
+            g_single, g_pair = objfun.linear_to_structured(g, objfun.ncol)
 
             xnorm_single = np.sum(x_single * x_single)
             xnorm_pair = np.sum(x_pair * x_pair)
@@ -150,7 +153,7 @@ class Adam():
 
 
             #print out progress
-            self.progress(i + 1, xnorm_single, xnorm_pair, gnorm_single, gnorm_pair, xnorm_diff, gnorm_diff, sign_g_t10, sign_g_t8)
+            self.progress(i + 1, xnorm_single, xnorm_pair, g, gnorm_single, gnorm_pair, xnorm_diff, gnorm_diff, sign_g_t10, sign_g_t8)
 
 
             #stop condition
