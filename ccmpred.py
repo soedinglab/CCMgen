@@ -128,7 +128,7 @@ def parse_args():
     grp_al.add_argument("--ad-learning_rate",       dest="learning_rate",       default=1e-3,   type=float, help="learning rate for adam")
     grp_al.add_argument("--ad-mom1",                dest="mom1",                default=0.9,    type=float, help="momentum 1 for adam")
     grp_al.add_argument("--ad-mom2",                dest="mom2",                default=0.999,  type=float, help="momentum 2 for adam")
-    grp_al.add_argument("--ad-decay",               dest="adam_decay",          action="store_true", default=False,  type=bool, help="decay adam learning rate with 1/sqrt(it)")
+    grp_al.add_argument("--ad-decay",               dest="adam_decay",          action="store_true", default=False,  help="decay adam learning rate with 1/sqrt(it)")
 
     grp_con = parser.add_argument_group("Convergence Criteria")
     grp_con.add_argument("--epsilon",                dest="epsilon",             default=1e-5,   type=float, help="Set convergence criterion: converged when relative change in f (or xnorm) in last CONVERGENCE_PREV iterations < EPSILON [default: 0.01]")

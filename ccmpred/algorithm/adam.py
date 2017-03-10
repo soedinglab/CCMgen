@@ -156,7 +156,7 @@ class Adam():
             #update learning rate
             alpha  = self.learning_rate
             if(self.decay):
-                alpha /= np.sqrt(i)
+                alpha /= np.sqrt(i+1)
 
             #print out progress
             self.progress(i + 1, xnorm_single, xnorm_pair, g, gnorm_single, gnorm_pair, xnorm_diff, gnorm_diff, sign_g_t10, sign_g_t8, alpha)
