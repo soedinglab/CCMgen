@@ -17,12 +17,13 @@ class Adam():
 
     """
 
-    def __init__(self, maxit=100, learning_rate=1e-3, momentum_estimate1=0.9, momentum_estimate2=0.999, noise=1e-7, epsilon=1e-5, convergence_prev=5, early_stopping=False):
+    def __init__(self, maxit=100, learning_rate=1e-3, momentum_estimate1=0.9, momentum_estimate2=0.999, noise=1e-7, epsilon=1e-5, convergence_prev=5, early_stopping=False, decay=False):
         self.maxit = maxit
         self.learning_rate = learning_rate
         self.momentum_estimate1 = momentum_estimate1
         self.momentum_estimate2 = momentum_estimate2
         self.noise = noise
+        self.decay=decay
 
         self.g_hist = deque([])
         self.g_sign = deque([])
@@ -36,9 +37,9 @@ class Adam():
         self.convergence_prev=convergence_prev
 
     def __repr__(self):
-        return "Adam stochastic optimization (learning_rate={0} momentum_estimate1={1} momentum_estimate2={2} noise={3}) \n" \
-               "convergence criteria: maxit={4} early_stopping={5} epsilon={6} prev={7}".format(
-            self.learning_rate, self.momentum_estimate1, self.momentum_estimate2, self.noise,
+        return "Adam stochastic optimization (decay={0} learning_rate={1} momentum_estimate1={2} momentum_estimate2={3} noise={4}) \n" \
+               "convergence criteria: maxit={5} early_stopping={6} epsilon={7} prev={8}".format(
+            self.decay, self.learning_rate, self.momentum_estimate1, self.momentum_estimate2, self.noise,
             self.maxit, self.early_stopping, self.epsilon, self.convergence_prev)
 
     def begin_process(self):
@@ -48,7 +49,7 @@ class Adam():
                          ('|g|', 12), ('|g_single|', 12), ('|g_pair|', 12),
                          #('|first moment|', 12), ('|second moment|', 12),
                          ('xnorm_diff', 12), ('max_g', 12), ('gnorm_diff', 12),
-                         ('sign_g_t10', 12), ('sign_g_t8', 12)
+                         ('sign_g_t10', 12), ('sign_g_t8', 12), ('alpha', 12)
                          ]
 
 
@@ -59,7 +60,7 @@ class Adam():
         else:
             print(headerline)
 
-    def progress(self, n_iter, xnorm_single, xnorm_pair, g, gnorm_single, gnorm_pair, xnorm_diff, gnorm_diff, sign_g_t10, sign_g_t8 ):
+    def progress(self, n_iter, xnorm_single, xnorm_pair, g, gnorm_single, gnorm_pair, xnorm_diff, gnorm_diff, sign_g_t10, sign_g_t8, alpha ):
 
         xnorm = xnorm_single + xnorm_pair
         gnorm = gnorm_single+gnorm_pair
@@ -70,7 +71,7 @@ class Adam():
                        (xnorm, '12g'), (xnorm_single, '12g'), (xnorm_pair, '12g'),
                        (gnorm, '12g'), (gnorm_single, '12g'), (gnorm_pair, '12g'),
                        (xnorm_diff, '12g'), (max_g, '12g'), (gnorm_diff, '12g'),
-                       (sign_g_t10, '12g'), (sign_g_t8, '12g')
+                       (sign_g_t10, '12g'), (sign_g_t8, '12g'), (alpha, '12g')
                        ]
 
 
@@ -152,8 +153,13 @@ class Adam():
             # ====================================================================================
 
 
+            #update learning rate
+            alpha  = self.learning_rate
+            if(self.decay):
+                alpha /= np.sqrt(i)
+
             #print out progress
-            self.progress(i + 1, xnorm_single, xnorm_pair, g, gnorm_single, gnorm_pair, xnorm_diff, gnorm_diff, sign_g_t10, sign_g_t8)
+            self.progress(i + 1, xnorm_single, xnorm_pair, g, gnorm_single, gnorm_pair, xnorm_diff, gnorm_diff, sign_g_t10, sign_g_t8, alpha)
 
 
             #stop condition
@@ -175,7 +181,8 @@ class Adam():
 
 
             #update parameters
-            x -= self.learning_rate * first_moment_corrected / np.sqrt(second_moment_corrected + self.noise)
+
+            x -= alpha * first_moment_corrected / ( np.sqrt(second_moment_corrected) + self.noise)
 
 
         return fx, x, ret
