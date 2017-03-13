@@ -96,7 +96,7 @@ void calculate_weights_simple(
 		}
 
 
-		if(my_ids > idthres) {
+		if(my_ids >= idthres) {
 			#pragma omp atomic
 			weights[i]++;
 			#pragma omp atomic
