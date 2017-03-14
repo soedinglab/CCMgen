@@ -36,7 +36,8 @@ def remove_gapped_positions(msa, max_gap_percentage):
     ungapped_positions  = np.where(msa_gap_counts <  max_gap_count)
     gapped_positions    = np.where(msa_gap_counts >=  max_gap_count)
 
-    print("Removed " + str(len(gapped_positions[0])) + " alignment positions with > " +
-          str(max_gap_percentage/100.0) + " percent gaps. ")
+    if max_gap_percentage < 100:
+        print("Removed {0} alignment positions with > {1} percent gaps.".format(
+            len(gapped_positions[0]), max_gap_percentage/100.0))
 
     return np.ascontiguousarray(msa[:, ungapped_positions[0]]), gapped_positions[0]
