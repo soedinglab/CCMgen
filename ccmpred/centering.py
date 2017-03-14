@@ -1,6 +1,8 @@
 import numpy as np
 import ccmpred.pseudocounts
 
+
+
 def calculate(freqs):
     single_freqs, _ = freqs
 
@@ -17,3 +19,19 @@ def calculate(freqs):
     v_center[:, 20] = 0
 
     return v_center
+
+
+
+def calculate_vanilla(freqs):
+    single_freqs, _ = freqs
+
+    #single_freqs will never be zero as there is at least 1 pseudo count
+    lsingle_freqs = np.log(single_freqs)
+
+    v_center = lsingle_freqs - lsingle_freqs[:, 20][:, np.newaxis]
+    v_center[:, 20] = 0
+
+
+
+    return v_center
+
