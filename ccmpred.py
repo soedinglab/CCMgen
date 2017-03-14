@@ -47,24 +47,35 @@ ALGORITHMS = {
 
 class CDAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
-        gibbs_steps, n_samples = values
+        gibbs_steps, n_sequences = values
 
-        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': False, 'n_samples': n_samples}
+        if n_sequences < 1:
+            n_sequences = 1
+
+        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': False, 'n_sequences': n_sequences}
         namespace.objfun = cd.ContrastiveDivergence
 
 
 class CDPLLAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
-        gibbs_steps, n_samples = values
+        gibbs_steps, n_sequences = values
 
-        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': False, 'n_samples': n_samples, 'pll': True}
+        if n_sequences < 1:
+            n_sequences = 1
+
+
+        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': False, 'n_sequences': n_sequences, 'pll': True}
         namespace.objfun = cd.ContrastiveDivergence
 
 class PCDAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
-        gibbs_steps, n_samples = values
+        gibbs_steps, n_sequences = values
 
-        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': True, 'n_samples': n_samples}
+        if n_sequences < 1:
+            n_sequences = 1
+
+
+        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': True, 'n_sequences': n_sequences}
         namespace.objfun = cd.ContrastiveDivergence
 
 class TreeCDAction(argparse.Action):
@@ -114,9 +125,9 @@ def parse_args():
 
     grp_of = parser.add_argument_group("Objective Functions")
     grp_of.add_argument("--ofn-pll", dest="objfun", action="store_const", const=pll.PseudoLikelihood, default=pll.PseudoLikelihood, help="Use pseudo-log-likelihood (default)")
-    grp_of.add_argument("--ofn-cd",  dest="objfun", action=CDAction, metavar=("GIBBS_STEPS", "N_SAMPLES"), nargs=2, type=int, help="Use Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences and sample an alignment with N_SAMPLES sequences")
-    grp_of.add_argument("--ofn-cdpll",  dest="objfun", action=CDPLLAction, metavar=("GIBBS_STEPS", "N_SAMPLES"), nargs=2, type=int, help="Use Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences and sample an alignment with N_SAMPLES sequences")
-    grp_of.add_argument("--ofn-pcd", dest="objfun", action=PCDAction, metavar=("GIBBS_STEPS", "N_SAMPLES"), nargs=2, type=int, help="Use PERSISTENT Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences and sample an alignment with N_SAMPLES sequences")
+    grp_of.add_argument("--ofn-cd",  dest="objfun", action=CDAction, metavar=("GIBBS_STEPS", "N_SEQUENCES"), nargs=2, type=int, help="Use Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences and sample N_SEQUENCES sequences")
+    grp_of.add_argument("--ofn-cdpll",  dest="objfun", action=CDPLLAction, metavar=("GIBBS_STEPS", "N_SEQUENCES"), nargs=2, type=int, help="Use Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences and sample an alignment with N_SEQUENCES sequences")
+    grp_of.add_argument("--ofn-pcd", dest="objfun", action=PCDAction, metavar=("GIBBS_STEPS", "N_SEQUENCES"), nargs=2, type=int, help="Use PERSISTENT Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences and sample an alignment with N_SEQUENCES sequences")
     grp_of.add_argument("--ofn-tree-cd", action=TreeCDAction, metavar=("TREEFILE", "ANCESTORFILE"), nargs=2, type=str, help="Use Tree-controlled Contrastive Divergence, loading tree data from TREEFILE and ancestral sequence data from ANCESTORFILE")
 
     grp_al = parser.add_argument_group("Algorithms")
@@ -236,7 +247,11 @@ def main():
 
 
     #initialise objective function
-    x0, f = opt.objfun.init(msa, freqs, weights, raw_init, regularization, *opt.objfun_args, **opt.objfun_kwargs)
+    #x0, f = opt.objfun(msa, freqs, weights, raw_init, regularization, *opt.objfun_args, **opt.objfun_kwargs)
+    f  =  opt.objfun(msa, freqs, weights, raw_init, regularization, *opt.objfun_args, **opt.objfun_kwargs)
+    x0 = f.x0
+
+
 
     if opt.comparerawfile:
         craw = ccmpred.raw.parse(opt.comparerawfile)
