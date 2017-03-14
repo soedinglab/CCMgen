@@ -15,6 +15,24 @@ def get_neff(msa):
 
     return neff
 
+
+def calculate_frequencies_vanilla(msa):
+
+    print("Calculating AA Frequencies as in C++ CCMpred vanilla: 1 pseudocount is added to single_counts")
+
+    single_counts, pair_counts = ccmpred.counts.both_counts(msa, None)
+    nrow =  msa.shape[0]
+
+    #add one pseudocunt to every single amino acid count
+    single_counts += 1
+
+
+    #normalized with gaps
+    single_freq = single_counts / (nrow + 21)
+    pair_freq = pair_counts / nrow
+
+    return single_freq, pair_freq
+
 def calculate_frequencies_dev_center_v(msa, weights):
 
 
