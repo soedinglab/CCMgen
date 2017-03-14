@@ -9,6 +9,7 @@ import ccmpred.metadata
 import ccmpred.weighting
 import ccmpred.scoring
 import ccmpred.pseudocounts
+import ccmpred.initialise_potentials
 import ccmpred.raw
 import ccmpred.logo
 import ccmpred.io
@@ -165,6 +166,7 @@ def parse_args():
     grp_db.add_argument("--write-cd-alignment", dest="cd_alnfile", default=None, metavar="ALNFILE", help="Write PSICOV-formatted sampled alignment to ALNFILE")
     grp_db.add_argument("-c", "--compare-to-raw", dest="comparerawfile", default=None, help="Compare potentials to raw file")
     grp_db.add_argument("--dev-center-v", dest="dev_center_v", action="store_true", default=False, help="Use same settings as in c++ dev-center-v version")
+    grp_db.add_argument("--ccmpred-vanilla", dest="vanilla", action="store_true", default=False, help="Use same settings as in default c++ CCMpred")
     grp_db.add_argument("--only_model_prob", dest="only_model_prob", action="store_true", default=False, help="Only compute model probabilties and do not optimize (-i must be specified!).")
 
     args = parser.parse_args()
@@ -191,8 +193,6 @@ def main():
 
     protein=os.path.basename(opt.alnfile).split(".")[0]
     print("Alignment for protein {0} (L={1}) has {2} sequences and Neff(HHsuite-like)={3}".format(protein, msa.shape[1], msa.shape[0], ccmpred.pseudocounts.get_neff(msa)))
-    if (opt.max_gap_ratio < 100):
-        print("{0} positions have been removed as they contain more than {1} percent gaps".format(len(gapped_positions), opt.max_gap_ratio))
     print("Reweighted sequences to Sum(weights)={0:g} using {1} and ignore_gaps={2})".format(np.sum(weights), opt.weight.__name__, opt.ignore_gaps))
 
 
@@ -207,23 +207,36 @@ def main():
     else:
         freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, opt.pseudocounts[0], pseudocount_n_single=opt.pseudocounts[1], pseudocount_n_pair=opt.pseudocount_pair_count, remove_gaps=False)
 
+
     #setup regularization properties
     scaling = REG_L2_SCALING[opt.scaling](msa)
     centering = ccmpred.centering.calculate(freqs)
     regularization = opt.regularization(msa, centering, scaling)
 
+    #default initialisation of parameters
+    raw_init = ccmpred.initialise_potentials.init(msa.shape[1], centering)
+
+    if opt.vanilla:
+        freqs_for_init = ccmpred.pseudocounts.calculate_frequencies_vanilla(msa)
+        centering = ccmpred.centering.calculate_vanilla(freqs_for_init)
+        raw_init = ccmpred.initialise_potentials.init(msa.shape[1], centering)
+        regularization = opt.regularization(msa, np.zeros_like(centering), scaling)
+        #besides initialisation and regularization, there seems to be another difference in gradient calculation between CCMpred vanilla and CCMpred-dev-center-v
+
+
     if opt.initrawfile:
-        raw = ccmpred.raw.parse(opt.initrawfile)
-        x0, f = opt.objfun.init_from_raw(msa, freqs, weights, raw, regularization, *opt.objfun_args, **opt.objfun_kwargs)
+        raw_init = ccmpred.raw.parse(opt.initrawfile)
         #only compute model frequencies and exit
         if opt.only_model_prob and opt.outmodelprobmsgpackfile:
             print("Writing msgpack-formatted model probabilties to {0}".format(opt.outmodelprobmsgpackfile))
             if opt.dev_center_v:
                 freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, ccmpred.pseudocounts.constant_pseudocounts, pseudocount_n_single=1, pseudocount_n_pair=1, remove_gaps=True)
-            ccmpred.model_probabilities.write_msgpack(opt.outmodelprobmsgpackfile, raw, weights, msa, freqs, regularization.lambda_pair)
+            ccmpred.model_probabilities.write_msgpack(opt.outmodelprobmsgpackfile, raw_init, weights, msa, freqs, regularization.lambda_pair)
             sys.exit(0)
-    else:
-        x0, f = opt.objfun.init_from_default(msa, freqs, weights, regularization, *opt.objfun_args, **opt.objfun_kwargs)
+
+
+    #initialise objective function
+    x0, f = opt.objfun.init(msa, freqs, weights, raw_init, regularization, *opt.objfun_args, **opt.objfun_kwargs)
 
     if opt.comparerawfile:
         craw = ccmpred.raw.parse(opt.comparerawfile)
