@@ -32,43 +32,34 @@ def stream_or_file(mode='r'):
     return inner
 
 
-def calculate_Ni(freqs_single, neff):
-    msa_counts_single = freqs_single * neff
-    msa_counts_single[:, 20] = 0
-
-    return(msa_counts_single.sum(1))
-
-# def calculate_Nij(freqs_pair, neff):
-#     msa_counts_pair = freqs_pair * neff
-#     msa_counts_pair[:, :, :, 20] = 0
-#     msa_counts_pair[:, :, 20, :] = 0
-#
-#     return(msa_counts_pair.sum(3).sum(2))
-
-def calculate_Nij(weights, msa):
-    msa_counts_pair = ccmpred.counts.pair_counts(msa, weights)
-
-    msa_counts_pair[:, :, :, 20] = 0
-    msa_counts_pair[:, :, 20, :] = 0
-
-    return(msa_counts_pair.sum(3).sum(2))
-
 @stream_or_file('wb')
 def write_msgpack(outmsgpackfile, res, weights, msa, freqs, lambda_pair):
 
+    out={}
+
+
+    #Nij will NOT contain pseudocount Counts!
+    msa_counts_single, msa_counts_pair = ccmpred.counts.both_counts(msa, weights)
+    msa_counts_pair[:, :, :, 20] = 0
+    msa_counts_pair[:, :, 20, :] = 0
+    Nij = msa_counts_pair.sum(3).sum(2)
+
+    # write lower triangular matrix row-wise
+    # read in as upper triangular matrix column-wise in c++
+    out['N_ij'] = Nij[np.tril_indices(res.ncol, k=-1)].tolist() #rowwise
+
+
+
+
+    #no pseudo counts
+    freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, ccmpred.pseudocounts.no_pseudocounts, pseudocount_n_single=0, pseudocount_n_pair=0, remove_gaps=True)
     freqs_single, freqs_pair = freqs
-    neff = np.sum(weights)
-
-    Nij = calculate_Nij(weights, msa)
-
-    out={
-        # write lower triangular matrix row-wise
-        # read in as upper triangular matrix column-wise in c++
-        'N_ij': Nij[np.tril_indices(res.ncol, k=-1)].tolist(), #rowwise
-    }
 
     #renormalize pair frequencies without gaps + reshape row-wise
     pair_freq = ccmpred.pseudocounts.degap(freqs_pair).reshape(res.ncol,res.ncol,400)
+
+
+
 
     #couplings without gaps + reshape row-wise
     x_pair_nogaps = res.x_pair[:,:,:20,:20].reshape(res.ncol,res.ncol, 400)
@@ -86,7 +77,16 @@ def write_msgpack(outmsgpackfile, res, weights, msa, freqs, lambda_pair):
         for ind in indices:
             i = indices_triu[0][ind]
             j = indices_triu[1][ind]
-            print(i, j, sum(model_prob[i,j]), sum(pair_freq[i,j].flatten()), sum(x_pair_nogaps[i,j].flatten()), Nij[i,j])
+            print('e.g: ', i, j, sum(model_prob[i,j]), sum(pair_freq[i,j].flatten()), sum(x_pair_nogaps[i,j].flatten()), Nij[i,j])
+
+    if any(model_prob[indices_triu].sum(1) > 1.01):
+        print("Warning: there are "+str(sum(model_prob[indices_triu].sum(1) > 1.01))+" pairs with sum(model probabilites) > 1.01. Max sum(q_ij): " +str(np.max(model_prob[indices_triu].sum(1))))
+        indices = np.where(model_prob[indices_triu].sum(1) > 1.01)[0]
+        for ind in indices:
+            i = indices_triu[0][ind]
+            j = indices_triu[1][ind]
+            print('e.g: ', i, j, sum(model_prob[i,j]), sum(pair_freq[i,j].flatten()), sum(x_pair_nogaps[i,j].flatten()), Nij[i,j])
+
 
 
     model_prob_flat = model_prob[indices_triu].flatten() #row-wise upper triangular indices

@@ -27,12 +27,12 @@ class ContrastiveDivergence():
         self.pll = pll
 
         # get constant alignment counts
-        freqs_single, freqs_pair = freqs
-        self.msa_counts_single = freqs_single * self.neff
-        self.msa_counts_pair = freqs_pair * self.neff
+        # freqs_single, freqs_pair = freqs
+        # self.msa_counts_single = freqs_single * self.neff
+        # self.msa_counts_pair = freqs_pair * self.neff
 
         #do not use pseudo counts!
-        #self.msa_counts_single, self.msa_counts_pair = ccmpred.counts.both_counts(msa, self.weights)
+        self.msa_counts_single, self.msa_counts_pair = ccmpred.counts.both_counts(msa, self.weights)
 
         # reset gap counts
         self.msa_counts_single[:, 20] = 0
@@ -60,33 +60,15 @@ class ContrastiveDivergence():
 
             return self.msa[seq_id], weights_msa_sampled
 
-
     @classmethod
-    def init_from_default(cls, msa, freqs, weights, regularization, gibbs_steps=1, persistent=False, n_samples=0, pll=False ):
-        res = cls(msa, freqs, weights, regularization, n_samples, gibbs_steps, persistent, pll)
-
-        if hasattr(regularization, "center_x_single"):
-            ncol = msa.shape[1]
-            x_pair = np.zeros((ncol, ncol, 21, 21), dtype="float64")
-            x = res.structured_to_linear(regularization.center_x_single[:, :20], x_pair)
-        else:
-            x = np.zeros((res.nvar, ), dtype=np.dtype('float64'))
-
-        return x, res
-
-
-    @classmethod
-    def init_from_raw(cls, msa, freqs, weights, raw, regularization, gibbs_steps=1, persistent=False, n_samples=0, pll=False):
-
-        #n_samples = msa.shape[0]
-
-        res = cls(msa, freqs, weights, regularization, n_samples, gibbs_steps, persistent, pll)
+    def init(cls, msa, freqs, weights, raw, regularization):
+        res = cls(msa, freqs, weights, regularization)
 
         if msa.shape[1] != raw.ncol:
             raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
 
-
         x = res.structured_to_linear(raw.x_single[:, :20], raw.x_pair)
+
         return x, res
 
     def finalize(self, x, meta):

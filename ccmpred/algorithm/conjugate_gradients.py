@@ -64,6 +64,9 @@ class conjugateGradient():
         x_single, x_pair = objfun.linear_to_structured(x)
         g_single, g_pair = objfun.linear_to_structured(g)
 
+
+
+
         self.progress(xnorm, x_single, x_pair, gnorm, g_single, g_pair, fx, 0, 0, 0)
 
         gprevnorm = None

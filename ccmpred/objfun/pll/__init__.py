@@ -6,10 +6,9 @@ import ccmpred.objfun
 import ccmpred.objfun.pll.cext
 import ccmpred.counts
 
-class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
 
+class PseudoLikelihood():
     def __init__(self, msa, freqs, weights, regularization):
-        super(PseudoLikelihood, self).__init__()
 
         self.msa = msa
         self.nrow, self.ncol = msa.shape
@@ -46,21 +45,7 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
         self.structured_to_linear = structured_to_linear
 
     @classmethod
-    def init_from_default(cls, msa, freqs, weights, regularization):
-        res = cls(msa, freqs, weights, regularization)
-
-        if hasattr(regularization, "center_x_single"):
-            ncol = msa.shape[1]
-            x_pair = np.zeros((ncol, ncol, 21, 21), dtype="float64")
-            x = structured_to_linear(regularization.center_x_single, x_pair)
-
-        else:
-            x = np.zeros((res.nvar, ), dtype=np.dtype('float64'))
-
-        return x, res
-
-    @classmethod
-    def init_from_raw(cls, msa, freqs, weights, raw, regularization):
+    def init(cls, msa, freqs, weights, raw, regularization):
         res = cls(msa, freqs, weights, regularization)
 
         if msa.shape[1] != raw.ncol:
@@ -83,16 +68,36 @@ class PseudoLikelihood(ccmpred.objfun.ObjectiveFunction):
 
         #pointer to g == self.g
         fx, g = ccmpred.objfun.pll.cext.evaluate(x, self.g, self.g2, self.weights, self.msa)
-        self.g -= self.g_init
+        g -= self.g_init
+
 
         x_single, x_pair = linear_to_structured(x, self.ncol)
         g_single, g_pair = linear_to_structured(g, self.ncol)
+
+
+        # print("x_single[0,0]: {0}".format(x_single[0,0]))
+        # print("g_single[0,0]: {0}".format(g_single[0,0]))
+        # print("---------------------------------------------")
+        # print("x_single[1,0]: {0}".format(x_single[1,0]))
+        # print("g_single[1,0]: {0}".format(g_single[1,0]))
+        # print("---------------------------------------------")
+
 
         fx_reg, g_single_reg, g_pair_reg = self.regularization(x_single, x_pair)
 
         g_reg = structured_to_linear(g_single_reg, g_pair_reg)
         fx += fx_reg
         g += g_reg
+
+        # print("lambda_single: {0}".format(self.regularization.lambda_single))
+        # print("lambda_pair: {0}".format(self.regularization.lambda_pair))
+        # print("x_single[0,0]: {0}".format(x_single[0,0]))
+        # print("g_single_reg[0,0]: {0}".format(g_single_reg[0,0]))
+        # print("---------------------------------------------")
+        # print("x_single[1,0]: {0}".format(x_single[1,0]))
+        # print("g_single_reg[1,0]: {0}".format(g_single_reg[1,0]))
+        # print("---------------------------------------------")
+
 
         return fx, g
 
