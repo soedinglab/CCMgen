@@ -8,10 +8,22 @@ import ccmpred.counts
 
 
 class PseudoLikelihood():
-    def __init__(self, msa, freqs, weights, regularization):
+    def __init__(self, msa, freqs, weights, raw, regularization):
 
+
+        if msa.shape[1] != raw.ncol:
+            raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
+
+        if raw.x_single.shape[1] == 20:
+            temp = np.zeros((raw.ncol, 21))
+            temp[:,:20] = raw.x_single
+            raw.x_single = temp
+
+        self.x0 = structured_to_linear(raw.x_single, raw.x_pair)
         self.msa = msa
+        self.weights = weights
         self.nrow, self.ncol = msa.shape
+        self.regularization = regularization
 
         #use msa counts with pseudo counts - numerically more stable?? but gradient does not fit ll fct!!
         #neff = np.sum(weights)
@@ -27,15 +39,13 @@ class PseudoLikelihood():
         for i in range(self.ncol):
             msa_counts_pair[i, i, :, :] = 0
 
+        #no pseudo counts in gradient calculation
         self.g_init = structured_to_linear(msa_counts_single, 2 * msa_counts_pair)
 
         self.nsingle = self.ncol * 21
         self.nsingle_padded = self.nsingle + 32 - (self.nsingle % 32)
         self.nvar = self.nsingle_padded + self.ncol * self.ncol * 21 * 32
 
-        self.weights = weights
-
-        self.regularization = regularization
 
         # memory allocation for intermediate variables
         self.g = np.empty((self.nsingle_padded + self.ncol * self.ncol * 21 * 32,), dtype=np.dtype('float64'))
@@ -44,21 +54,21 @@ class PseudoLikelihood():
         self.linear_to_structured = lambda x: linear_to_structured(x, self.ncol, clip=True)
         self.structured_to_linear = structured_to_linear
 
-    @classmethod
-    def init(cls, msa, freqs, weights, raw, regularization):
-        res = cls(msa, freqs, weights, regularization)
-
-        if msa.shape[1] != raw.ncol:
-            raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
-
-        if raw.x_single.shape[1] == 20:
-            temp = np.zeros((raw.ncol, 21))
-            temp[:,:20] = raw.x_single
-            raw.x_single = temp
-
-        x = structured_to_linear(raw.x_single, raw.x_pair)
-
-        return x, res
+    # @classmethod
+    # def init(cls, msa, freqs, weights, raw, regularization):
+    #     res = cls(msa, freqs, weights, regularization)
+    #
+    #     if msa.shape[1] != raw.ncol:
+    #         raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
+    #
+    #     if raw.x_single.shape[1] == 20:
+    #         temp = np.zeros((raw.ncol, 21))
+    #         temp[:,:20] = raw.x_single
+    #         raw.x_single = temp
+    #
+    #     x = structured_to_linear(raw.x_single, raw.x_pair)
+    #
+    #     return x, res
 
     def finalize(self, x, meta):
         x_single, x_pair = linear_to_structured(x, self.ncol, clip=True)

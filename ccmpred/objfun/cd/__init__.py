@@ -1,4 +1,5 @@
 import numpy as np
+from collections import deque
 
 import ccmpred.raw
 import ccmpred.gaps
@@ -9,9 +10,16 @@ import ccmpred.objfun.cd.cext
 import ccmpred.pseudocounts
 import ccmpred.weighting
 
+
 class ContrastiveDivergence():
 
-    def __init__(self, msa, freqs, weights, regularization, n_samples,  gibbs_steps, persistent, pll):
+    def __init__(self, msa, freqs, weights, raw, regularization, gibbs_steps=1, persistent=False, n_sequences=1, pll=False):
+
+
+        if msa.shape[1] != raw.ncol:
+            raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
+
+        self.x0 = self.structured_to_linear(raw.x_single[:, :20], raw.x_pair)
 
         self.msa = msa
         self.weights = weights
@@ -21,18 +29,22 @@ class ContrastiveDivergence():
         self.nrow, self.ncol = msa.shape
         self.nsingle = self.ncol * 20
         self.nvar = self.nsingle + self.ncol * self.ncol * 21 * 21
-        self.n_samples = n_samples
+
+        self.n_sequences = n_sequences
+        self.n_samples_msa = int(np.ceil(float(self.n_sequences) / self.neff))
         self.gibbs_steps = gibbs_steps
         self.persistent = persistent
         self.pll = pll
+        self.collection_sample_counts_single = deque([])
+        self.collection_sample_counts_pair = deque([])
 
         # get constant alignment counts
-        # freqs_single, freqs_pair = freqs
-        # self.msa_counts_single = freqs_single * self.neff
-        # self.msa_counts_pair = freqs_pair * self.neff
+        freqs_single, freqs_pair = freqs
+        self.msa_counts_single = freqs_single * self.neff
+        self.msa_counts_pair = freqs_pair * self.neff
 
         #do not use pseudo counts!
-        self.msa_counts_single, self.msa_counts_pair = ccmpred.counts.both_counts(msa, self.weights)
+        #self.msa_counts_single, self.msa_counts_pair = ccmpred.counts.both_counts(msa, self.weights)
 
         # reset gap counts
         self.msa_counts_single[:, 20] = 0
@@ -40,36 +52,41 @@ class ContrastiveDivergence():
         self.msa_counts_pair[:, :, 20, :] = 0
 
         #non_gapped counts
-        # self.Ni = self.msa_counts_single.sum(1)
-        # self.Nij = self.msa_counts_pair.sum(3).sum(2)
+        self.Ni = self.msa_counts_single.sum(1)
+        self.Nij = self.msa_counts_pair.sum(3).sum(2)
 
         # init sample alignment as input MSA
-        self.msa_sampled, self.weights_msa_sampled = self.init_sample_alignment()
+        self.msa_sampled = self.init_sample_alignment()
+
 
 
     def init_sample_alignment(self):
 
-        if self.n_samples == 0 or self.n_samples < self.nrow:
-            return self.msa.copy(), self.weights
-        else:
-            #pick random sequences from original alignment
-            #random_sequence_ids =  np.random.randint(0, self.nrow, self.n_samples)
-            seq_id = range(self.nrow) * (self.n_samples / self.nrow)
-            weights_msa_sampled = self.weights.tolist() * (self.n_samples / self.nrow)
-            weights_msa_sampled = np.array(weights_msa_sampled) / (self.n_samples / self.nrow)
+        return self.msa.copy()
 
-            return self.msa[seq_id], weights_msa_sampled
+        # if self.n_samples == 0 or self.n_samples < self.nrow:
+        #     return self.msa.copy(), self.weights
+        # else:
+        #     #pick random sequences from original alignment
+        #     #random_sequence_ids =  np.random.randint(0, self.nrow, self.n_samples)
+        #     seq_id = range(self.nrow) * (self.n_samples / self.nrow)
+        #     weights_msa_sampled = self.weights.tolist() * (self.n_samples / self.nrow)
+        #     weights_msa_sampled = np.array(weights_msa_sampled) / (self.n_samples / self.nrow)
+        #
+        #     return self.msa[seq_id], weights_msa_sampled
 
-    @classmethod
-    def init(cls, msa, freqs, weights, raw, regularization):
-        res = cls(msa, freqs, weights, regularization)
-
-        if msa.shape[1] != raw.ncol:
-            raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
-
-        x = res.structured_to_linear(raw.x_single[:, :20], raw.x_pair)
-
-        return x, res
+    # @classmethod
+    # def init(cls, msa, freqs, weights, raw, regularization, gibbs_steps=1, persistent=False, n_sequences=1, pll=False):
+    #     res = cls(msa, freqs, weights, regularization, gibbs_steps, persistent, n_sequences, pll)
+    #
+    #     print n_sequences
+    #
+    #     if msa.shape[1] != raw.ncol:
+    #         raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
+    #
+    #     x = res.structured_to_linear(raw.x_single[:, :20], raw.x_pair)
+    #
+    #     return x, res
 
     def finalize(self, x, meta):
         x_single, x_pair = self.linear_to_structured(x, self.ncol, add_gap_state=True)
@@ -85,9 +102,10 @@ class ContrastiveDivergence():
 
     def evaluate(self, x):
 
+
         #reset the msa for sampling
         if not self.persistent:
-            self.msa_sampled, self.weights_msa_sampled = self.init_sample_alignment()
+            self.msa_sampled = self.init_sample_alignment()
             #print("Neff sampled alingment: {0} Neff input alignment: {1}".format(np.sum(self.weights_msa_sampled), np.sum(self.weights)))
 
         if self.pll:
@@ -98,12 +116,34 @@ class ContrastiveDivergence():
 
 
         #careful with the weights: sum(sample_counts) should equal sum(msa_counts) !
-        sample_counts_single, sample_counts_pair = ccmpred.counts.both_counts(self.msa_sampled, self.weights_msa_sampled)
+        sample_counts_single, sample_counts_pair = ccmpred.counts.both_counts(self.msa_sampled, self.weights)
 
-        # reset gap counts for sampled msa
+        #reset gap counts for sampled msa
         sample_counts_single[:, 20] = 0
         sample_counts_pair[:, :, :, 20] = 0
         sample_counts_pair[:, :, 20, :] = 0
+
+        #store sample counts
+        self.collection_sample_counts_single.append(sample_counts_single)
+        self.collection_sample_counts_pair.append(sample_counts_pair)
+
+
+        #keep only N_SAMPLES_MSA latest counts
+        if len(self.collection_sample_counts_single) > self.n_samples_msa:
+            self.collection_sample_counts_single.popleft()
+            self.collection_sample_counts_pair.popleft()
+
+        #Sum counts over all stored sample counts
+        overall_sampled_counts_single = np.sum(self.collection_sample_counts_single, axis=0)
+        overall_sampled_counts_pair = np.sum(self.collection_sample_counts_pair, axis=0)
+
+        #Number of non_gapped counts
+        Ni_sampled = overall_sampled_counts_single.sum(1)
+        Nij_sampled = overall_sampled_counts_pair.sum(3).sum(2)
+
+        #normalize counts according to input msa counts
+        sample_counts_single = overall_sampled_counts_single / Ni_sampled[:, np.newaxis] * self.Ni[:, np.newaxis]
+        sample_counts_pair   = overall_sampled_counts_pair / Nij_sampled[:, :,  np.newaxis, np.newaxis] * self.Nij[:, :,  np.newaxis, np.newaxis]
 
         #non_gapped counts per position / pair
         # Ni_sampled = sample_counts_single.sum(1)
@@ -144,11 +184,11 @@ class ContrastiveDivergence():
         return -1, g
 
     def __repr__(self):
-        return "{0} {1} contrastive divergence using {2} Gibbs sampling steps for sampling {3} sequences ".format(
+        return "{0} {1} contrastive divergence using {2} Gibbs sampling steps and sampling {3} times the input MSA ".format(
             "PERSISTENT" if (self.persistent) else "",
             "PLL" if (self.pll) else "",
             self.gibbs_steps,
-            self.n_samples if self.n_samples > 0 else self.nrow
+            self.n_samples_msa
         )
 
     @staticmethod
