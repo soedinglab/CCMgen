@@ -138,8 +138,8 @@ class ContrastiveDivergence():
         overall_sampled_counts_pair = np.sum(self.collection_sample_counts_pair, axis=0)
 
         #Number of non_gapped counts
-        Ni_sampled = overall_sampled_counts_single.sum(1)
-        Nij_sampled = overall_sampled_counts_pair.sum(3).sum(2)
+        Ni_sampled = overall_sampled_counts_single.sum(1)+ 1e-10
+        Nij_sampled = overall_sampled_counts_pair.sum(3).sum(2)+ 1e-10
 
         #normalize counts according to input msa counts
         sample_counts_single = overall_sampled_counts_single / Ni_sampled[:, np.newaxis] * self.Ni[:, np.newaxis]
