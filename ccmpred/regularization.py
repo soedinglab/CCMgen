@@ -5,7 +5,7 @@ import numpy as np
 class L2(object):
     """L2 regularization on single and pair emission potentials"""
 
-    def __init__(self, lambda_single, lambda_pair, center_x_single=0):
+    def __init__(self, lambda_single, lambda_pair, center_x_single):
         self.lambda_single = lambda_single
         self.lambda_pair = lambda_pair
         self.center_x_single = center_x_single
