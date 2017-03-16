@@ -79,7 +79,7 @@ class ContrastiveDivergence():
         if self.average_sample_counts:
             return self.msa.copy()
         elif self.n_sequences < self.nrow:
-            return self.msa.copy(), self.weights
+            return self.msa.copy()
         else:
             seq_id = range(self.nrow) * self.n_samples_msa
             self.msa_sampled_weights = self.weights[seq_id]
