@@ -2,6 +2,8 @@ import numpy as np
 import ccmpred.logo
 import sys
 from collections import deque
+import plotly.graph_objs as go
+from plotly.offline import plot as plotly_plot
 
 class Adam():
     """
@@ -29,10 +31,14 @@ class Adam():
         self.g_sign = deque([])
         self.x_hist = deque([])
 
+        #for plotting
+        self.optimization_log={}
+
         self.lastg = np.array([])
         self.neg_g_sign = 0
 
         self.early_stopping = early_stopping
+        self.it_succesfull_stop_condition=-1
         self.epsilon = epsilon
         self.convergence_prev=convergence_prev
 
@@ -55,17 +61,38 @@ class Adam():
 
         headerline = (" ".join("{0:>{1}s}".format(ht, hw) for ht, hw in header_tokens))
 
+
+        self.optimization_log['||x||'] = []
+        self.optimization_log['||x_single||'] = []
+        self.optimization_log['||x_pair||'] = []
+        self.optimization_log['||g||'] = []
+        self.optimization_log['||g_single||'] = []
+        self.optimization_log['||g_pair||'] = []
+        self.optimization_log['max_g'] = []
+        self.optimization_log['alpha'] = []
+
         if ccmpred.logo.is_tty:
             print("\x1b[2;37m{0}\x1b[0m".format(headerline))
         else:
             print(headerline)
 
-    def progress(self, n_iter, xnorm_single, xnorm_pair, g, gnorm_single, gnorm_pair, xnorm_diff, gnorm_diff, sign_g_t10, sign_g_t8, alpha ):
+    def progress(self, n_iter, xnorm_single, xnorm_pair, g, gnorm_single, gnorm_pair, xnorm_diff, gnorm_diff, sign_g_t10, sign_g_t8, alpha, plotfile ):
 
         xnorm = xnorm_single + xnorm_pair
-        gnorm = gnorm_single+gnorm_pair
-
+        gnorm = gnorm_single + gnorm_pair
         max_g = np.max(np.abs(g))
+
+        if plotfile is not None:
+            self.optimization_log['||x||'].append(xnorm)
+            self.optimization_log['||x_single||'].append(xnorm_single)
+            self.optimization_log['||x_pair||'].append(xnorm_pair)
+            self.optimization_log['||g||'].append(gnorm)
+            self.optimization_log['||g_single||'].append(gnorm_single)
+            self.optimization_log['||g_pair||'].append(gnorm_pair)
+            self.optimization_log['max_g'].append(max_g)
+            self.optimization_log['alpha'].append(alpha)
+            self.plot_progress(plotfile)
+
 
         data_tokens = [(n_iter, '8d'),
                        (xnorm, '12g'), (xnorm_single, '12g'), (xnorm_pair, '12g'),
@@ -80,7 +107,48 @@ class Adam():
 
         sys.stdout.flush()
 
-    def minimize(self, objfun, x):
+    def plot_progress(self, plotfile):
+
+
+        title="Optimization Log <br>"
+        title += self.__repr__().replace("\n", "<br>")
+
+
+
+        data=[]
+        for k,v in self.optimization_log.iteritems():
+            data.append(
+                go.Scatter(
+                    x=range(1, len(v)+1),
+                    y=v,
+                    mode='lines',
+                    name=k
+                )
+            )
+
+        plot = {
+            "data": data,
+            "layout": go.Layout(
+                title = title,
+                xaxis1 = dict(
+                    title="iteration",
+                    exponentformat="e",
+                    showexponent='All'
+                ),
+                yaxis1 = dict(
+                    title="metric",
+                    exponentformat="e",
+                    showexponent='All'
+                ),
+            font = dict(size=18),
+            )
+        }
+
+        plotly_plot(plot, filename=plotfile, auto_open=False)
+
+
+
+    def minimize(self, objfun, x, plotfile):
 
         #initialize the moment vectors
         first_moment = np.zeros(objfun.nvar)
@@ -155,23 +223,28 @@ class Adam():
 
             #update learning rate
             alpha  = self.learning_rate
-            if(self.decay):
-                alpha /= np.sqrt(i+1)
+            if(self.decay and self.it_succesfull_stop_condition > -1):
+                alpha /= np.sqrt(i - self.it_succesfull_stop_condition)
                 #alpha = self.learning_rate / (1 + i / 10.0) #as in gradient descent
 
 
             #print out progress
-            self.progress(i + 1, xnorm_single, xnorm_pair, g, gnorm_single, gnorm_pair, xnorm_diff, gnorm_diff, sign_g_t10, sign_g_t8, alpha)
+            self.progress(i + 1, xnorm_single, xnorm_pair, g, gnorm_single, gnorm_pair, xnorm_diff, gnorm_diff, sign_g_t10, sign_g_t8, alpha, plotfile)
 
 
             #stop condition
-            if self.early_stopping:
+            if self.early_stopping and self.it_succesfull_stop_condition == -1:
                 if xnorm_diff < self.epsilon:
-                    ret = {
-                        "code": 0,
-                        "message": "Stopping condition (xnorm diff < {0}) successfull.".format(self.epsilon)
-                    }
-                    return fx, x, ret
+                    if self.decay:
+                        print("use decaying learning rate from now on")
+                        self.it_succesfull_stop_condition=i
+                        continue
+                    else:
+                        ret = {
+                            "code": 0,
+                            "message": "Stopping condition (xnorm diff < {0}) successfull.".format(self.epsilon)
+                        }
+                        return fx, x, ret
 
                 # if self.neg_g_sign > 10:
                 #     ret = {

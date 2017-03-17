@@ -119,6 +119,8 @@ def parse_args():
     parser.add_argument("-A", "--disable_apc",  dest="disable_apc", action="store_true", default=False, help="Disable average product correction (APC)")
     parser.add_argument("--aln-format", dest="aln_format", default="psicov", help="File format for MSAs [default: \"%(default)s\"]")
     parser.add_argument("--no-logo", dest="logo", default=True, action="store_false", help="Disable showing the CCMpred logo")
+    parser.add_argument("-p", "--plot_opt_progress", dest="plot_opt_progress", default=False, action="store_true", help="Plot optimization progress")
+
 
     parser.add_argument("alnfile", help="Input alignment file to use")
     parser.add_argument("matfile", help="Output matrix file to write")
@@ -199,7 +201,6 @@ def main():
     msa = ccmpred.io.alignment.read_msa(opt.alnfile, opt.aln_format)
     msa, gapped_positions = ccmpred.gaps.remove_gapped_positions(msa, opt.max_gap_ratio)
 
-
     weights = opt.weight(msa, opt.ignore_gaps)
 
     protein=os.path.basename(opt.alnfile).split(".")[0]
@@ -261,9 +262,15 @@ def main():
 
     alg = ALGORITHMS[opt.algorithm](opt)
 
+    #whether to plot progress of optimization
+    plotfile=None
+    if(opt.plot_opt_progress):
+        plotfile=os.path.dirname(opt.matfile) + "/" + protein + ".opt_progress.html"
+
+
     print("Will optimize {0} {1} variables wrt {2} and {3}".format(x0.size, x0.dtype, f, f.regularization))
     print("Optimizer: {0}".format(alg))
-    fx, x, algret = alg.minimize(f, x0)
+    fx, x, algret = alg.minimize(f, x0, plotfile)
 
 
     condition = "Finished" if algret['code'] >= 0 else "Exited"
