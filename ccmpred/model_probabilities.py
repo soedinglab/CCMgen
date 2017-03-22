@@ -37,29 +37,32 @@ def write_msgpack(outmsgpackfile, res, weights, msa, freqs, lambda_pair):
 
     out={}
 
+    neff = np.sum(weights)
 
-    #Nij will NOT contain pseudocount Counts!
-    msa_counts_single, msa_counts_pair = ccmpred.counts.both_counts(msa, weights)
+    freqs_single, freqs_pair = freqs
+
+    # ENFORCE NO PSEUDO COUNTS
+    # freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, ccmpred.pseudocounts.no_pseudocounts, pseudocount_n_single=0, pseudocount_n_pair=0, remove_gaps=False)
+    # freqs_single, freqs_pair = freqs
+
+
+    msa_counts_pair = freqs_pair * neff
+    # reset gap counts
     msa_counts_pair[:, :, :, 20] = 0
     msa_counts_pair[:, :, 20, :] = 0
+
+    #non_gapped counts
     Nij = msa_counts_pair.sum(3).sum(2)
+
+
 
     # write lower triangular matrix row-wise
     # read in as upper triangular matrix column-wise in c++
     out['N_ij'] = Nij[np.tril_indices(res.ncol, k=-1)].tolist() #rowwise
 
 
-
-
-    #no pseudo counts
-    freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, ccmpred.pseudocounts.no_pseudocounts, pseudocount_n_single=0, pseudocount_n_pair=0, remove_gaps=True)
-    freqs_single, freqs_pair = freqs
-
     #renormalize pair frequencies without gaps + reshape row-wise
     pair_freq = ccmpred.pseudocounts.degap(freqs_pair).reshape(res.ncol,res.ncol,400)
-
-
-
 
     #couplings without gaps + reshape row-wise
     x_pair_nogaps = res.x_pair[:,:,:20,:20].reshape(res.ncol,res.ncol, 400)
@@ -87,7 +90,7 @@ def write_msgpack(outmsgpackfile, res, weights, msa, freqs, lambda_pair):
             j = indices_triu[1][ind]
             print('e.g: ', i, j, sum(model_prob[i,j]), sum(pair_freq[i,j].flatten()), sum(x_pair_nogaps[i,j].flatten()), Nij[i,j])
 
-
+    print np.min(model_prob[2,4]), np.max(model_prob[2,4]), np.sum(model_prob[2,4])
 
     model_prob_flat = model_prob[indices_triu].flatten() #row-wise upper triangular indices
 
