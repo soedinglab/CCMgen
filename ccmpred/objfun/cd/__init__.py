@@ -83,7 +83,8 @@ class ContrastiveDivergence():
         else:
             seq_id = range(self.nrow) * self.n_samples_msa
             self.msa_sampled_weights = self.weights[seq_id]
-            return self.msa[seq_id]
+            sample_msa = self.msa[seq_id]
+            return sample_msa.copy()
 
     # @classmethod
     # def init(cls, msa, freqs, weights, raw, regularization, gibbs_steps=1, persistent=False, n_sequences=1, pll=False):
@@ -176,11 +177,6 @@ class ContrastiveDivergence():
         if(np.abs(np.sum(sample_counts_single[0,:20]) - np.sum(self.msa_counts_single[0,:20])) > 1e-5):
             print("Warning: sample aa counts ({0}) do not equal input msa aa counts ({1})!".format(np.sum(sample_counts_single[0,:20]), np.sum(self.msa_counts_single[0,:20])))
 
-        x_single, x_pair = self.linear_to_structured(x, self.ncol)
-        _, g_single_reg, g_pair_reg = self.regularization(x_single, x_pair)
-
-        g_single[:, :20] += g_single_reg
-        g_pair += g_pair_reg
 
         # set gradients for gap states to 0
         g_single[:, 20] = 0
@@ -190,8 +186,17 @@ class ContrastiveDivergence():
         for i in range(self.ncol):
             g_pair[i, i, :, :] = 0
 
+
         #gradient for x_single only L x 20
         g = self.structured_to_linear(g_single[:, :20], g_pair)
+
+        #add regularization
+        x_single, x_pair = self.linear_to_structured(x, self.ncol)
+        _, g_single_reg, g_pair_reg = self.regularization(x_single, x_pair)
+
+        g_reg = self.structured_to_linear(g_single_reg[:, :20], g_pair_reg)
+        g += g_reg
+
         return -1, g
 
     def __repr__(self):

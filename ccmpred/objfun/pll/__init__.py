@@ -39,6 +39,10 @@ class PseudoLikelihood():
         for i in range(self.ncol):
             msa_counts_pair[i, i, :, :] = 0
 
+        #non_gapped counts
+        self.Ni = msa_counts_single.sum(1)
+        self.Nij = msa_counts_pair.sum(3).sum(2)
+
         #no pseudo counts in gradient calculation
         self.g_init = structured_to_linear(msa_counts_single, 2 * msa_counts_pair)
 
