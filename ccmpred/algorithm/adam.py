@@ -41,6 +41,7 @@ class Adam():
         self.it_succesfull_stop_condition=-1
         self.epsilon = epsilon
         self.convergence_prev=convergence_prev
+        self.decrease = 5.0
 
     def __repr__(self):
         return "Adam stochastic optimization (decay={0} learning_rate={1} momentum_estimate1={2} momentum_estimate2={3} noise={4}) \n" \
@@ -122,6 +123,7 @@ class Adam():
                     x=range(1, len(v)+1),
                     y=v,
                     mode='lines',
+                    visible="legendonly",
                     name=k
                 )
             )
@@ -176,9 +178,15 @@ class Adam():
             first_moment_corrected  = first_moment / (1 - np.power(self.momentum_estimate1, i+1))
             second_moment_corrected = second_moment / (1 - np.power(self.momentum_estimate2, i+1))
 
+            first_moment_corrected_single, first_moment_corrected_pair = objfun.linear_to_structured(first_moment_corrected, objfun.ncol)
+            second_moment_corrected_single, second_moment_corrected_pair = objfun.linear_to_structured(second_moment_corrected, objfun.ncol)
+
             # ========================================================================================
             x_single, x_pair = objfun.linear_to_structured(x, objfun.ncol)
             g_single, g_pair = objfun.linear_to_structured(g, objfun.ncol)
+
+
+            #print x_single[9, :], np.sum(x_single[9, :])
 
             xnorm_single = np.sum(x_single * x_single)
             xnorm_pair = np.sum(x_pair * x_pair)
@@ -223,28 +231,46 @@ class Adam():
 
             #update learning rate
             alpha  = self.learning_rate
-            if(self.decay and self.it_succesfull_stop_condition > -1):
-                alpha /= np.sqrt(i - self.it_succesfull_stop_condition)
-                #alpha = self.learning_rate / (1 + i / 10.0) #as in gradient descent
-
+            if(self.decay):
+                if (self.early_stopping and self.it_succesfull_stop_condition > -1) or (not self.early_stopping):
+                    #alpha /= np.sqrt(i  - self.it_succesfull_stop_condition)
+                    alpha /= (1 + (i - self.it_succesfull_stop_condition) / self.decrease)
 
             #print out progress
             self.progress(i + 1, xnorm_single, xnorm_pair, g, gnorm_single, gnorm_pair, xnorm_diff, gnorm_diff, sign_g_t10, sign_g_t8, alpha, plotfile)
 
 
             #stop condition
-            if self.early_stopping and self.it_succesfull_stop_condition == -1:
+            if self.early_stopping:
                 if xnorm_diff < self.epsilon:
-                    if self.decay:
-                        print("use decaying learning rate from now on")
+
+                    if not self.decay and objfun.gibbs_steps == 1 and not objfun.persistent:
+                        objfun.gibbs_steps = 5
+                        self.epsilon *= 1e-1        #decrease convergence criterion
+                        print("Use 5 Gibss sampling steps. Set learning rate to {0}. Decrease epsilon to {1}".format(self.learning_rate, self.epsilon))
+                    elif not self.decay and objfun.gibbs_steps == 5:
+                        self.decay = True
+                        self.epsilon *= 1e-1        #decrease convergence criterion
                         self.it_succesfull_stop_condition=i
-                        continue
+                        print("Turn on decaying learning rate. Use 5 Gibss sampling steps. Decrease epsilon to {0}".format(self.epsilon))
+                    elif self.decay and self.decrease > 1:
+                        self.decrease -= 1.0
+                        print("Decrease decay. Set deacay to {0}".format(self.decrease))
+                    elif self.decay and not objfun.persistent:
+                        objfun.persistent=True
+                        objfun.gibbs_steps = 1
+                        #self.epsilon *= 1e-1        #decrease convergence criterion
+                        self.learning_rate = 1e-3
+                        self.decrease = 10.0
+                        self.it_succesfull_stop_condition=i
+                        print("Turn on persistent CD. Decrease epsilon to {0}. Set learnign rate to {1}. Set decrease tp {2}.".format(self.epsilon, self.learning_rate, self.decrease))
                     else:
                         ret = {
                             "code": 0,
                             "message": "Stopping condition (xnorm diff < {0}) successfull.".format(self.epsilon)
                         }
                         return fx, x, ret
+
 
                 # if self.neg_g_sign > 10:
                 #     ret = {
@@ -257,7 +283,15 @@ class Adam():
 
             #update parameters
 
-            x -= alpha * first_moment_corrected / ( np.sqrt(second_moment_corrected) + self.noise)
+
+            step_single = first_moment_corrected_single / ( np.sqrt(second_moment_corrected_single.max(1))[:, np.newaxis] + self.noise)
+            x_single -= alpha * step_single
+
+            step_pair = first_moment_corrected_pair / ( np.sqrt(second_moment_corrected_pair.max(3).max(2))[:, :, np.newaxis, np.newaxis] + self.noise)
+            x_pair -= alpha * step_pair
+            x=objfun.structured_to_linear(x_single, x_pair)
+
+            #x -= alpha * first_moment_corrected / ( np.sqrt(second_moment_corrected) + self.noise)
 
 
         return fx, x, ret
