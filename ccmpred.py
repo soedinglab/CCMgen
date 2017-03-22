@@ -17,6 +17,7 @@ import ccmpred.centering
 import ccmpred.regularization
 import ccmpred.model_probabilities
 import ccmpred.gaps
+import ccmpred.sanity_check
 
 import ccmpred.objfun.pll as pll
 import ccmpred.objfun.cd as cd
@@ -162,6 +163,7 @@ def parse_args():
     grp_rg.add_argument("--reg-l2-scale_by_L",      dest="scaling", action="store_const", const="L", default="L", help=" LAMBDA_PAIR * (L-1) (default)")
     grp_rg.add_argument("--reg-l2-scale_by_div",    dest="scaling", action="store_const", const="diversity", help="LAMBDA_PAIR * (L/sqrt(N))")
     grp_rg.add_argument("--reg-l2-noscaling",       dest="scaling", action="store_const", const="1", help="LAMBDA_PAIR")
+    grp_rg.add_argument("--center-v",               dest="center_v", action="store_true", default=False, help="Gaussian prior for single emissions centered at v*.")
 
     grp_gp = parser.add_argument_group("Gap Treatment")
     grp_gp.add_argument("--max_gap_ratio",  dest="max_gap_ratio", default=100, type=int, help="Remove alignment positions with >x% gaps [default: %(default)s  = no removal]")
@@ -221,19 +223,25 @@ def main():
 
 
     #setup regularization properties
+    centering   = ccmpred.centering.center_zero(freqs)
+
+    if opt.center_v or opt.dev_center_v:
+        centering = ccmpred.centering.center_v(freqs)
+
+
     scaling = REG_L2_SCALING[opt.scaling](msa)
-    centering = ccmpred.centering.calculate(freqs)
     regularization = opt.regularization(msa, centering, scaling)
 
-    #default initialisation of parameters
-    raw_init = ccmpred.initialise_potentials.init(msa.shape[1], centering)
+    init_single_potentials        = centering
 
     if opt.vanilla:
         freqs_for_init = ccmpred.pseudocounts.calculate_frequencies_vanilla(msa)
-        centering = ccmpred.centering.calculate_vanilla(freqs_for_init)
-        raw_init = ccmpred.initialise_potentials.init(msa.shape[1], centering)
-        regularization = opt.regularization(msa, np.zeros_like(centering), scaling)
+        init_single_potentials = ccmpred.centering.center_vanilla(freqs_for_init)
         #besides initialisation and regularization, there seems to be another difference in gradient calculation between CCMpred vanilla and CCMpred-dev-center-v
+        #furthermore initialisation does NOT assure sum_a(v_ia) == 1
+
+    #default initialisation of parameters
+    raw_init = ccmpred.initialise_potentials.init(msa.shape[1], init_single_potentials)
 
 
     if opt.initrawfile:
@@ -248,7 +256,6 @@ def main():
 
 
     #initialise objective function
-    #x0, f = opt.objfun(msa, freqs, weights, raw_init, regularization, *opt.objfun_args, **opt.objfun_kwargs)
     f  =  opt.objfun(msa, freqs, weights, raw_init, regularization, *opt.objfun_args, **opt.objfun_kwargs)
     x0 = f.x0
 
@@ -310,6 +317,9 @@ def main():
     #write contact map and meta data info matfile
     ccmpred.io.contactmatrix.write_matrix(opt.matfile, res, meta, disable_apc=opt.disable_apc)
 
+    #perform simple checks:
+    ccmpred.sanity_check.check_single_potentials(res.x_single, verbose=1)
+    ccmpred.sanity_check.check_pair_potentials(res.x_pair, verbose=1)
 
     exitcode = 0 if algret['code'] > 0 else -algret['code']
     sys.exit(exitcode)

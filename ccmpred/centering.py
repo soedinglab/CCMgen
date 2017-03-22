@@ -3,7 +3,7 @@ import ccmpred.pseudocounts
 
 
 
-def calculate(freqs):
+def center_v(freqs):
     single_freqs, _ = freqs
 
     #single_freqs either normalized with or without gaps --> same result due to subtraction of mean
@@ -21,12 +21,18 @@ def calculate(freqs):
     return v_center
 
 
+def center_zero(freqs):
+    single_freqs, _ = freqs
 
-def calculate_vanilla(freqs):
+    return np.zeros_like(single_freqs)
+
+
+def center_vanilla(freqs):
     single_freqs, _ = freqs
 
     #single_freqs will never be zero as there is at least 1 pseudo count
     lsingle_freqs = np.log(single_freqs)
+
 
     v_center = lsingle_freqs - lsingle_freqs[:, 20][:, np.newaxis]
     v_center[:, 20] = 0
