@@ -1,7 +1,8 @@
 import numpy as np
 import ccmpred.logo
 import sys
-
+import plotly.graph_objs as go
+from plotly.offline import plot as plotly_plot
 
 class conjugateGradient():
     """Optimize objective function usign conjugate gradients"""
@@ -14,6 +15,9 @@ class conjugateGradient():
         self.wolfe = wolfe
         self.epsilon = epsilon
         self.convergence_prev = convergence_prev
+
+        #for plotting
+        self.optimization_log={}
 
     def __repr__(self):
         return "conjugate gradient optimization (ftol={0} max_linesearch={1} alpha_mul={2} wolfe={3}) \n" \
@@ -30,12 +34,22 @@ class conjugateGradient():
 
         headerline = (" ".join("{0:>{1}s}".format(ht, hw) for ht, hw in header_tokens))
 
+        self.optimization_log['||x||'] = []
+        self.optimization_log['||x_single||'] = []
+        self.optimization_log['||x_pair||'] = []
+        self.optimization_log['||g||'] = []
+        self.optimization_log['||g_single||'] = []
+        self.optimization_log['||g_pair||'] = []
+        self.optimization_log['step'] = []
+
+
+
         if ccmpred.logo.is_tty:
             print("\x1b[1;77m{0}\x1b[0m".format(headerline))
         else:
             print(headerline)
 
-    def progress(self, xnorm, x_single, x_pair, gnorm, g_single, g_pair, fx, n_iter, n_ls, step):
+    def progress(self, xnorm, x_single, x_pair, gnorm, g_single, g_pair, fx, n_iter, n_ls, step, plotfile):
 
         xnorm_single = np.sum(x_single * x_single)
         xnorm_pair = np.sum(x_pair *x_pair )
@@ -49,11 +63,63 @@ class conjugateGradient():
 
         print(" ".join("{0:{1}}".format(dt, df) for dt, df in data_tokens))
 
+        if plotfile is not None:
+            self.optimization_log['||x||'].append(xnorm)
+            self.optimization_log['||x_single||'].append(xnorm_single)
+            self.optimization_log['||x_pair||'].append(xnorm_pair)
+            self.optimization_log['||g||'].append(gnorm)
+            self.optimization_log['||g_single||'].append(gnorm_single)
+            self.optimization_log['||g_pair||'].append(gnorm_pair)
+            self.optimization_log['step'].append(step)
+            self.plot_progress(plotfile)
+
+
 
         sys.stdout.flush()
 
 
-    def minimize(self, objfun, x):
+    def plot_progress(self, plotfile):
+
+
+        title="Optimization Log <br>"
+        title += self.__repr__().replace("\n", "<br>")
+
+
+        data=[]
+        for k,v in self.optimization_log.iteritems():
+            data.append(
+                go.Scatter(
+                    x=range(1, len(v)+1),
+                    y=v,
+                    mode='lines',
+                    name=k
+                )
+            )
+
+        plot = {
+            "data": data,
+            "layout": go.Layout(
+                title = title,
+                xaxis1 = dict(
+                    title="iteration",
+                    exponentformat="e",
+                    showexponent='All'
+                ),
+                yaxis1 = dict(
+                    title="metric",
+                    exponentformat="e",
+                    showexponent='All'
+                ),
+            font = dict(size=18),
+            )
+        }
+
+        plotly_plot(plot, filename=plotfile, auto_open=False)
+
+
+
+
+    def minimize(self, objfun, x, plotfile):
 
         #objfun.begin_progress()
         self.begin_progress()
@@ -65,9 +131,7 @@ class conjugateGradient():
         g_single, g_pair = objfun.linear_to_structured(g)
 
 
-
-
-        self.progress(xnorm, x_single, x_pair, gnorm, g_single, g_pair, fx, 0, 0, 0)
+        self.progress(xnorm, x_single, x_pair, gnorm, g_single, g_pair, fx, 0, 0, 0, plotfile)
 
         gprevnorm = None
         alpha_prev = None
@@ -133,7 +197,9 @@ class conjugateGradient():
             #objfun.progress(x, g, fx, iteration, n_linesearch, alpha)
             x_single, x_pair = objfun.linear_to_structured(x)
             g_single, g_pair = objfun.linear_to_structured(g)
-            self.progress(xnorm, x_single, x_pair, gnorm, g_single, g_pair, fx, iteration, n_linesearch, alpha)
+
+
+            self.progress(xnorm, x_single, x_pair, gnorm, g_single, g_pair, fx, iteration, n_linesearch, alpha, plotfile)
 
         return fx, x, ret
 

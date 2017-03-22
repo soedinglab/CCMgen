@@ -2,7 +2,8 @@ import numpy as np
 import ccmpred.logo
 import sys
 from collections import deque
-
+import plotly.graph_objs as go
+from plotly.offline import plot as plotly_plot
 
 class gradientDescent():
     """Optimize objective function using gradient descent"""
@@ -17,6 +18,9 @@ class gradientDescent():
         self.x_hist = deque([])
         self.lastg = np.array([])
         self.neg_g_sign = 0
+
+        #for plotting
+        self.optimization_log={}
 
         self.early_stopping = early_stopping
         self.epsilon = epsilon
@@ -39,6 +43,15 @@ class gradientDescent():
                          ]
 
 
+        self.optimization_log['||x||'] = []
+        self.optimization_log['||x_single||'] = []
+        self.optimization_log['||x_pair||'] = []
+        self.optimization_log['||g||'] = []
+        self.optimization_log['||g_single||'] = []
+        self.optimization_log['||g_pair||'] = []
+        self.optimization_log['step'] = []
+
+
         headerline = (" ".join("{0:>{1}s}".format(ht, hw) for ht, hw in header_tokens))
 
         if ccmpred.logo.is_tty:
@@ -46,7 +59,7 @@ class gradientDescent():
         else:
             print(headerline)
 
-    def progress(self, n_iter, xnorm_single, xnorm_pair, gnorm_single, gnorm_pair, xnorm_diff, gnorm_diff, sign_g_t10, sign_g_t8, step):
+    def progress(self, n_iter, xnorm_single, xnorm_pair, gnorm_single, gnorm_pair, xnorm_diff, gnorm_diff, sign_g_t10, sign_g_t8, step, plotfile):
 
 
         xnorm = xnorm_single+xnorm_pair
@@ -65,10 +78,62 @@ class gradientDescent():
         print(" ".join("{0:{1}}".format(dt, df) for dt, df in data_tokens))
 
 
+        if plotfile is not None:
+            self.optimization_log['||x||'].append(xnorm)
+            self.optimization_log['||x_single||'].append(xnorm_single)
+            self.optimization_log['||x_pair||'].append(xnorm_pair)
+            self.optimization_log['||g||'].append(gnorm)
+            self.optimization_log['||g_single||'].append(gnorm_single)
+            self.optimization_log['||g_pair||'].append(gnorm_pair)
+            self.optimization_log['step'].append(step)
+            self.plot_progress(plotfile)
+
+
+
         sys.stdout.flush()
 
+    def plot_progress(self, plotfile):
 
-    def minimize(self, objfun, x):
+
+        title="Optimization Log <br>"
+        title += self.__repr__().replace("\n", "<br>")
+
+
+
+        data=[]
+        for k,v in self.optimization_log.iteritems():
+            data.append(
+                go.Scatter(
+                    x=range(1, len(v)+1),
+                    y=v,
+                    mode='lines',
+                    name=k
+                )
+            )
+
+        plot = {
+            "data": data,
+            "layout": go.Layout(
+                title = title,
+                xaxis1 = dict(
+                    title="iteration",
+                    exponentformat="e",
+                    showexponent='All'
+                ),
+                yaxis1 = dict(
+                    title="metric",
+                    exponentformat="e",
+                    showexponent='All'
+                ),
+            font = dict(size=18),
+            )
+        }
+
+        plotly_plot(plot, filename=plotfile, auto_open=False)
+
+
+
+    def minimize(self, objfun, x, plotfile):
 
         self.begin_progress()
 
@@ -90,6 +155,7 @@ class gradientDescent():
             # ========================================================================================
             x_single, x_pair = objfun.linear_to_structured(x, objfun.ncol)
             g_single, g_pair = objfun.linear_to_structured(g, objfun.ncol)
+
 
             xnorm_single = np.sum(x_single * x_single)
             xnorm_pair = np.sum(x_pair * x_pair)
@@ -132,7 +198,7 @@ class gradientDescent():
             # ====================================================================================
 
             #print out progress
-            self.progress(i, xnorm_single, xnorm_pair, gnorm_single, gnorm_pair, xnorm_diff, gnorm_diff, sign_g_t10, sign_g_t8, alpha)
+            self.progress(i, xnorm_single, xnorm_pair, gnorm_single, gnorm_pair, xnorm_diff, gnorm_diff, sign_g_t10, sign_g_t8, alpha, plotfile)
 
             #stop condition
             if self.early_stopping:
