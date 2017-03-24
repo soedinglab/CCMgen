@@ -1,8 +1,7 @@
 import numpy as np
 import ccmpred.logo
 import sys
-import plotly.graph_objs as go
-from plotly.offline import plot as plotly_plot
+import ccmpred.monitor.progress as pr
 
 class conjugateGradient():
     """Optimize objective function usign conjugate gradients"""
@@ -16,8 +15,8 @@ class conjugateGradient():
         self.epsilon = epsilon
         self.convergence_prev = convergence_prev
 
-        #for plotting
-        self.optimization_log={}
+        self.progress = pr.Progress(plotfile=None,
+                                    fx=[], max_g=[], step=[], n_linesearch=[], rel_diff_fx=[])
 
     def __repr__(self):
         return "conjugate gradient optimization (ftol={0} max_linesearch={1} alpha_mul={2} wolfe={3}) \n" \
@@ -121,17 +120,36 @@ class conjugateGradient():
 
     def minimize(self, objfun, x, plotfile):
 
-        #objfun.begin_progress()
-        self.begin_progress()
+        subtitle = " L={0} N={1} Neff={2}<br>".format(objfun.ncol, objfun.nrow, np.round(objfun.neff, decimals=3))
+        subtitle += self.__repr__().replace("\n", "<br>")
+        self.progress.plot_options(
+            plotfile,
+            ['fx', '||x||', '||x_single||', '||x_pair||', '||g||', '||g_single||', '||g_pair||', 'max_g', 'step', 'rel_diff_fx'],
+            subtitle
+        )
+        self.progress.begin_process()
 
+        #for initialization of linesearch
         fx, g = objfun.evaluate(x)
-        gnorm = np.sum(g * g)
-        xnorm = np.sum(x * x)
+
+
         x_single, x_pair = objfun.linear_to_structured(x)
         g_single, g_pair = objfun.linear_to_structured(g)
 
+        xnorm_single = np.sum(x_single * x_single)
+        xnorm_pair = np.sum(x_pair * x_pair)
 
-        self.progress(xnorm, x_single, x_pair, gnorm, g_single, g_pair, fx, 0, 0, 0, plotfile)
+        gnorm_single = np.sum(g_single * g_single)
+        gnorm_pair = np.sum(g_pair * g_pair)
+        gnorm = gnorm_single + gnorm_pair
+        max_g = np.max(g)
+
+        # print out progress
+        self.progress.log_progress(0,
+                                   xnorm_single, xnorm_pair,
+                                   gnorm_single, gnorm_pair,
+                                   fx=fx, max_g=max_g, step=0, n_linesearch=0, rel_diff_fx=0)
+
 
         gprevnorm = None
         alpha_prev = None
@@ -143,15 +161,11 @@ class conjugateGradient():
             "code": -9999
         }
 
-        if gnorm / xnorm < self.epsilon:
-            ret['message'] = "Already minimized!"
-            ret['code'] = 1
-            return fx, x, ret
 
-        lastfx = []
 
         alpha = 1 / np.sqrt(gnorm)
         iteration = 0
+        rel_diff_fx=np.nan
         while True:
             if iteration >= self.maxit:
                 ret['message'] = "Reached maximum number of iterations"
@@ -163,10 +177,10 @@ class conjugateGradient():
                 s = beta * s - g
                 dg = np.sum(s * g)
                 alpha = alpha_prev * dg_prev / dg
-
             else:
                 s = -g
                 dg = np.sum(s * g)
+
 
             n_linesearch, fx, alpha, g, x = self.linesearch(x, fx, g, objfun, s, alpha)
 
@@ -175,33 +189,46 @@ class conjugateGradient():
                 ret['code'] = -2
                 break
 
-            gprevnorm = gnorm
-            gnorm = np.sum(g * g)
-            xnorm = np.sum(x * x)
-            alpha_prev = alpha
-            dg_prev = dg
 
             # convergence check
-            if len(lastfx) >= self.convergence_prev:
-                check_fx = lastfx[-self.convergence_prev]
-                #print("check_fx: {0} (check_fx - fx) / check_fx: {1}".format(check_fx, (check_fx - fx) / check_fx))
-                if (check_fx - fx) / check_fx < self.epsilon:
+            if len(self.progress.optimization_log['fx']) >= self.convergence_prev:
+                check_fx = self.progress.optimization_log['fx'][-self.convergence_prev]
+                rel_diff_fx = (check_fx - fx) / check_fx
+                if rel_diff_fx < self.epsilon:
                     ret['message'] = 'Success!'
                     ret['code'] = 0
                     break
 
-            lastfx.append(fx)
+            #for plotting
+            x_single, x_pair = objfun.linear_to_structured(x)
+            xnorm_single = np.sum(x_single * x_single)
+            xnorm_pair   = np.sum(x_pair * x_pair)
+
+            g_single, g_pair = objfun.linear_to_structured(g)
+            gnorm_single = np.sum(g_single * g_single)
+            gnorm_pair = np.sum(g_pair * g_pair)
+
+            max_g = np.max(g)
+
+            #update optimization specific values
+            gprevnorm = gnorm
+            gnorm = gnorm_single + gnorm_pair
+
+            alpha_prev = alpha
+            dg_prev = dg
 
             iteration += 1
 
-            #objfun.progress(x, g, fx, iteration, n_linesearch, alpha)
-            x_single, x_pair = objfun.linear_to_structured(x)
-            g_single, g_pair = objfun.linear_to_structured(g)
+            # print out progress
+            self.progress.log_progress(iteration,
+                                       xnorm_single, xnorm_pair,
+                                       gnorm_single, gnorm_pair,
+                                       fx = fx, max_g=max_g,  step=alpha, n_linesearch=n_linesearch, rel_diff_fx=rel_diff_fx)
 
 
-            self.progress(xnorm, x_single, x_pair, gnorm, g_single, g_pair, fx, iteration, n_linesearch, alpha, plotfile)
 
         return fx, x, ret
+
 
     def linesearch(self, x0, fx, g, objfun, s, alpha):
         dg_init = np.sum(g * s) #!!!!!!!!!!!!!!!!!!!! this was formerly dg_init = np.sum(g * g)
