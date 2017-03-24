@@ -41,42 +41,37 @@ REG_L2_SCALING= {
 ALGORITHMS = {
     "conjugate_gradients": lambda opt: cg.conjugateGradient(maxit=opt.maxit, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev),
     "gradient_descent": lambda opt: gd.gradientDescent(maxit=opt.maxit, alpha0=opt.alpha0, alpha_decay=opt.alpha_decay, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping),
-    "adam": lambda opt: ad.Adam(maxit=opt.maxit, learning_rate=opt.learning_rate, momentum_estimate1=opt.mom1, momentum_estimate2=opt.mom2, noise=1e-7, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping, decay=opt.adam_decay),
+    "adam": lambda opt: ad.Adam(maxit=opt.maxit, alpha0=opt.alpha0, momentum_estimate1=opt.mom1, momentum_estimate2=opt.mom2,
+                                noise=1e-7, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping,
+                                decay=opt.decay, alpha_decay=opt.alpha_decay, start_decay=opt.start_decay),
     "numerical_differentiation": lambda opt: nd.numDiff(maxit=opt.maxit, epsilon=opt.epsilon)
 }
 
 
 class CDAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
-        gibbs_steps, n_sequences = values
+        gibbs_steps, min_nseq_factorL = values
 
-        if n_sequences < 1:
-            n_sequences = 1
 
-        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': False, 'n_sequences': n_sequences}
+        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': False, 'min_nseq_factorL': min_nseq_factorL}
         namespace.objfun = cd.ContrastiveDivergence
 
 
 class CDPLLAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
-        gibbs_steps, n_sequences = values
-
-        if n_sequences < 1:
-            n_sequences = 1
+        gibbs_steps, min_nseq_factorL = values
 
 
-        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': False, 'n_sequences': n_sequences, 'pll': True}
+
+        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': False, 'min_nseq_factorL': min_nseq_factorL, 'pll': True}
         namespace.objfun = cd.ContrastiveDivergence
 
 class PCDAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
-        gibbs_steps, n_sequences = values
-
-        if n_sequences < 1:
-            n_sequences = 1
+        gibbs_steps, min_nseq_factorL = values
 
 
-        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': True, 'n_sequences': n_sequences}
+        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': True, 'min_nseq_factorL': min_nseq_factorL}
         namespace.objfun = cd.ContrastiveDivergence
 
 class TreeCDAction(argparse.Action):
@@ -128,9 +123,9 @@ def parse_args():
 
     grp_of = parser.add_argument_group("Objective Functions")
     grp_of.add_argument("--ofn-pll", dest="objfun", action="store_const", const=pll.PseudoLikelihood, default=pll.PseudoLikelihood, help="Use pseudo-log-likelihood (default)")
-    grp_of.add_argument("--ofn-cd",  dest="objfun", action=CDAction, metavar=("GIBBS_STEPS", "N_SEQUENCES"), nargs=2, type=int, help="Use Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences and sample N_SEQUENCES sequences")
-    grp_of.add_argument("--ofn-cdpll",  dest="objfun", action=CDPLLAction, metavar=("GIBBS_STEPS", "N_SEQUENCES"), nargs=2, type=int, help="Use Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences and sample an alignment with N_SEQUENCES sequences")
-    grp_of.add_argument("--ofn-pcd", dest="objfun", action=PCDAction, metavar=("GIBBS_STEPS", "N_SEQUENCES"), nargs=2, type=int, help="Use PERSISTENT Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences and sample an alignment with N_SEQUENCES sequences")
+    grp_of.add_argument("--ofn-cd",  dest="objfun", action=CDAction, metavar=("GIBBS_STEPS", "MIN_NSEQ_FACTORL"), nargs=2, type=int, help="Use Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences and sample at least MIN_NSEQ_FACTORL * L  sequences")
+    grp_of.add_argument("--ofn-cdpll",  dest="objfun", action=CDPLLAction, metavar=("GIBBS_STEPS", "MIN_NSEQ_FACTORL"), nargs=2, type=int, help="Use Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences and sample at least MIN_NSEQ_FACTORL * L sequences")
+    grp_of.add_argument("--ofn-pcd", dest="objfun", action=PCDAction, metavar=("GIBBS_STEPS", "MIN_NSEQ_FACTORL"), nargs=2, type=int, help="Use PERSISTENT Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences and sample at least MIN_NSEQ_FACTORL * L sequences")
     grp_of.add_argument("--ofn-tree-cd", action=TreeCDAction, metavar=("TREEFILE", "ANCESTORFILE"), nargs=2, type=str, help="Use Tree-controlled Contrastive Divergence, loading tree data from TREEFILE and ancestral sequence data from ANCESTORFILE")
 
     grp_al = parser.add_argument_group("Algorithms")
@@ -138,12 +133,14 @@ def parse_args():
     grp_al.add_argument("--alg-gd", dest="algorithm", action="store_const", const='gradient_descent', help='Use gradient descent')
     grp_al.add_argument("--alg-nd", dest="algorithm", action="store_const", const='numerical_differentiation', help='Debug gradients with numerical differentiation')
     grp_al.add_argument("--alg-ad", dest="algorithm", action="store_const", const='adam', help='Use Adam')
-    grp_al.add_argument("--gd-alpha0",              dest="alpha0",              default=5e-3,   type=float, help="alpha0 parameter for gradient descent")
-    grp_al.add_argument("--gd-alpha_decay",         dest="alpha_decay",         default=1e1,    type=float, help="alpha_decay for gradient descent")
-    grp_al.add_argument("--ad-learning_rate",       dest="learning_rate",       default=1e-3,   type=float, help="learning rate for adam")
+
+
     grp_al.add_argument("--ad-mom1",                dest="mom1",                default=0.9,    type=float, help="momentum 1 for adam")
     grp_al.add_argument("--ad-mom2",                dest="mom2",                default=0.999,  type=float, help="momentum 2 for adam")
-    grp_al.add_argument("--ad-decay",               dest="adam_decay",          action="store_true", default=False,  help="decay adam learning rate with 1/sqrt(it)")
+    grp_al.add_argument("--decay",                  dest="decay",               action="store_true", default=False,  help="Use decaying learnign rate. Start decay when convergence < START_DECAY")
+    grp_al.add_argument("--start_decay",            dest="start_decay",         default=1e-4,   type=float, help="Start decay when convergence criteria < START_DECAY")
+    grp_al.add_argument("--alpha0",                 dest="alpha0",              default=1e-3,   type=float, help="initial learning rate")
+    grp_al.add_argument("--alpha_decay",            dest="alpha_decay",         default=1e1,    type=float, help="rate of decay for learning rate when --decay is set")
 
     grp_con = parser.add_argument_group("Convergence Criteria")
     grp_con.add_argument("--epsilon",                dest="epsilon",             default=1e-5,   type=float, help="Set convergence criterion: converged when relative change in f (or xnorm) in last CONVERGENCE_PREV iterations < EPSILON [default: 0.01]")
@@ -163,7 +160,7 @@ def parse_args():
     grp_rg.add_argument("--reg-l2-scale_by_L",      dest="scaling", action="store_const", const="L", default="L", help=" LAMBDA_PAIR * (L-1) (default)")
     grp_rg.add_argument("--reg-l2-scale_by_div",    dest="scaling", action="store_const", const="diversity", help="LAMBDA_PAIR * (L/sqrt(N))")
     grp_rg.add_argument("--reg-l2-noscaling",       dest="scaling", action="store_const", const="1", help="LAMBDA_PAIR")
-    grp_rg.add_argument("--center-v",               dest="center_v", action="store_true", default=False, help="Gaussian prior for single emissions centered at v*.")
+    grp_rg.add_argument("--center-v",               dest="reg_type", action="store_const", const="center-v", default="zero", help="Use mu=v* for gaussian prior for single emissions.")
 
     grp_gp = parser.add_argument_group("Gap Treatment")
     grp_gp.add_argument("--max_gap_ratio",  dest="max_gap_ratio", default=100, type=int, help="Remove alignment positions with >x% gaps [default: %(default)s  = no removal]")
@@ -222,11 +219,13 @@ def main():
         freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, opt.pseudocounts[0], pseudocount_n_single=opt.pseudocounts[1], pseudocount_n_pair=opt.pseudocount_pair_count, remove_gaps=False)
 
 
-    #setup regularization properties
-    centering   = ccmpred.centering.center_zero(freqs)
+    print opt.reg_type
 
-    if opt.center_v or opt.dev_center_v:
-        centering = ccmpred.centering.center_v(freqs)
+    #setup regularization properties
+    if opt.dev_center_v or opt.reg_type == "center-v":
+        centering   = ccmpred.centering.center_v(freqs)
+    else:
+        centering   = ccmpred.centering.center_zero(freqs)
 
 
     scaling = REG_L2_SCALING[opt.scaling](msa)
