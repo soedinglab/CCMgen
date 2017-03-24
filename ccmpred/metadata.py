@@ -17,7 +17,7 @@ def create(opt, regularization, msa, weights, f, fx, algret, alg):
 
     meta['workflow'][0]['parameters'] = {}
     meta['workflow'][0]['parameters']['regularization'] = {}
-    meta['workflow'][0]['parameters']['regularization']['regularization_type'] = 'l2_centered_v'
+    meta['workflow'][0]['parameters']['regularization']['regularization_type'] = opt.reg_type
     meta['workflow'][0]['parameters']['regularization']['regularization_scaling'] = opt.scaling
     meta['workflow'][0]['parameters']['regularization']['lambda_single'] = regularization.lambda_single
     meta['workflow'][0]['parameters']['regularization']['lambda_pair'] = regularization.lambda_pair
@@ -58,7 +58,9 @@ def create(opt, regularization, msa, weights, f, fx, algret, alg):
         meta['workflow'][0]['parameters']['optimization']['alpha_decay'] = opt.alpha_decay
 
     if (opt.algorithm) == 'adam':
-        meta['workflow'][0]['parameters']['optimization']['learning_rate'] = opt.learning_rate
+        meta['workflow'][0]['parameters']['optimization']['alpha0'] = opt.alpha0
+        meta['workflow'][0]['parameters']['optimization']['alpha_decay'] = opt.alpha_decay
+        meta['workflow'][0]['parameters']['optimization']['decay'] = opt.decay
         meta['workflow'][0]['parameters']['optimization']['momentum1'] = opt.mom1
         meta['workflow'][0]['parameters']['optimization']['momentum2'] = opt.mom2
 
