@@ -22,6 +22,7 @@ class PseudoLikelihood():
         self.x0 = structured_to_linear(raw.x_single, raw.x_pair)
         self.msa = msa
         self.weights = weights
+        self.neff = np.sum(weights)
         self.nrow, self.ncol = msa.shape
         self.regularization = regularization
 

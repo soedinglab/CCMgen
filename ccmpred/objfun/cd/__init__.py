@@ -13,7 +13,7 @@ import ccmpred.weighting
 
 class ContrastiveDivergence():
 
-    def __init__(self, msa, freqs, weights, raw, regularization, gibbs_steps=1, persistent=False, n_sequences=1, pll=False, average_sample_counts=False):
+    def __init__(self, msa, freqs, weights, raw, regularization, gibbs_steps=1, persistent=False, min_nseq_factorL=1, pll=False, average_sample_counts=False):
 
 
         if msa.shape[1] != raw.ncol:
@@ -30,12 +30,6 @@ class ContrastiveDivergence():
         self.nsingle = self.ncol * 20
         self.nvar = self.nsingle + self.ncol * self.ncol * 21 * 21
 
-        #minimum number of sequences used for sampling
-        self.n_sequences = n_sequences
-        if self.n_sequences < 1:
-            self.n_sequences = 1
-        #correspondingly: how many copies of input MSA needed to arrive at n_sequences
-        self.n_samples_msa = int(np.ceil(float(self.n_sequences) / self.nrow))
 
         #perform x steps of sampling (all variables)
         self.gibbs_steps = gibbs_steps
@@ -68,20 +62,34 @@ class ContrastiveDivergence():
         self.Ni = self.msa_counts_single.sum(1)
         self.Nij = self.msa_counts_pair.sum(3).sum(2)
 
-        # init sample alignment as input MSA
+
+        #number of sequences used for sampling
+        self.min_nseq_factorL = min_nseq_factorL
+        self.n_sequences = np.max([min_nseq_factorL * self.ncol, self.nrow])
+        self.n_samples_msa = float(self.n_sequences) / self.nrow
         self.msa_sampled_weights = self.weights.copy()
-        self.msa_sampled = self.init_sample_alignment()
+
+        # init sample alignment as input MSA
+        self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL)
 
 
 
-    def init_sample_alignment(self):
+    def init_sample_alignment(self, min_nseq_factorL):
+
+        self.min_nseq_factorL = min_nseq_factorL
+
+        self.n_sequences = np.max([min_nseq_factorL * self.ncol, self.nrow])
+
+        #correspondingly: how many copies of input MSA needed to arrive at n_sequences
+        self.n_samples_msa = float(self.n_sequences) / self.nrow
+
+        #print "Will sample {0} sequences which is {1} times N and {2} times L.".format(self.n_sequences, n_samples_msa,  nseq_factor)
 
         if self.average_sample_counts:
             return self.msa.copy()
-        elif self.n_sequences < self.nrow:
-            return self.msa.copy()
         else:
-            seq_id = range(self.nrow) * self.n_samples_msa
+            seq_id =  range(self.nrow) * int(np.floor(self.n_samples_msa))
+            seq_id += range(self.nrow)[:int((self.n_samples_msa-np.floor(self.n_samples_msa)) * self.nrow)]
             self.msa_sampled_weights = self.weights[seq_id]
             sample_msa = self.msa[seq_id]
             return sample_msa.copy()
@@ -117,8 +125,11 @@ class ContrastiveDivergence():
         self.collection_sample_counts_single.append(sample_counts_single)
         self.collection_sample_counts_pair.append(sample_counts_pair)
 
+
+        n_samples_msa = float(self.n_sequences / self.nrow)
+
         # keep only N_SAMPLES_MSA latest counts
-        if len(self.collection_sample_counts_single) > self.n_samples_msa:
+        if len(self.collection_sample_counts_single) > n_samples_msa:
 
             self.collection_sample_counts_single.popleft()
             self.collection_sample_counts_pair.popleft()
@@ -133,7 +144,7 @@ class ContrastiveDivergence():
 
         #reset the msa for sampling
         if not self.persistent:
-            self.msa_sampled = self.init_sample_alignment()
+            self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL)
 
         if self.pll:
             self.msa_sampled = self.sample_position_in_sequences(x)
@@ -200,13 +211,17 @@ class ContrastiveDivergence():
         return -1, g
 
     def __repr__(self):
-        return "{0}{1}contrastive divergence using {2} Gibbs sampling steps and sampling {3} times the input MSA {4}".format(
+
+        str = "{0}{1}contrastive divergence".format(
             "PERSISTENT " if (self.persistent) else "",
-            "PLL " if (self.pll) else "",
-            self.gibbs_steps,
-            self.n_samples_msa,
-            "(using averages)" if self.average_sample_counts else ""
+            "PLL " if (self.pll) else ""
         )
+
+        str += "Sampling {0} sequences ({1} x N and {2} x L)  with {3} Gibbs steps.".format(
+            self.n_sequences, np.round(self.n_samples_msa, decimals=3),  np.round(self.n_sequences / self.ncol, decimals=3), self.gibbs_steps
+        )
+
+        return str
 
     @staticmethod
     def linear_to_structured(x, ncol, add_gap_state=False):
