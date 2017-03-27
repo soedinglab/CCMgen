@@ -217,7 +217,7 @@ class ContrastiveDivergence():
             "PLL " if (self.pll) else ""
         )
 
-        str += "Sampling {0} sequences ({1} x N and {2} x L)  with {3} Gibbs steps.".format(
+        str += "\nSampling {0} sequences ({1} x N and {2} x L)  with {3} Gibbs steps.".format(
             self.n_sequences, np.round(self.n_samples_msa, decimals=3),  np.round(self.n_sequences / self.ncol, decimals=3), self.gibbs_steps
         )
 
