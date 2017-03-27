@@ -45,7 +45,13 @@ def create(opt, regularization, msa, weights, f, fx, algret, alg):
 
     meta['workflow'][0]['parameters']['optimization']={}
     meta['workflow'][0]['parameters']['optimization']['method'] = opt.algorithm
-    meta['workflow'][0]['parameters']['optimization']['objfun'] = opt.objfun.__name__
+    meta['workflow'][0]['parameters']['optimization']['objfun'] = opt.objfun
+
+    if (opt.objfun) == 'cd':
+        meta['workflow'][0]['parameters']['optimization']['objfun']['gibbs_steps'] = opt.cd_gibbs_steps
+        meta['workflow'][0]['parameters']['optimization']['objfun']['persistent']  = opt.cd_persistent
+        meta['workflow'][0]['parameters']['optimization']['objfun']['min_nseq_factorl'] = opt.cd_min_nseq_factorl
+        meta['workflow'][0]['parameters']['optimization']['objfun']['cd_pll'] = opt.cd_pll
 
     if (opt.algorithm) == 'conjugate_gradients':
         meta['workflow'][0]['parameters']['optimization']['wolfe'] = alg.wolfe
@@ -61,6 +67,7 @@ def create(opt, regularization, msa, weights, f, fx, algret, alg):
         meta['workflow'][0]['parameters']['optimization']['alpha0'] = opt.alpha0
         meta['workflow'][0]['parameters']['optimization']['alpha_decay'] = opt.alpha_decay
         meta['workflow'][0]['parameters']['optimization']['decay'] = opt.decay
+        meta['workflow'][0]['parameters']['optimization']['start_decay'] = opt.start_decay
         meta['workflow'][0]['parameters']['optimization']['momentum1'] = opt.mom1
         meta['workflow'][0]['parameters']['optimization']['momentum2'] = opt.mom2
 
@@ -78,13 +85,17 @@ def create(opt, regularization, msa, weights, f, fx, algret, alg):
     if opt.initrawfile:
         meta['workflow'][0]['initrawfile'] = opt.initrawfile
 
+    meta['workflow'][0]['progress'] = {}
+    meta['workflow'][0]['progress'].update(alg.progress.optimization_log)
+
 
     meta['workflow'][0]['results'] = {}
-    #meta['workflow'][0]['results']['num_iterations']
+    meta['workflow'][0]['results']['num_iterations'] = len(alg.progress.optimization_log)
     meta['workflow'][0]['results']['matfile'] = opt.matfile
     meta['workflow'][0]['results']['opt_code'] = algret['code']
     meta['workflow'][0]['results']['opt_message'] = algret['message']
     meta['workflow'][0]['results']['fx_final'] = fx
+
     if opt.cd_alnfile and hasattr(f, 'msa_sampled'):
         meta['workflow'][0]['results']['cd_alignmentfile'] =   opt.cd_alnfile
     if opt.outrawfile:

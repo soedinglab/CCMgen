@@ -48,31 +48,17 @@ ALGORITHMS = {
 }
 
 
-class CDAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        gibbs_steps, min_nseq_factorL = values
+OBJ_FUNC = {
+    "pll":  lambda opt, msa, freqs, weights, raw_init, regularization: pll.PseudoLikelihood(
+        msa, freqs, weights, raw_init, regularization
+    ),
+    "cd":   lambda opt, msa, freqs, weights, raw_init, regularization: cd.ContrastiveDivergence(
+        msa, freqs, weights, raw_init, regularization,
+        opt.cd_gibbs_steps, opt.cd_persistent, opt.cd_min_nseq_factorl, opt.cd_pll
+    ),
 
+}
 
-        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': False, 'min_nseq_factorL': min_nseq_factorL}
-        namespace.objfun = cd.ContrastiveDivergence
-
-
-class CDPLLAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        gibbs_steps, min_nseq_factorL = values
-
-
-
-        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': False, 'min_nseq_factorL': min_nseq_factorL, 'pll': True}
-        namespace.objfun = cd.ContrastiveDivergence
-
-class PCDAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        gibbs_steps, min_nseq_factorL = values
-
-
-        namespace.objfun_kwargs = {'gibbs_steps':gibbs_steps, 'persistent': True, 'min_nseq_factorL': min_nseq_factorL}
-        namespace.objfun = cd.ContrastiveDivergence
 
 class TreeCDAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
@@ -108,24 +94,29 @@ class StoreConstParametersAction(argparse.Action):
 def parse_args():
     parser = argparse.ArgumentParser(description="Recover direct couplings from a multiple sequence alignment", epilog=EPILOG)
 
-    parser.add_argument("-i", "--init-from-raw", dest="initrawfile", default=None, help="Init potentials from raw file")
-    parser.add_argument("-r", "--write-raw", dest="outrawfile", default=None, help="Write potentials to raw file")
-    parser.add_argument("-b", "--write-msgpack", dest="outmsgpackfile", default=None, help="Write potentials to MessagePack file")
-    parser.add_argument("-m", "--write-modelprob-msgpack", dest="outmodelprobmsgpackfile", default=None, help="Write model probabilities as MessagePack file")
-    parser.add_argument("-A", "--disable_apc",  dest="disable_apc", action="store_true", default=False, help="Disable average product correction (APC)")
-    parser.add_argument("--aln-format", dest="aln_format", default="psicov", help="File format for MSAs [default: \"%(default)s\"]")
-    parser.add_argument("--no-logo", dest="logo", default=True, action="store_false", help="Disable showing the CCMpred logo")
-    parser.add_argument("-p", "--plot_opt_progress", dest="plot_opt_progress", default=False, action="store_true", help="Plot optimization progress")
+    parser.add_argument("-i", "--init-from-raw",        dest="initrawfile", default=None, help="Init potentials from raw file")
+    parser.add_argument("-A", "--disable_apc",          dest="disable_apc", action="store_true", default=False, help="Disable average product correction (APC)")
+    parser.add_argument("--aln-format",                 dest="aln_format", default="psicov", help="File format for MSAs [default: \"%(default)s\"]")
+    parser.add_argument("--no-logo",                    dest="logo", default=True, action="store_false", help="Disable showing the CCMpred logo")
 
 
     parser.add_argument("alnfile", help="Input alignment file to use")
     parser.add_argument("matfile", help="Output matrix file to write")
 
+    grp_out = parser.add_argument_group("Output Options")
+    grp_out.add_argument("-p", "--plot_opt_progress",       dest="plot_opt_progress", default=False, action="store_true", help="Plot optimization progress")
+    grp_out.add_argument("-r", "--write-raw",               dest="outrawfile", default=None, help="Write potentials to raw file")
+    grp_out.add_argument("-b", "--write-msgpack",           dest="outmsgpackfile", default=None, help="Write potentials to MessagePack file")
+    grp_out.add_argument("-m", "--write-modelprob-msgpack", dest="outmodelprobmsgpackfile", default=None, help="Write model probabilities as MessagePack file")
+    grp_out.add_argument("--only_model_prob",               dest="only_model_prob", action="store_true", default=False, help="Only compute model probabilties and do not optimize (-i must be specified!).")
+
     grp_of = parser.add_argument_group("Objective Functions")
-    grp_of.add_argument("--ofn-pll", dest="objfun", action="store_const", const=pll.PseudoLikelihood, default=pll.PseudoLikelihood, help="Use pseudo-log-likelihood (default)")
-    grp_of.add_argument("--ofn-cd",  dest="objfun", action=CDAction, metavar=("GIBBS_STEPS", "MIN_NSEQ_FACTORL"), nargs=2, type=int, help="Use Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences and sample at least MIN_NSEQ_FACTORL * L  sequences")
-    grp_of.add_argument("--ofn-cdpll",  dest="objfun", action=CDPLLAction, metavar=("GIBBS_STEPS", "MIN_NSEQ_FACTORL"), nargs=2, type=int, help="Use Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences and sample at least MIN_NSEQ_FACTORL * L sequences")
-    grp_of.add_argument("--ofn-pcd", dest="objfun", action=PCDAction, metavar=("GIBBS_STEPS", "MIN_NSEQ_FACTORL"), nargs=2, type=int, help="Use PERSISTENT Contrastive Divergence with GIBBS_STEPS of Gibbs sampling steps for sequences and sample at least MIN_NSEQ_FACTORL * L sequences")
+    grp_of.add_argument("--ofn-pll",             dest="objfun", action="store_const", const="pll", default="pll", help="Use pseudo-log-likelihood (default)")
+    grp_of.add_argument("--ofn-cd",              dest="objfun", action="store_const", const="cd", help="Use Contrastive Divergence. Sample at least MIN_NSEQ_FACTORL * L  sequences (taken from input MSA) with Gibbs sampling (each sequences is sampled with GIBBS_STEPS.")
+    grp_of.add_argument("--cd-pll",              dest="cd_pll", action="store_true", default=False, help="Setting for CD: Sample only ONE variable per sampling step per sequence. [default: %(default)s]")
+    grp_of.add_argument("--cd-persistent",       dest="cd_persistent", action="store_true",  default=False, help="Setting for CD: Use Persistent Contrastive Divergence: do not restart Markov Chain in each iteration.[default: %(default)s] ")
+    grp_of.add_argument("--cd-min_nseq_factorl", dest="cd_min_nseq_factorl", default=0,      type=int, help="Setting for CD: Sample at least MIN_NSEQ_FACTORL * L  sequences (taken from input MSA).[default: %(default)s] ")
+    grp_of.add_argument("--cd-gibbs_steps",      dest="cd_gibbs_steps", default=1,      type=int, help="Setting for CD: Perform GIBBS_STEPS of Gibbs sampling per sequence. [default: %(default)s]")
     grp_of.add_argument("--ofn-tree-cd", action=TreeCDAction, metavar=("TREEFILE", "ANCESTORFILE"), nargs=2, type=str, help="Use Tree-controlled Contrastive Divergence, loading tree data from TREEFILE and ancestral sequence data from ANCESTORFILE")
 
     grp_al = parser.add_argument_group("Algorithms")
@@ -134,19 +125,18 @@ def parse_args():
     grp_al.add_argument("--alg-nd", dest="algorithm", action="store_const", const='numerical_differentiation', help='Debug gradients with numerical differentiation')
     grp_al.add_argument("--alg-ad", dest="algorithm", action="store_const", const='adam', help='Use Adam')
 
+    grp_al.add_argument("--ad-mom1",                dest="mom1",                default=0.9,    type=float, help="Set momentum 1 parameter for Adam. [default: %(default)s]")
+    grp_al.add_argument("--ad-mom2",                dest="mom2",                default=0.999,  type=float, help="Set momentum 2 parameter for Adam. [default: %(default)s]")
+    grp_al.add_argument("--decay",                  dest="decay",               action="store_true", default=False,  help="Use decaying learnign rate. Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
+    grp_al.add_argument("--start_decay",            dest="start_decay",         default=1e-4,   type=float, help="Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
+    grp_al.add_argument("--alpha0",                 dest="alpha0",              default=1e-3,   type=float, help="Set initial learning rate. [default: %(default)s]")
+    grp_al.add_argument("--alpha_decay",            dest="alpha_decay",         default=1e1,    type=float, help="Set rate of decay for learning rate when --decay is on. [default: %(default)s]")
 
-    grp_al.add_argument("--ad-mom1",                dest="mom1",                default=0.9,    type=float, help="momentum 1 for adam")
-    grp_al.add_argument("--ad-mom2",                dest="mom2",                default=0.999,  type=float, help="momentum 2 for adam")
-    grp_al.add_argument("--decay",                  dest="decay",               action="store_true", default=False,  help="Use decaying learnign rate. Start decay when convergence < START_DECAY")
-    grp_al.add_argument("--start_decay",            dest="start_decay",         default=1e-4,   type=float, help="Start decay when convergence criteria < START_DECAY")
-    grp_al.add_argument("--alpha0",                 dest="alpha0",              default=1e-3,   type=float, help="initial learning rate")
-    grp_al.add_argument("--alpha_decay",            dest="alpha_decay",         default=1e1,    type=float, help="rate of decay for learning rate when --decay is set")
-
-    grp_con = parser.add_argument_group("Convergence Criteria")
-    grp_con.add_argument("--epsilon",                dest="epsilon",             default=1e-5,   type=float, help="Set convergence criterion: converged when relative change in f (or xnorm) in last CONVERGENCE_PREV iterations < EPSILON [default: 0.01]")
-    grp_con.add_argument("--convergence_prev",       dest="convergence_prev",    default=5,      type=int,   help="Set convergence_prev parameter for convergence criterion [default: 5]")
-    grp_con.add_argument("--early_stopping",         dest="early_stopping",      default=False,  action="store_true",  help="Apply convergence criteria instead of only maxit")
-    grp_con.add_argument("--maxit",                   dest="maxit",              default=500,    type=int, help="Specify the maximum number of iterations [default: %(default)s]")
+    grp_con = parser.add_argument_group("Convergence Settings")
+    grp_con.add_argument("--maxit",                  dest="maxit",              default=500,    type=int, help="Stop when MAXIT number of iterations is reached. [default: %(default)s]")
+    grp_con.add_argument("--early_stopping",         dest="early_stopping",      default=False,  action="store_true",  help="Apply convergence criteria instead of only maxit. [default: %(default)s]")
+    grp_con.add_argument("--epsilon",                dest="epsilon",             default=1e-5,   type=float, help="Converged when relative change in f (or xnorm) in last CONVERGENCE_PREV iterations < EPSILON. [default: %(default)s]")
+    grp_con.add_argument("--convergence_prev",       dest="convergence_prev",    default=5,      type=int,   help="Set CONVERGENCE_PREV parameter. [default: %(default)s]")
 
 
     grp_wt = parser.add_argument_group("Weighting")
@@ -156,15 +146,15 @@ def parse_args():
     grp_wt.add_argument("--wt-uniform",         dest="weight", action="store_const", const=ccmpred.weighting.weights_uniform, help='Use uniform weighting')
 
     grp_rg = parser.add_argument_group("Regularization")
-    grp_rg.add_argument("--reg-l2", dest="regularization", action=RegL2Action, type=float, nargs=2, metavar=("LAMBDA_SINGLE", "LAMBDA_PAIR"), default=lambda msa, centering, scaling: ccmpred.regularization.L2(10, 0.2 * scaling, centering), help='Use L2 regularization with coefficients LAMBDA_SINGLE, LAMBDA_PAIR * SCALING;  (default: 10 0.2)')
-    grp_rg.add_argument("--reg-l2-scale_by_L",      dest="scaling", action="store_const", const="L", default="L", help=" LAMBDA_PAIR * (L-1) (default)")
-    grp_rg.add_argument("--reg-l2-scale_by_div",    dest="scaling", action="store_const", const="diversity", help="LAMBDA_PAIR * (L/sqrt(N))")
-    grp_rg.add_argument("--reg-l2-noscaling",       dest="scaling", action="store_const", const="1", help="LAMBDA_PAIR")
+    grp_rg.add_argument("--reg-l2", dest="regularization", action=RegL2Action, type=float, nargs=2, metavar=("LAMBDA_SINGLE", "LAMBDA_PAIR_FACTOR"), default=lambda msa, centering, scaling: ccmpred.regularization.L2(10, 0.2 * scaling, centering), help='Use L2 regularization with coefficients LAMBDA_SINGLE, LAMBDA_PAIR_FACTOR * SCALING;  (default: 10 0.2)')
+    grp_rg.add_argument("--reg-l2-scale_by_L",      dest="scaling", action="store_const", const="L", default="L", help="LAMBDA_PAIR = LAMBDA_PAIR_FACTOR * (L-1) (default)")
+    grp_rg.add_argument("--reg-l2-scale_by_div",    dest="scaling", action="store_const", const="diversity", help="LAMBDA_PAIR = LAMBDA_PAIR_FACTOR * (L/sqrt(N))")
+    grp_rg.add_argument("--reg-l2-noscaling",       dest="scaling", action="store_const", const="1", help="LAMBDA_PAIR = LAMBDA_PAIR_FACTOR")
     grp_rg.add_argument("--center-v",               dest="reg_type", action="store_const", const="center-v", default="zero", help="Use mu=v* for gaussian prior for single emissions.")
 
     grp_gp = parser.add_argument_group("Gap Treatment")
-    grp_gp.add_argument("--max_gap_ratio",  dest="max_gap_ratio", default=100, type=int, help="Remove alignment positions with >x% gaps [default: %(default)s  = no removal]")
-    grp_gp.add_argument("--wt-ignore-gaps", dest="ignore_gaps", action="store_true", default=False, help="Do not count gaps as identical amino acids during reweighting of sequences.")
+    grp_gp.add_argument("--max_gap_ratio",  dest="max_gap_ratio",   default=100, type=int, help="Remove alignment positions with > MAX_GAP_RATIO percent gaps. [default: %(default)s == no removal of gaps]")
+    grp_gp.add_argument("--wt-ignore-gaps", dest="ignore_gaps",     action="store_true", default=False, help="Do not count gaps as identical amino acids during reweighting of sequences. [default: %(default)s]")
 
     grp_pc = parser.add_argument_group("Pseudocounts")
     grp_pc.add_argument("--pc-submat",      dest="pseudocounts", action=StoreConstParametersAction, default=ccmpred.pseudocounts.substitution_matrix_pseudocounts, const=ccmpred.pseudocounts.substitution_matrix_pseudocounts, nargs="?", metavar="N", type=int, arg_default=1, help="Use N substitution matrix pseudocounts (default) (by default, N=1)")
@@ -179,13 +169,15 @@ def parse_args():
     grp_db.add_argument("-c", "--compare-to-raw", dest="comparerawfile", default=None, help="Compare potentials to raw file")
     grp_db.add_argument("--dev-center-v", dest="dev_center_v", action="store_true", default=False, help="Use same settings as in c++ dev-center-v version")
     grp_db.add_argument("--ccmpred-vanilla", dest="vanilla", action="store_true", default=False, help="Use same settings as in default c++ CCMpred")
-    grp_db.add_argument("--only_model_prob", dest="only_model_prob", action="store_true", default=False, help="Only compute model probabilties and do not optimize (-i must be specified!).")
+
 
     args = parser.parse_args()
 
     if args.cd_alnfile and args.objfun not in (cd.ContrastiveDivergence, treecd.TreeContrastiveDivergence):
         parser.error("--write-cd-alignment is only supported for (tree) contrastive divergence!")
 
+    if args.only_model_prob and not args.initrawfile:
+        parser.error("--only_model_prob is only supported when -i (--init-from-raw) is specified!")
 
     return args
 
@@ -255,7 +247,7 @@ def main():
 
 
     #initialise objective function
-    f  =  opt.objfun(msa, freqs, weights, raw_init, regularization, *opt.objfun_args, **opt.objfun_kwargs)
+    f = OBJ_FUNC[opt.objfun](opt, msa, freqs, weights, raw_init, regularization)
     x0 = f.x0
 
 
