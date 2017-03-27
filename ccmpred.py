@@ -43,7 +43,8 @@ ALGORITHMS = {
     "gradient_descent": lambda opt: gd.gradientDescent(maxit=opt.maxit, alpha0=opt.alpha0, alpha_decay=opt.alpha_decay, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping),
     "adam": lambda opt: ad.Adam(maxit=opt.maxit, alpha0=opt.alpha0, momentum_estimate1=opt.mom1, momentum_estimate2=opt.mom2,
                                 noise=1e-7, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping,
-                                decay=opt.decay, alpha_decay=opt.alpha_decay, start_decay=opt.start_decay),
+                                decay=opt.decay, alpha_decay=opt.alpha_decay, start_decay=opt.start_decay,
+                                fix_v=opt.fix_v, group_alpha=opt.group_alpha),
     "numerical_differentiation": lambda opt: nd.numDiff(maxit=opt.maxit, epsilon=opt.epsilon)
 }
 
@@ -131,6 +132,8 @@ def parse_args():
     grp_al.add_argument("--start_decay",            dest="start_decay",         default=1e-4,   type=float, help="Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
     grp_al.add_argument("--alpha0",                 dest="alpha0",              default=1e-3,   type=float, help="Set initial learning rate. [default: %(default)s]")
     grp_al.add_argument("--alpha_decay",            dest="alpha_decay",         default=1e1,    type=float, help="Set rate of decay for learning rate when --decay is on. [default: %(default)s]")
+    grp_al.add_argument("--ad-group_alpha",         dest="group_alpha",         action="store_true", default=False,  help="Use min learning rate for each group v_i and w_ij. [default: %(default)s]")
+
 
     grp_con = parser.add_argument_group("Convergence Settings")
     grp_con.add_argument("--maxit",                  dest="maxit",              default=500,    type=int, help="Stop when MAXIT number of iterations is reached. [default: %(default)s]")
@@ -151,6 +154,7 @@ def parse_args():
     grp_rg.add_argument("--reg-l2-scale_by_div",    dest="scaling", action="store_const", const="diversity", help="LAMBDA_PAIR = LAMBDA_PAIR_FACTOR * (L/sqrt(N))")
     grp_rg.add_argument("--reg-l2-noscaling",       dest="scaling", action="store_const", const="1", help="LAMBDA_PAIR = LAMBDA_PAIR_FACTOR")
     grp_rg.add_argument("--center-v",               dest="reg_type", action="store_const", const="center-v", default="zero", help="Use mu=v* for gaussian prior for single emissions.")
+    grp_rg.add_argument("--fix-v",                  dest="fix_v",   action="store_true",    default=False, help="Use v=v* and do not optimize v.")
 
     grp_gp = parser.add_argument_group("Gap Treatment")
     grp_gp.add_argument("--max_gap_ratio",  dest="max_gap_ratio",   default=100, type=int, help="Remove alignment positions with > MAX_GAP_RATIO percent gaps. [default: %(default)s == no removal of gaps]")
@@ -178,6 +182,7 @@ def parse_args():
 
     if args.only_model_prob and not args.initrawfile:
         parser.error("--only_model_prob is only supported when -i (--init-from-raw) is specified!")
+
 
     return args
 
@@ -277,6 +282,18 @@ def main():
     meta = ccmpred.metadata.create(opt, regularization, msa, weights, f, fx, algret, alg)
     res = f.finalize(x, meta)
 
+
+    #perform checks on potentials:
+    check_x_single  = ccmpred.sanity_check.check_single_potentials(res.x_single, verbose=1)
+    check_x_pair  = ccmpred.sanity_check.check_pair_potentials(res.x_pair, verbose=1)
+
+    #enforce sum(wij)=0 and sum(v_i)=0
+    if not check_x_single or not check_x_pair:
+        print("Enforce gauge sum(v_i)=0 and sum(w_ij)=0: center parameters at zero.")
+        res.x_single, res.x_pair = ccmpred.sanity_check.normalize_potentials(res.x_single, res.x_pair)
+
+
+
     if opt.cd_alnfile and hasattr(f, 'msa_sampled'):
         print("Writing sampled alignment to {0}".format(opt.cd_alnfile))
         msa_sampled = f.msa_sampled
@@ -307,10 +324,6 @@ def main():
 
     #write contact map and meta data info matfile
     ccmpred.io.contactmatrix.write_matrix(opt.matfile, res, meta, disable_apc=opt.disable_apc)
-
-    #perform simple checks:
-    ccmpred.sanity_check.check_single_potentials(res.x_single, verbose=1)
-    ccmpred.sanity_check.check_pair_potentials(res.x_pair, verbose=1)
 
     exitcode = 0 if algret['code'] > 0 else -algret['code']
     sys.exit(exitcode)
