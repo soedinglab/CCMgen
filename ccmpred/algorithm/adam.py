@@ -31,14 +31,6 @@ class Adam():
         self.alpha_decay = alpha_decay
         self.start_decay = start_decay
 
-        self.g_hist = deque([])
-        self.g_sign = deque([])
-        self.x_hist = deque([])
-
-
-        self.lastg = np.array([])
-        self.neg_g_sign = 0
-
         self.early_stopping = early_stopping
         self.it_succesfull_stop_condition=-1
         self.epsilon = epsilon
