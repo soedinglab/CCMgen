@@ -23,6 +23,10 @@ def create(opt, regularization, msa, weights, f, fx, algret, alg):
     meta['workflow'][0]['parameters']['regularization']['lambda_pair'] = regularization.lambda_pair
     meta['workflow'][0]['parameters']['regularization']['lambda_pair_factor'] = regularization.lambda_pair / (msa.shape[1] - 1)
 
+    if opt.fix_v:
+        meta['workflow'][0]['parameters']['regularization']['regularization_type'] = 'fix_v'
+        meta['workflow'][0]['parameters']['regularization']['lambda_single'] = np.inf
+
 
     meta['workflow'][0]['parameters']['msafile'] = {}
     meta['workflow'][0]['parameters']['msafile']['neff'] = np.sum(weights)
@@ -48,10 +52,11 @@ def create(opt, regularization, msa, weights, f, fx, algret, alg):
     meta['workflow'][0]['parameters']['optimization']['objfun'] = opt.objfun
 
     if (opt.objfun) == 'cd':
-        meta['workflow'][0]['parameters']['optimization']['objfun']['gibbs_steps'] = opt.cd_gibbs_steps
-        meta['workflow'][0]['parameters']['optimization']['objfun']['persistent']  = opt.cd_persistent
-        meta['workflow'][0]['parameters']['optimization']['objfun']['min_nseq_factorl'] = opt.cd_min_nseq_factorl
-        meta['workflow'][0]['parameters']['optimization']['objfun']['cd_pll'] = opt.cd_pll
+        meta['workflow'][0]['parameters']['optimization']['gibbs_steps'] = opt.cd_gibbs_steps
+        meta['workflow'][0]['parameters']['optimization']['persistent']  = opt.cd_persistent
+        meta['workflow'][0]['parameters']['optimization']['min_nseq_factorl'] = opt.cd_min_nseq_factorl
+        meta['workflow'][0]['parameters']['optimization']['cd_pll'] = opt.cd_pll
+
 
     if (opt.algorithm) == 'conjugate_gradients':
         meta['workflow'][0]['parameters']['optimization']['wolfe'] = alg.wolfe
@@ -70,7 +75,7 @@ def create(opt, regularization, msa, weights, f, fx, algret, alg):
         meta['workflow'][0]['parameters']['optimization']['start_decay'] = opt.start_decay
         meta['workflow'][0]['parameters']['optimization']['momentum1'] = opt.mom1
         meta['workflow'][0]['parameters']['optimization']['momentum2'] = opt.mom2
-
+        meta['workflow'][0]['parameters']['optimization']['group_alpha'] = opt.group_alpha
 
 
     meta['workflow'][0]['parameters']['optimization']['convergence']={}
