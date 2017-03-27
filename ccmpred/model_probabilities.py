@@ -90,8 +90,6 @@ def write_msgpack(outmsgpackfile, res, weights, msa, freqs, lambda_pair):
             j = indices_triu[1][ind]
             print('e.g: ', i, j, sum(model_prob[i,j]), sum(pair_freq[i,j].flatten()), sum(x_pair_nogaps[i,j].flatten()), Nij[i,j])
 
-    print np.min(model_prob[2,4]), np.max(model_prob[2,4]), np.sum(model_prob[2,4])
-
     model_prob_flat = model_prob[indices_triu].flatten() #row-wise upper triangular indices
 
     if any(qijab < 0 for qijab in model_prob_flat):
