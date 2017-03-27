@@ -21,7 +21,7 @@ class Adam():
 
     def __init__(self, maxit=100, alpha0=1e-3, alpha_decay=1e1, momentum_estimate1=0.9, momentum_estimate2=0.999, noise=1e-7,
                  epsilon=1e-5, convergence_prev=5, early_stopping=False,
-                 decay=False, start_decay=1e-4):
+                 decay=False, start_decay=1e-4, fix_v=False, group_alpha=True):
         self.maxit = maxit
         self.alpha0 = alpha0
         self.momentum_estimate1 = momentum_estimate1
@@ -30,6 +30,9 @@ class Adam():
         self.decay=decay
         self.alpha_decay = alpha_decay
         self.start_decay = start_decay
+
+        self.fix_v = fix_v
+        self.group_alpha = group_alpha
 
         self.early_stopping = early_stopping
         self.it_succesfull_stop_condition=-1
@@ -41,9 +44,9 @@ class Adam():
 
 
     def __repr__(self):
-        return "Adam stochastic optimization (decay={0} learning_rate={1} momentum_estimate1={2} momentum_estimate2={3} noise={4}) \n" \
-               "convergence criteria: maxit={5} early_stopping={6} epsilon={7} prev={8}".format(
-            self.decay, self.alpha0, self.momentum_estimate1, self.momentum_estimate2, self.noise,
+        return "Adam stochastic optimization (decay={0} learning_rate={1} momentum_estimate1={2} momentum_estimate2={3} noise={4} fix_v={5}) \n" \
+               "convergence criteria: maxit={6} early_stopping={7} epsilon={8} prev={9}".format(
+            self.decay, self.alpha0, self.momentum_estimate1, self.momentum_estimate2, self.noise, self.fix_v,
             self.maxit, self.early_stopping, self.epsilon, self.convergence_prev)
 
 
@@ -211,15 +214,24 @@ class Adam():
                     return fx, x, ret
 
 
-            #update parameters - use same scaing of gradients for each group!, e.g v_i and w_ij
+
             first_moment_corrected_single, first_moment_corrected_pair = objfun.linear_to_structured(first_moment_corrected, objfun.ncol)
             second_moment_corrected_single, second_moment_corrected_pair = objfun.linear_to_structured(second_moment_corrected, objfun.ncol)
 
-            step_single = first_moment_corrected_single / ( np.sqrt(second_moment_corrected_single.max(1))[:, np.newaxis] + self.noise)
-            x_single -= alpha * step_single
+            #use same scaing of gradients for each group!, e.g v_i and w_ij
+            if self.group_alpha:
+                step_single = first_moment_corrected_single / ( np.sqrt(second_moment_corrected_single.max(1))[:, np.newaxis] + self.noise)
+                step_pair   = first_moment_corrected_pair / ( np.sqrt(second_moment_corrected_pair.max(3).max(2))[:, :, np.newaxis, np.newaxis] + self.noise)
+            else:
+                step_single = first_moment_corrected_single / ( np.sqrt(second_moment_corrected_single) + self.noise)
+                step_pair   = first_moment_corrected_pair / ( np.sqrt(second_moment_corrected_pair) + self.noise)
 
-            step_pair = first_moment_corrected_pair / ( np.sqrt(second_moment_corrected_pair.max(3).max(2))[:, :, np.newaxis, np.newaxis] + self.noise)
+
+            #update parameters
+            if not self.fix_v:
+                x_single -= alpha * step_single
             x_pair -= alpha * step_pair
+
             x=objfun.structured_to_linear(x_single, x_pair)
             #x -= alpha * first_moment_corrected / ( np.sqrt(second_moment_corrected) + self.noise)
 
