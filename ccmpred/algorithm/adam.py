@@ -3,7 +3,8 @@ import ccmpred.logo
 import ccmpred.monitor.progress as pr
 import sys
 from collections import deque
-
+import ccmpred.model_probabilities
+import ccmpred.sanity_check
 
 class Adam():
     """
@@ -17,11 +18,22 @@ class Adam():
     In addition to storing an exponentially decaying average of past squared gradients vtvt like Adadelta and RMSprop,
     Adam also keeps an exponentially decaying average of past gradients mtmt, similar to momentum
 
+    m = mom1*m + (1-mom1)*dx
+    v = mom2*v + (1-mom2)*(dx**2)
+    x += - learning_rate * m / (np.sqrt(v) + eps)
+
+
+    If setting mom1=0, then Adam becomes RMSProp as described by Hinton here:
+    http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf
+
+    v = mom2*v + (1-mom2)*dx**2
+    x += - learning_rate * dx / (np.sqrt(v) + eps)
+
     """
 
-    def __init__(self, maxit=100, alpha0=1e-3, alpha_decay=1e1, momentum_estimate1=0.9, momentum_estimate2=0.999, noise=1e-7,
+    def __init__(self, maxit=100, alpha0=1e-3, alpha_decay=1e1, momentum_estimate1=0.9, momentum_estimate2=0.999, noise=1e-8,
                  epsilon=1e-5, convergence_prev=5, early_stopping=False,
-                 decay=False, start_decay=1e-4, fix_v=False, group_alpha=True):
+                 decay=False, start_decay=1e-4, fix_v=False, group_alpha=False, qij_condition=False):
         self.maxit = maxit
         self.alpha0 = alpha0
         self.momentum_estimate1 = momentum_estimate1
@@ -38,6 +50,7 @@ class Adam():
         self.it_succesfull_stop_condition=-1
         self.epsilon = epsilon
         self.convergence_prev=convergence_prev
+        self.qij_condition = qij_condition
 
         self.progress = pr.Progress(plotfile=None,
                                     xnorm_diff=[], max_g=[], gnorm_diff=[], alpha=[])
@@ -72,6 +85,7 @@ class Adam():
         }
 
         fx = -1
+        alpha=self.alpha0
         #objfun.msa_sampled =  objfun.init_sample_alignment(5 * objfun.ncol)
         for i in range(self.maxit):
 
@@ -149,6 +163,11 @@ class Adam():
             # ====================================================================================
 
 
+            #step decay: reduce the learning rate by a constant (e.g. 0.5) whenever the xnorm < eps
+            # if xnorm_diff < self.start_decay:
+            #     alpha /= self.alpha_decay
+            #     self.start_decay *= 1e-1
+
             #start decay at iteration i
             if xnorm_diff < self.start_decay and self.it_succesfull_stop_condition < 0:
                 self.it_succesfull_stop_condition = i
@@ -169,6 +188,14 @@ class Adam():
             #stop condition
             if self.early_stopping:
                 if xnorm_diff < self.epsilon:
+
+                    #compute q_ij
+                    nr_pairs_qij_error = 0
+                    if self.qij_condition:
+                        _, x_pair_centered = ccmpred.sanity_check.normalize_potentials(x_single, x_pair)
+                        model_prob_flat, nr_pairs_qij_error = ccmpred.model_probabilities.compute_qij(
+                            objfun.freqs_pair, x_pair_centered, objfun.regularization.lambda_pair, objfun.Nij, verbose=False
+                        )
 
                     # if not self.decay:
                     #
@@ -207,11 +234,16 @@ class Adam():
                     #     print("Turn on persistent CD. Decrease epsilon to {0}. Set learnign rate to {1}. Set decrease tp {2}.".format(self.epsilon, self.learning_rate, self.decrease))
                     # else:
                     # else:
-                    ret = {
-                        "code": 0,
-                        "message": "Stopping condition (xnorm diff < {0}) successfull.".format(self.epsilon)
-                    }
-                    return fx, x, ret
+                    if nr_pairs_qij_error == 0:
+                        ret = {
+                            "code": 0,
+                            "message": "Stopping condition (xnorm diff < {0}) successfull and q_ij ok.".format(self.epsilon)
+                        }
+                        return fx, x, ret
+                    else:
+                        print("Stopping condition (xnorm diff < {0}) successfull but {1} pair(s) with q_ijab < 0".format(
+                            self.epsilon, nr_pairs_qij_error)
+                        )
 
 
 

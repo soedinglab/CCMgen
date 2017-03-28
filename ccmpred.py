@@ -44,7 +44,7 @@ ALGORITHMS = {
     "adam": lambda opt: ad.Adam(maxit=opt.maxit, alpha0=opt.alpha0, momentum_estimate1=opt.mom1, momentum_estimate2=opt.mom2,
                                 noise=1e-7, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping,
                                 decay=opt.decay, alpha_decay=opt.alpha_decay, start_decay=opt.start_decay,
-                                fix_v=opt.fix_v, group_alpha=opt.group_alpha),
+                                fix_v=opt.fix_v, group_alpha=opt.group_alpha, qij_condition=opt.qij_condition),
     "numerical_differentiation": lambda opt: nd.numDiff(maxit=opt.maxit, epsilon=opt.epsilon)
 }
 
@@ -136,10 +136,11 @@ def parse_args():
 
 
     grp_con = parser.add_argument_group("Convergence Settings")
-    grp_con.add_argument("--maxit",                  dest="maxit",              default=500,    type=int, help="Stop when MAXIT number of iterations is reached. [default: %(default)s]")
+    grp_con.add_argument("--maxit",                  dest="maxit",               default=500,    type=int, help="Stop when MAXIT number of iterations is reached. [default: %(default)s]")
     grp_con.add_argument("--early_stopping",         dest="early_stopping",      default=False,  action="store_true",  help="Apply convergence criteria instead of only maxit. [default: %(default)s]")
     grp_con.add_argument("--epsilon",                dest="epsilon",             default=1e-5,   type=float, help="Converged when relative change in f (or xnorm) in last CONVERGENCE_PREV iterations < EPSILON. [default: %(default)s]")
     grp_con.add_argument("--convergence_prev",       dest="convergence_prev",    default=5,      type=int,   help="Set CONVERGENCE_PREV parameter. [default: %(default)s]")
+    grp_con.add_argument("--qij_condition",          dest="qij_condition",       action="store_true", default=False,  help="Compution of q_ij with all q_ijab > 0. [default: %(default)s]")
 
 
     grp_wt = parser.add_argument_group("Weighting")
@@ -182,6 +183,10 @@ def parse_args():
 
     if args.only_model_prob and not args.initrawfile:
         parser.error("--only_model_prob is only supported when -i (--init-from-raw) is specified!")
+
+
+    if (args.outmodelprobmsgpackfile and args.objfun != "cd") or args.only_model_prob:
+        print("Note: when computing q_ij data: couplings should be computed from full likelihood (e.g. CD)")
 
 
     return args
@@ -277,25 +282,25 @@ def main():
 
 
     condition = "Finished" if algret['code'] >= 0 else "Exited"
-    print("\n{0} with code {code} -- {message}".format(condition, **algret))
+    print("\n{0} with code {code} -- {message}\n".format(condition, **algret))
 
     meta = ccmpred.metadata.create(opt, regularization, msa, weights, f, fx, algret, alg)
     res = f.finalize(x, meta)
 
 
     #perform checks on potentials:
-    check_x_single  = ccmpred.sanity_check.check_single_potentials(res.x_single, verbose=1)
-    check_x_pair  = ccmpred.sanity_check.check_pair_potentials(res.x_pair, verbose=1)
+    check_x_single  = ccmpred.sanity_check.check_single_potentials(res.x_single, verbose=0)
+    check_x_pair  = ccmpred.sanity_check.check_pair_potentials(res.x_pair, verbose=0)
 
     #enforce sum(wij)=0 and sum(v_i)=0
     if not check_x_single or not check_x_pair:
-        print("Enforce gauge sum(v_i)=0 and sum(w_ij)=0: center parameters at zero.")
+        print("Enforce sum(v_i)=0 and sum(w_ij)=0 by centering parameters at zero.")
         res.x_single, res.x_pair = ccmpred.sanity_check.normalize_potentials(res.x_single, res.x_pair)
 
 
 
     if opt.cd_alnfile and hasattr(f, 'msa_sampled'):
-        print("Writing sampled alignment to {0}".format(opt.cd_alnfile))
+        print("\nWriting sampled alignment to {0}".format(opt.cd_alnfile))
         msa_sampled = f.msa_sampled
 
         with open(opt.cd_alnfile, "w") as f:
@@ -305,22 +310,22 @@ def main():
         ccmpred.gaps.backinsert_gapped_positions(res, gapped_positions)
 
     if opt.outrawfile:
-        print("Writing raw-formatted potentials to {0}".format(opt.outrawfile))
+        print("\nWriting raw-formatted potentials to {0}".format(opt.outrawfile))
         ccmpred.raw.write_oldraw(opt.outrawfile, res)
 
     if opt.outmsgpackfile:
-        print("Writing msgpack-formatted potentials to {0}".format(opt.outmsgpackfile))
+        print("\nWriting msgpack-formatted potentials to {0}".format(opt.outmsgpackfile))
         ccmpred.raw.write_msgpack(opt.outmsgpackfile, res)
 
     if opt.outmodelprobmsgpackfile:
-        print("Writing msgpack-formatted model probabilties to {0}".format(opt.outmodelprobmsgpackfile))
+        print("\nWriting msgpack-formatted model probabilties to {0}".format(opt.outmodelprobmsgpackfile))
         if opt.max_gap_ratio < 100:
             msa = ccmpred.io.alignment.read_msa(opt.alnfile, opt.aln_format)
             freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, opt.pseudocounts[0], pseudocount_n_single=opt.pseudocounts[1], pseudocount_n_pair=opt.pseudocount_pair_count)
         if opt.dev_center_v:
             freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, ccmpred.pseudocounts.constant_pseudocounts, pseudocount_n_single=1, pseudocount_n_pair=1, remove_gaps=True)
 
-        ccmpred.model_probabilities.write_msgpack(opt.outmodelprobmsgpackfile, res, weights, msa, freqs, regularization.lambda_pair)
+        ccmpred.model_probabilities.write_msgpack(opt.outmodelprobmsgpackfile, res, weights, msa, freqs, regularization.lambda_pair, True)
 
     #write contact map and meta data info matfile
     ccmpred.io.contactmatrix.write_matrix(opt.matfile, res, meta, disable_apc=opt.disable_apc)
