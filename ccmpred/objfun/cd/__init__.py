@@ -46,9 +46,9 @@ class ContrastiveDivergence():
         self.collection_sample_counts_pair = deque([])
 
         # get constant alignment counts
-        freqs_single, freqs_pair = freqs
-        self.msa_counts_single = freqs_single * self.neff
-        self.msa_counts_pair = freqs_pair * self.neff
+        self.freqs_single, self.freqs_pair = freqs
+        self.msa_counts_single = self.freqs_single * self.neff
+        self.msa_counts_pair = self.freqs_pair * self.neff
 
         #do not use pseudo counts!
         #self.msa_counts_single, self.msa_counts_pair = ccmpred.counts.both_counts(msa, self.weights)
