@@ -7,7 +7,7 @@ import gzip
 
 def write_matrix(matfile, res, meta, disable_apc=False):
 
-    print("Writing summed score matrix (with APC={0}) to {1}".format(not disable_apc, matfile))
+    print("\nWriting summed score matrix (with APC={0}) to {1}".format(not disable_apc, matfile))
 
     mat = ccmpred.scoring.frobenius_score(res.x_pair)
     if not disable_apc:
