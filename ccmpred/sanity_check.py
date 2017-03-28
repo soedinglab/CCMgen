@@ -45,10 +45,10 @@ def normalize_potentials( x_single, x_pair):
 
 
     means = np.mean(np.mean(x_pair[:, :, :20, :20], axis=2), axis=2)
-    x_pair_centered = x_pair[:, :, :20, :20] - means[:, :, np.newaxis, np.newaxis]
+    x_pair[:, :, :20, :20] -=  means[:, :, np.newaxis, np.newaxis]
 
-    means = np.mean(x_single, axis=1)
-    x_single_centered = x_single - means[:, np.newaxis]
+    means = np.mean(x_single[: , :20], axis=1)
+    x_single[: , :20] -= means[:, np.newaxis]
 
 
-    return x_single_centered, x_pair_centered
+    return x_single, x_pair
