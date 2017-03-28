@@ -74,29 +74,40 @@ def write_msgpack(outmsgpackfile, res, weights, msa, freqs, lambda_pair):
     model_prob = np.zeros((res.ncol, res.ncol, 400))
     model_prob[indices_triu] = pair_freq[indices_triu] - (x_pair_nogaps[indices_triu] * lambda_pair / Nij[:,:, np.newaxis][indices_triu])
 
-    if any(model_prob[indices_triu].sum(1) < 0.99):
-        print("Warning: there are "+str(sum(model_prob[indices_triu].sum(1) < 0.99))+" pairs with sum(model probabilites) < 0.99. Minimal sum(q_ij): " +str(np.min(model_prob[indices_triu].sum(1))))
-        indices = np.where(model_prob[indices_triu].sum(1) < 0.99)[0]
-        for ind in indices:
+    if any(model_prob[indices_triu].sum(1) < 0.999):
+        print("Warning:  {0}/{1} pairs have sum(qij) < 0.999. Minimal sum(q_ij): {2}".format(sum(model_prob[indices_triu].sum(1) < 0.999), len(indices_triu[0]), np.min(model_prob[indices_triu].sum(1))))
+        indices = np.where(model_prob[indices_triu].sum(1) < 0.999)[0]
+        for ind in indices[:10]:
             i = indices_triu[0][ind]
             j = indices_triu[1][ind]
-            print('e.g: ', i, j, sum(model_prob[i,j]), sum(pair_freq[i,j].flatten()), sum(x_pair_nogaps[i,j].flatten()), Nij[i,j])
+            print("e.g: i={0:<2} j={1:<2}: min(qij)={2:<20} sum(qij)={3:<20} sum(pair_freq)={4:<20} sum(x_pair)={5:<20} N_ij={6}".format(
+                i, j, min(model_prob[i,j]), sum(model_prob[i,j]), sum(pair_freq[i,j].flatten()), sum(x_pair_nogaps[i,j].flatten()), Nij[i,j])
+            )
 
-    if any(model_prob[indices_triu].sum(1) > 1.01):
-        print("Warning: there are "+str(sum(model_prob[indices_triu].sum(1) > 1.01))+" pairs with sum(model probabilites) > 1.01. Max sum(q_ij): " +str(np.max(model_prob[indices_triu].sum(1))))
-        indices = np.where(model_prob[indices_triu].sum(1) > 1.01)[0]
-        for ind in indices:
+    if any(model_prob[indices_triu].sum(1) > 1.001):
+        print("Warning:  {0}/{1} pairs have sum(qij) > 1.001. Max sum(q_ij): {2}".format(sum(model_prob[indices_triu].sum(1) > 1.001), len(indices_triu[0]), np.max(model_prob[indices_triu].sum(1))))
+        indices = np.where(model_prob[indices_triu].sum(1) > 1.001)[0]
+        for ind in indices[:10]:
             i = indices_triu[0][ind]
             j = indices_triu[1][ind]
-            print('e.g: ', i, j, sum(model_prob[i,j]), sum(pair_freq[i,j].flatten()), sum(x_pair_nogaps[i,j].flatten()), Nij[i,j])
+            print("e.g: i={0:<2} j={1:<2}: min(qij)={2:<20} sum(qij)={3:<20} sum(pair_freq)={4:<20} sum(x_pair)={5:<20} N_ij={6}".format(
+                i, j, min(model_prob[i,j]), sum(model_prob[i,j]), sum(pair_freq[i,j].flatten()), sum(x_pair_nogaps[i,j].flatten()), Nij[i,j])
+            )
 
-    model_prob_flat = model_prob[indices_triu].flatten() #row-wise upper triangular indices
-
-    if any(qijab < 0 for qijab in model_prob_flat):
-        print("Warning: there are "+str(sum(model_prob_flat < 0))+" negative model probabilites. Min qijab: " + str(np.min(model_prob_flat)))
-
+    if any(model_prob[indices_triu].min(1) < 0):
+        print("Warning:  {0}/{1} pairs have min(q_ij) < 0. Minimal min(q_ij): {2}".format(sum(model_prob[indices_triu].min(1) < 0), len(indices_triu[0]), np.min(model_prob[indices_triu].min(1))))
+        indices = np.where(model_prob[indices_triu].min(1) < 0)[0]
+        for ind in indices[:10]:
+            i = indices_triu[0][ind]
+            j = indices_triu[1][ind]
+            print("e.g: i={0:<2} j={1:<2}: min(qij)={2:<20} sum(qij)={3:<20} sum(pair_freq)={4:<20} sum(x_pair)={5:<20} N_ij={6}".format(
+                i, j, min(model_prob[i,j]), sum(model_prob[i,j]), sum(pair_freq[i,j].flatten()), sum(x_pair_nogaps[i,j].flatten()), Nij[i,j])
+            )
         #hack: set all negative model probabilities to zero
         #model_prob_flat[model_prob_flat < 0] = 0
+
+
+    model_prob_flat = model_prob[indices_triu].flatten() #row-wise upper triangular indices
 
     if any(np.isnan(qijab) for qijab in model_prob_flat):
         print("Warning: there are "+str(sum(np.isnan(model_prob_flat)))+" nan model probabilites")

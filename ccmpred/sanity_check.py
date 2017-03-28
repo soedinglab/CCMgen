@@ -4,12 +4,12 @@ import numpy as np
 def check_single_potentials(x_single, verbose=0):
 
     if any(np.abs(x_single.sum(1)) > 1e-10):
-        if verbose: print("Warning: Some single potentials do not sum to 0:")
-        for i in range(x_single.shape[0]):
-            sum_vi = np.abs(np.sum(x_single[i]))
-            if sum_vi > 1e-10:
-                if verbose: print "i={0} has sum_a(v_ia)={1}".format(i+1, np.sum(x_single[i]))
+        print("Warning: Some single potentials do not sum to 0")
 
+        if verbose:
+            indices = np.where(np.abs(x_single.sum(1)) > 1e-10)[0]
+            for ind in indices[:10]:
+                print "eg: i={0:<2} has sum_a(v_ia)={1}".format(ind+1, np.sum(x_single[ind]))
 
         return 0
 
@@ -17,17 +17,23 @@ def check_single_potentials(x_single, verbose=0):
 
 def check_pair_potentials(x_pair, verbose=0):
 
-    for i in range(x_pair.shape[0]-1):
-        for j in range(i+1, x_pair.shape[0]):
-            sum_wij = np.abs(np.sum(x_pair[i, j]))
-            if sum_wij > 1e-10:
-                if verbose: print "i={0} j={1} has sum_ab(w_ijab)={2}".format(i+1, j+1, np.sum(x_pair[i,j]))
-                return 0
+    if any(np.abs(x_pair.sum(2).sum(2)[np.triu_indices(x_pair.shape[0], k=1)]) > 1e-10):
+        print("Warning: Some pair potentials do not sum to 0")
+
+        if verbose:
+            indices_triu = np.triu_indices(x_pair.shape[0], 1)
+            indices = np.where(np.abs(x_pair.sum(2).sum(2)[indices_triu]) > 1e-10)[0]
+            for ind in indices[:10]:
+                i = indices_triu[0][ind]
+                j = indices_triu[1][ind]
+                print "eg: i={0:<2} j={1:<2} has sum_ab(w_ijab)={2}".format(i+1, j+1, np.sum(x_pair[i,j]))
+
+        return 0
 
     return 1
 
 
-def normalize_potentials(x_single, x_pair):
+def normalize_potentials( x_single, x_pair):
     """
 
     Enforce gauge choice that
@@ -37,10 +43,12 @@ def normalize_potentials(x_single, x_pair):
     :return:
     """
 
-    means = np.mean(np.mean(x_pair, axis=2), axis=2)
-    x_pair_centered = x_pair - means[:, :, np.newaxis, np.newaxis]
+
+    means = np.mean(np.mean(x_pair[:, :, :20, :20], axis=2), axis=2)
+    x_pair_centered = x_pair[:, :, :20, :20] - means[:, :, np.newaxis, np.newaxis]
 
     means = np.mean(x_single, axis=1)
     x_single_centered = x_single - means[:, np.newaxis]
+
 
     return x_single_centered, x_pair_centered
