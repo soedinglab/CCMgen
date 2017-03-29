@@ -2,7 +2,10 @@ import ccmpred.logo
 import plotly.graph_objs as go
 import os
 import sys
+import numpy as np
 from plotly.offline import plot as plotly_plot
+
+
 
 class Progress():
     """
@@ -44,11 +47,8 @@ class Progress():
         self.subtitle =  subtitle
 
 
-    def log_progress(self, n_iter, xnorm_single, xnorm_pair, gnorm_single, gnorm_pair, **kwargs):
+    def log_progress(self, n_iter, xnorm, xnorm_single, xnorm_pair, gnorm, gnorm_single, gnorm_pair, **kwargs):
 
-
-        xnorm = xnorm_single + xnorm_pair
-        gnorm = gnorm_single + gnorm_pair
 
 
         self.optimization_log['||x||'].append(xnorm)

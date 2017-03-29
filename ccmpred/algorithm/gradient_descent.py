@@ -8,9 +8,11 @@ import ccmpred.monitor.progress as pr
 class gradientDescent():
     """Optimize objective function using gradient descent"""
 
-    def __init__(self, maxit=100, alpha0=5e-3, alpha_decay=10, epsilon=1e-5, convergence_prev=5, early_stopping=False):
+    def __init__(self, maxit=100, alpha0=5e-3, decay=True,  start_decay=1e-3, alpha_decay=10, epsilon=1e-5, convergence_prev=5, early_stopping=False):
 
         self.maxit = maxit
+        self.decay=decay
+        self.start_decay = start_decay
         self.alpha0 = alpha0
         self.alpha_decay = alpha_decay
 
@@ -19,7 +21,7 @@ class gradientDescent():
         self.convergence_prev=convergence_prev
 
         self.progress = pr.Progress(plotfile=None,
-                            xnorm_diff=[], max_g=[], gnorm_diff=[], alpha=[])
+                            xnorm_diff=[], max_g=[], alpha=[])
 
     def __repr__(self):
         return "Gradient descent optimization (alpha0={0} alpha_decay={1}) \n" \
@@ -46,13 +48,12 @@ class gradientDescent():
         }
 
         fx = -1
-
+        alpha = self.alpha0
         for i in range(self.maxit):
 
             fx, g = objfun.evaluate(x)
 
-            #new step size
-            alpha = self.alpha0 / (1 + i / self.alpha_decay)
+
 
             # ========================================================================================
             x_single, x_pair = objfun.linear_to_structured(x, objfun.ncol)
@@ -61,27 +62,27 @@ class gradientDescent():
 
             xnorm_single = np.sum(x_single * x_single)
             xnorm_pair = np.sum(x_pair * x_pair)
-            xnorm = xnorm_single + xnorm_pair
+            xnorm = np.sqrt(xnorm_single + xnorm_pair)
 
             gnorm_single = np.sum(g_single * g_single)
             gnorm_pair = np.sum(g_pair * g_pair)
-            gnorm = gnorm_single + gnorm_pair
+            gnorm = np.sqrt(gnorm_single + gnorm_pair)
 
             if i > self.convergence_prev:
                 xnorm_prev = self.progress.optimization_log['||x||'][-self.convergence_prev]
                 xnorm_diff = np.abs((xnorm_prev - xnorm)) / xnorm_prev
-                gnorm_prev = self.progress.optimization_log['||g||'][-self.convergence_prev]
-                gnorm_diff = np.abs((gnorm_prev - gnorm)) / gnorm_prev
             else:
                 xnorm_diff = 1
-                gnorm_diff = 1
 
+            #new step size
+            if self.decay and xnorm_diff < self.start_decay:
+                alpha = self.alpha0 / (1 + i / self.alpha_decay)
 
             #print out progress
             self.progress.log_progress(i + 1,
-                                       xnorm_single, xnorm_pair,
-                                       gnorm_single, gnorm_pair,
-                                       xnorm_diff=xnorm_diff, max_g=max_g, gnorm_diff=gnorm_diff, alpha=alpha)
+                                       xnorm, np.sqrt(xnorm_single), np.sqrt(xnorm_pair),
+                                       gnorm, np.sqrt(gnorm_single), np.sqrt(gnorm_pair),
+                                       xnorm_diff=xnorm_diff, max_g=max_g, alpha=alpha)
             # ========================================================================================
 
             #stop condition
