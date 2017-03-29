@@ -40,11 +40,16 @@ REG_L2_SCALING= {
 
 ALGORITHMS = {
     "conjugate_gradients": lambda opt: cg.conjugateGradient(maxit=opt.maxit, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev),
-    "gradient_descent": lambda opt: gd.gradientDescent(maxit=opt.maxit, alpha0=opt.alpha0, alpha_decay=opt.alpha_decay, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping),
-    "adam": lambda opt: ad.Adam(maxit=opt.maxit, alpha0=opt.alpha0, momentum_estimate1=opt.mom1, momentum_estimate2=opt.mom2,
-                                noise=1e-7, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping,
-                                decay=opt.decay, alpha_decay=opt.alpha_decay, start_decay=opt.start_decay,
-                                fix_v=opt.fix_v, group_alpha=opt.group_alpha, qij_condition=opt.qij_condition),
+    "gradient_descent": lambda opt: gd.gradientDescent(
+        maxit=opt.maxit, alpha0=opt.alpha0, decay=opt.decay, start_decay=opt.start_decay, alpha_decay=opt.alpha_decay,
+        epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping
+    ),
+    "adam": lambda opt: ad.Adam(
+        maxit=opt.maxit, alpha0=opt.alpha0, beta1=opt.beta1, beta2=opt.beta2, epsilon=opt.epsilon,
+        convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping, decay=opt.decay,
+        alpha_decay=opt.alpha_decay, start_decay=opt.start_decay, fix_v=opt.fix_v,
+        group_alpha=opt.group_alpha, qij_condition=opt.qij_condition
+    ),
     "numerical_differentiation": lambda opt: nd.numDiff(maxit=opt.maxit, epsilon=opt.epsilon)
 }
 
@@ -126,13 +131,15 @@ def parse_args():
     grp_al.add_argument("--alg-nd", dest="algorithm", action="store_const", const='numerical_differentiation', help='Debug gradients with numerical differentiation')
     grp_al.add_argument("--alg-ad", dest="algorithm", action="store_const", const='adam', help='Use Adam')
 
-    grp_al.add_argument("--ad-mom1",                dest="mom1",                default=0.9,    type=float, help="Set momentum 1 parameter for Adam. [default: %(default)s]")
-    grp_al.add_argument("--ad-mom2",                dest="mom2",                default=0.999,  type=float, help="Set momentum 2 parameter for Adam. [default: %(default)s]")
-    grp_al.add_argument("--decay",                  dest="decay",               action="store_true", default=False,  help="Use decaying learnign rate. Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
-    grp_al.add_argument("--start_decay",            dest="start_decay",         default=1e-4,   type=float, help="Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
-    grp_al.add_argument("--alpha0",                 dest="alpha0",              default=1e-3,   type=float, help="Set initial learning rate. [default: %(default)s]")
-    grp_al.add_argument("--alpha_decay",            dest="alpha_decay",         default=1e1,    type=float, help="Set rate of decay for learning rate when --decay is on. [default: %(default)s]")
-    grp_al.add_argument("--ad-group_alpha",         dest="group_alpha",         action="store_true", default=False,  help="Use min learning rate for each group v_i and w_ij. [default: %(default)s]")
+    grp_als = parser.add_argument_group("Algorithm specific settings")
+    grp_als.add_argument("--ad-beta1",          dest="beta1",           default=0.9,        type=float,     help="Set beta 1 parameter for Adam. [default: %(default)s]")
+    grp_als.add_argument("--ad-beta2",          dest="beta2",           default=0.999,      type=float,     help="Set beta 2 parameter for Adam. [default: %(default)s]")
+    grp_als.add_argument("--ad-group_alpha",    dest="group_alpha",     action="store_true", default=False, help="Use min learning rate for each group v_i and w_ij. [default: %(default)s]")
+    grp_als.add_argument("--alpha0",            dest="alpha0",          default=1e-3,       type=float,     help="Set initial learning rate. [default: %(default)s]")
+    grp_als.add_argument("--decay",             dest="decay",           action="store_true", default=False, help="Use decaying learnign rate. Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
+    grp_als.add_argument("--start_decay",       dest="start_decay",     default=1e-4,       type=float,     help="Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
+    grp_als.add_argument("--alpha_decay",       dest="alpha_decay",         default=1e1,    type=float,     help="Set rate of decay for learning rate when --decay is on. [default: %(default)s]")
+
 
 
     grp_con = parser.add_argument_group("Convergence Settings")

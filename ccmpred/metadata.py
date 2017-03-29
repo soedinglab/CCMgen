@@ -66,6 +66,8 @@ def create(opt, regularization, msa, weights, f, fx, algret, alg):
 
     if (opt.algorithm) == 'gradient_descent':
         meta['workflow'][0]['parameters']['optimization']['alpha0'] = opt.alpha0
+        meta['workflow'][0]['parameters']['optimization']['decay'] = opt.decay
+        meta['workflow'][0]['parameters']['optimization']['start_decay'] = opt.start_decay
         meta['workflow'][0]['parameters']['optimization']['alpha_decay'] = opt.alpha_decay
 
     if (opt.algorithm) == 'adam':
@@ -73,8 +75,8 @@ def create(opt, regularization, msa, weights, f, fx, algret, alg):
         meta['workflow'][0]['parameters']['optimization']['alpha_decay'] = opt.alpha_decay
         meta['workflow'][0]['parameters']['optimization']['decay'] = opt.decay
         meta['workflow'][0]['parameters']['optimization']['start_decay'] = opt.start_decay
-        meta['workflow'][0]['parameters']['optimization']['momentum1'] = opt.mom1
-        meta['workflow'][0]['parameters']['optimization']['momentum2'] = opt.mom2
+        meta['workflow'][0]['parameters']['optimization']['beta1'] = opt.beta1
+        meta['workflow'][0]['parameters']['optimization']['beta2'] = opt.beta2
         meta['workflow'][0]['parameters']['optimization']['group_alpha'] = opt.group_alpha
 
 
