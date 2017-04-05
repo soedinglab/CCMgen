@@ -63,49 +63,50 @@ class ContrastiveDivergence():
         self.Nij = self.msa_counts_pair.sum(3).sum(2)
 
 
-        #number of sequences used for sampling
+        #number of sequences used for sampling: multiples of MSA and at least 1xMSA
         self.min_nseq_factorL = min_nseq_factorL
-        self.n_sequences = np.max([min_nseq_factorL * self.ncol, self.nrow])
-        self.n_samples_msa = float(self.n_sequences) / self.nrow
-        self.msa_sampled_weights = self.weights.copy()
+        n_sequence_min_nseq_factorL =  self.min_nseq_factorL * self.ncol
+        self.n_samples_msa = np.ceil( n_sequence_min_nseq_factorL / float(self.nrow))
+
 
         # init sample alignment as input MSA
+        self.msa_sampled_weights = np.array([1] * self.nrow * self.n_samples_msa)
         self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL)
-
 
 
     def init_sample_alignment(self, min_nseq_factorL):
 
+
+        # nr of sequences = min_nseq_factorL * L
         self.min_nseq_factorL = min_nseq_factorL
+        n_sequence_min_nseq_factorL =  self.min_nseq_factorL * self.ncol
 
-        self.n_sequences = np.max([min_nseq_factorL * self.ncol, self.nrow])
+        #Use multiples of input MSA: at least 1xMSA
+        self.n_samples_msa = np.ceil( n_sequence_min_nseq_factorL / float(self.nrow))
 
-        #correspondingly: how many copies of input MSA needed to arrive at n_sequences
-        self.n_samples_msa = float(self.n_sequences) / self.nrow
 
-        #print "Will sample {0} sequences which is {1} times N and {2} times L.".format(self.n_sequences, n_samples_msa,  nseq_factor)
 
         if self.average_sample_counts:
             return self.msa.copy()
-        else:
-            seq_id =  range(self.nrow) * int(np.floor(self.n_samples_msa))
-            seq_id += range(self.nrow)[:int((self.n_samples_msa-np.floor(self.n_samples_msa)) * self.nrow)]
-            self.msa_sampled_weights = self.weights[seq_id]
-            sample_msa = self.msa[seq_id]
-            return sample_msa.copy()
+        elif self.persistent:
 
-    # @classmethod
-    # def init(cls, msa, freqs, weights, raw, regularization, gibbs_steps=1, persistent=False, n_sequences=1, pll=False):
-    #     res = cls(msa, freqs, weights, regularization, gibbs_steps, persistent, n_sequences, pll)
-    #
-    #     print n_sequences
-    #
-    #     if msa.shape[1] != raw.ncol:
-    #         raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
-    #
-    #     x = res.structured_to_linear(raw.x_single[:, :20], raw.x_pair)
-    #
-    #     return x, res
+            global_aa_freq = ccmpred.pseudocounts.calculate_global_aa_freq(self.msa, self.weights)
+
+            #gap = 20; do not generate gaps!
+            n_sequences = self.n_samples_msa * self.nrow
+            msa_sampled = np.array([[np.random.choice(np.arange(0, 20), p=global_aa_freq) for l in range(self.ncol)] for n in range(n_sequences)], dtype='uint8')
+
+            #do not use weights as samples are iid in contrast to input MSA
+            self.msa_sampled_weights = np.array([1] * self.nrow)
+
+            return msa_sampled.copy()
+        else:
+            seq_id = range(self.nrow) * self.n_samples_msa
+            msa_sampled = self.msa[seq_id]
+            self.msa_sampled_weights = ccmpred.weighting.weights_simple(self.msa_sampled)
+            return msa_sampled.copy()
+
+
 
     def finalize(self, x, meta):
         x_single, x_pair = self.linear_to_structured(x, self.ncol, add_gap_state=True)
@@ -115,8 +116,10 @@ class ContrastiveDivergence():
     def gibbs_sample_sequences(self, x):
         return ccmpred.objfun.cd.cext.gibbs_sample_sequences(self.msa_sampled,  x, self.gibbs_steps)
 
+    def gibbs_sample_sequences_nogaps(self, x):
+        return ccmpred.objfun.cd.cext.gibbs_sample_sequences_nogaps(self.msa_sampled,  x, self.gibbs_steps)
+
     def sample_position_in_sequences(self, x):
-        #for PERSISTENT CD continue the markov chain
         return ccmpred.objfun.cd.cext.sample_position_in_sequences(self.msa_sampled, x)
 
 
@@ -148,6 +151,8 @@ class ContrastiveDivergence():
 
         if self.pll:
             self.msa_sampled = self.sample_position_in_sequences(x)
+        elif self.persistent:
+            self.msa_sampled = self.gibbs_sample_sequences_nogaps(x)
         else:
             #Gibbs Sampling of sequences (each position of each sequence will be sampled this often: self.gibbs_steps)
             self.msa_sampled = self.gibbs_sample_sequences(x)
@@ -176,13 +181,10 @@ class ContrastiveDivergence():
         sample_counts_single    = sampled_freq_single * self.Ni[:, np.newaxis]
         sample_counts_pair      = sampled_freq_pair * self.Nij[:, :, np.newaxis, np.newaxis]
 
-
-
-
-
         #actually compute the gradients
         g_single = sample_counts_single - self.msa_counts_single
         g_pair = sample_counts_pair - self.msa_counts_pair
+
 
         #sanity check
         if(np.abs(np.sum(sample_counts_single[0,:20]) - np.sum(self.msa_counts_single[0,:20])) > 1e-5):
