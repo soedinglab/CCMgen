@@ -96,13 +96,12 @@ class ContrastiveDivergence():
             msa_sampled = np.array([[np.random.choice(np.arange(0, 20), p=global_aa_freq) for l in range(self.ncol)] for n in range(n_sequences)], dtype='uint8')
 
             #do not use weights as samples are iid in contrast to input MSA
-            self.msa_sampled_weights = np.array([1] * self.nrow)
-
+            self.msa_sampled_weights = np.array([1] * n_sequences, dtype="float64")
             return msa_sampled.copy()
         else:
             seq_id = range(self.nrow) * self.n_samples_msa
             msa_sampled = self.msa[seq_id]
-            self.msa_sampled_weights = ccmpred.weighting.weights_simple(self.msa_sampled)
+            self.msa_sampled_weights = ccmpred.weighting.weights_simple(msa_sampled)
             return msa_sampled.copy()
 
 
@@ -144,6 +143,7 @@ class ContrastiveDivergence():
 
     def evaluate(self, x):
 
+
         #reset the msa for sampling
         if not self.persistent:
             self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL)
@@ -159,6 +159,7 @@ class ContrastiveDivergence():
 
         #careful with the weights: sum(sample_counts) should equal sum(msa_counts) !
         sample_counts_single, sample_counts_pair = ccmpred.counts.both_counts(self.msa_sampled, self.msa_sampled_weights)
+
 
         #reset gap counts for sampled msa
         sample_counts_single[:, 20] = 0
