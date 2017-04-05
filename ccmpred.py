@@ -138,7 +138,7 @@ def parse_args():
     grp_als.add_argument("--alpha0",            dest="alpha0",          default=1e-3,       type=float,     help="Set initial learning rate. [default: %(default)s]")
     grp_als.add_argument("--decay",             dest="decay",           action="store_true", default=False, help="Use decaying learnign rate. Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
     grp_als.add_argument("--start_decay",       dest="start_decay",     default=1e-4,       type=float,     help="Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
-    grp_als.add_argument("--alpha_decay",       dest="alpha_decay",         default=1e1,    type=float,     help="Set rate of decay for learning rate when --decay is on. [default: %(default)s]")
+    grp_als.add_argument("--alpha_decay",       dest="alpha_decay",     default=1e1,    type=float,     help="Set rate of decay for learning rate when --decay is on. [default: %(default)s]")
 
 
 
