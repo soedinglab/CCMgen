@@ -48,7 +48,8 @@ ALGORITHMS = {
         maxit=opt.maxit, alpha0=opt.alpha0, beta1=opt.beta1, beta2=opt.beta2, epsilon=opt.epsilon,
         convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping, decay=opt.decay,
         alpha_decay=opt.alpha_decay, start_decay=opt.start_decay, fix_v=opt.fix_v,
-        group_alpha=opt.group_alpha, qij_condition=opt.qij_condition
+        group_alpha=opt.group_alpha, qij_condition=opt.qij_condition,
+        decay_type=opt.decay_type
     ),
     "numerical_differentiation": lambda opt: nd.numDiff(maxit=opt.maxit, epsilon=opt.epsilon)
 }
@@ -138,8 +139,8 @@ def parse_args():
     grp_als.add_argument("--alpha0",            dest="alpha0",          default=1e-3,       type=float,     help="Set initial learning rate. [default: %(default)s]")
     grp_als.add_argument("--decay",             dest="decay",           action="store_true", default=False, help="Use decaying learnign rate. Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
     grp_als.add_argument("--start_decay",       dest="start_decay",     default=1e-4,       type=float,     help="Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
-    grp_als.add_argument("--alpha_decay",       dest="alpha_decay",     default=1e1,    type=float,     help="Set rate of decay for learning rate when --decay is on. [default: %(default)s]")
-
+    grp_als.add_argument("--alpha_decay",       dest="alpha_decay",     default=1e1,        type=float,     help="Set rate of decay for learning rate when --decay is on. [default: %(default)s]")
+    grp_als.add_argument("--decay-type",        dest="decay_type",      default="step",     type=str,       help="Decay type. One of: step, sqrt, exp. [default: %(default)s]")
 
 
     grp_con = parser.add_argument_group("Convergence Settings")
@@ -191,6 +192,9 @@ def parse_args():
     if args.only_model_prob and not args.initrawfile:
         parser.error("--only_model_prob is only supported when -i (--init-from-raw) is specified!")
 
+
+    if args.decay and args.decay_type not in ["step", "sqrt", "exp"]:
+        parser.error("--decay-type must be one of: step, sqrt, exp!")
 
     if (args.outmodelprobmsgpackfile and args.objfun != "cd") or args.only_model_prob:
         print("Note: when computing q_ij data: couplings should be computed from full likelihood (e.g. CD)")

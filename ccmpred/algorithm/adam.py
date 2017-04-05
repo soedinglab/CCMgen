@@ -32,7 +32,7 @@ class Adam():
     """
 
     def __init__(self, maxit=100, alpha0=1e-3, alpha_decay=1e1, beta1=0.9, beta2=0.999, noise=1e-8,
-                 epsilon=1e-5, convergence_prev=5, early_stopping=False,
+                 epsilon=1e-5, convergence_prev=5, early_stopping=False, decay_type="step",
                  decay=False, start_decay=1e-4, fix_v=False, group_alpha=False, qij_condition=False):
         self.maxit = maxit
         self.alpha0 = alpha0
@@ -42,6 +42,7 @@ class Adam():
         self.decay=decay
         self.alpha_decay = alpha_decay
         self.start_decay = start_decay
+        self.decay_type  = decay_type
 
         self.fix_v = fix_v
         self.group_alpha = group_alpha
@@ -63,11 +64,11 @@ class Adam():
         )
 
         if self.decay:
-            rep_str+="decay: decay={0} alpha_decay={1} start_decay={2} \n".format(
-                self.decay, self.alpha_decay, self.start_decay
+            rep_str+="decay: decay={0} alpha_decay={1} start_decay={2} decay_type={3}\n".format(
+                self.decay, self.alpha_decay, self.start_decay, self.decay_type
             )
         else:
-            rep_str+="decay: decay={0}".format(
+            rep_str+="decay: decay={0}\n".format(
               self.decay
             )
 
@@ -153,22 +154,25 @@ class Adam():
                 xnorm_diff = 1
 
 
+
             # step decay: reduce the learning rate by a constant (e.g. 0.5) whenever the xnorm < eps
-            if self.decay and xnorm_diff < self.start_decay:
+            if self.decay and xnorm_diff < self.start_decay and self.decay_type == "step":
                 alpha *= self.alpha_decay
                 self.beta1 *= self.alpha_decay
                 self.beta2 *= self.alpha_decay
                 self.start_decay *= 5e-1
 
-            # #start decay at iteration i
-            # if xnorm_diff < self.start_decay and self.it_succesfull_stop_condition < 0:
-            #     self.it_succesfull_stop_condition = i
-            #
-            # #update learning rate
-            # alpha=self.alpha0
-            # if self.decay and self.it_succesfull_stop_condition > -1:
-            #         #alpha /= np.sqrt(i  - self.it_succesfull_stop_condition)
-            #         alpha /= (1 + (i - self.it_succesfull_stop_condition) / self.alpha_decay)
+            #update learning rate
+            if self.decay and self.it_succesfull_stop_condition > -1 and self.decay_type != "step":
+
+                    if self.decay_type == "sqrt":
+                        alpha = self.alpha0 / np.sqrt(i - self.it_succesfull_stop_condition)
+                    else:
+                        alpha = self.alpha0 / (1 + (i - self.it_succesfull_stop_condition) / self.alpha_decay)
+
+            #start decay at iteration i
+            if self.decay and xnorm_diff < self.start_decay and self.it_succesfull_stop_condition < 0:
+                self.it_succesfull_stop_condition = i
 
 
             #print out progress
