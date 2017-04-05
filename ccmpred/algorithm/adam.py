@@ -57,10 +57,13 @@ class Adam():
 
 
     def __repr__(self):
-        return "Adam stochastic optimization (decay={0} learning_rate={1} beta1={2} beta2={3} noise={4} fix_v={5}) \n" \
-               "convergence criteria: maxit={6} early_stopping={7} epsilon={8} prev={9}".format(
-            self.decay, self.alpha0, self.beta1, self.beta2, self.noise, self.fix_v,
-            self.maxit, self.early_stopping, self.epsilon, self.convergence_prev)
+        return "Adam stochastic optimization ( beta1={0} beta2={1} learning_rate={2} noise={3} fix_v={4}) \n" \
+                "decay: decay={5} alpha_decay={6} start_decay={7} \n" \
+                "convergence criteria: maxit={8} early_stopping={9} epsilon={10} prev={11}".format(
+            self.beta1, self.beta2, self.alpha0, self.noise, self.fix_v,
+            self.decay, self.alpha_decay, self.start_decay,
+            self.maxit, self.early_stopping, self.epsilon, self.convergence_prev
+        )
 
 
     def minimize(self, objfun, x, plotfile):
@@ -123,6 +126,7 @@ class Adam():
             gnorm = np.sqrt(gnorm_single + gnorm_pair)
             max_g = np.max(np.abs(g))
 
+
             if i > self.convergence_prev:
                 xnorm_prev = self.progress.optimization_log['||x||'][-self.convergence_prev]
                 xnorm_diff = np.abs((xnorm_prev - xnorm)) / xnorm_prev
@@ -169,8 +173,10 @@ class Adam():
                     if nr_pairs_qij_error == 0:
                         ret = {
                             "code": 0,
-                            "message": "Stopping condition (xnorm diff < {0}) successfull and q_ij ok.".format(self.epsilon)
+                            "message": "Stopping condition (xnorm diff < {0}).".format(self.epsilon)
                         }
+                        if self.qij_condition:
+                            ret['message'] += " and all q_ijab > 0."
                         return fx, x, ret
                     else:
                         print("Stopping condition (xnorm diff < {0}) successfull but {1} pair(s) with q_ijab < 0".format(
