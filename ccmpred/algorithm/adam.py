@@ -57,13 +57,32 @@ class Adam():
 
 
     def __repr__(self):
-        return "Adam stochastic optimization ( beta1={0} beta2={1} learning_rate={2} noise={3} fix_v={4}) \n" \
-                "decay: decay={5} alpha_decay={6} start_decay={7} \n" \
-                "convergence criteria: maxit={8} early_stopping={9} epsilon={10} prev={11}".format(
-            self.beta1, self.beta2, self.alpha0, self.noise, self.fix_v,
-            self.decay, self.alpha_decay, self.start_decay,
-            self.maxit, self.early_stopping, self.epsilon, self.convergence_prev
+
+        rep_str="Adam stochastic optimization ( beta1={0} beta2={1} learning_rate={2} noise={3} fix_v={4}) \n ".format(
+            self.beta1, self.beta2, self.alpha0, self.noise, self.fix_v
         )
+
+        if self.decay:
+            rep_str+="decay: decay={0} alpha_decay={1} start_decay={2} \n".format(
+                self.decay, self.alpha_decay, self.start_decay
+            )
+        else:
+            rep_str+="decay: decay={0}".format(
+              self.decay
+            )
+
+        if self.early_stopping:
+            rep_str+="convergence criteria: maxit={0} early_stopping={1} epsilon={2} prev={3}".format(
+                self.maxit, self.early_stopping, self.epsilon, self.convergence_prev
+            )
+        else:
+            rep_str+="convergence criteria: maxit={0} early_stopping={1}".format(
+                self.maxit, self.early_stopping
+            )
+
+        return rep_str
+
+
 
 
     def minimize(self, objfun, x, plotfile):
