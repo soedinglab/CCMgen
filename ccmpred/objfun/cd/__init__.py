@@ -206,7 +206,7 @@ class ContrastiveDivergence():
         )
 
         str += "\nSampling {0} sequences ({1} x N and {2} x L)  with {3} Gibbs steps.".format(
-            (self.n_samples_msa * self.nrow), np.round(self.n_samples_msa, decimals=3),  np.round((self.n_samples_msa * self.nrow) / self.ncol, decimals=3), self.gibbs_steps
+            (self.n_samples_msa * self.nrow), np.round(self.n_samples_msa, decimals=3),  np.round((self.n_samples_msa * self.nrow) / float(self.ncol), decimals=3), self.gibbs_steps
         )
 
         return str
