@@ -32,7 +32,7 @@ class ContrastiveDivergence():
 
 
         #perform x steps of sampling (all variables)
-        self.gibbs_steps = gibbs_steps
+        self.gibbs_steps = np.max([gibbs_steps, 1])
 
         #do not initialise markov chain from input MSA at each iteration
         self.persistent = persistent
@@ -64,45 +64,33 @@ class ContrastiveDivergence():
 
 
         #number of sequences used for sampling: multiples of MSA and at least 1xMSA
-        self.min_nseq_factorL = min_nseq_factorL
+        self.min_nseq_factorL = np.max([min_nseq_factorL, 1])
         self.n_samples_msa = 1
 
 
         # init sample alignment as input MSA
-        self.msa_sampled_weights = np.array([1] * self.nrow * self.n_samples_msa)
         self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL)
-
+        self.msa_sampled_weights = ccmpred.weighting.weights_simple(self.msa_sampled)
 
     def init_sample_alignment(self, min_nseq_factorL):
 
 
         # nr of sequences = min_nseq_factorL * L
-        self.min_nseq_factorL = min_nseq_factorL
+        self.min_nseq_factorL = np.max([min_nseq_factorL, 1])
         n_sequence_min_nseq_factorL =  self.min_nseq_factorL * self.ncol
 
         #Use multiples of input MSA: at least 1xMSA
         self.n_samples_msa = int(np.ceil( n_sequence_min_nseq_factorL / float(self.nrow)))
 
-
-
         if self.average_sample_counts:
             return self.msa.copy()
-        elif self.persistent:
-
-            global_aa_freq = ccmpred.pseudocounts.calculate_global_aa_freq(self.msa, self.weights)
-
-            #gap = 20; do not generate gaps!
-            n_sequences = self.n_samples_msa * self.nrow
-            msa_sampled = np.array([[np.random.choice(np.arange(0, 20), p=global_aa_freq) for l in range(self.ncol)] for n in range(n_sequences)], dtype='uint8')
-
-            #do not use weights as samples are iid in contrast to input MSA
-            self.msa_sampled_weights = np.array([1] * n_sequences, dtype="float64")
-            return msa_sampled.copy()
         else:
             seq_id = range(self.nrow) * self.n_samples_msa
             msa_sampled = self.msa[seq_id]
-            self.msa_sampled_weights = ccmpred.weighting.weights_simple(msa_sampled)
+
             return msa_sampled.copy()
+
+
 
 
 
@@ -144,14 +132,12 @@ class ContrastiveDivergence():
     def evaluate(self, x):
 
 
-        #reset the msa for sampling
+        #reset the msa for sampling in caes of CD
         if not self.persistent:
             self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL)
 
         if self.pll:
             self.msa_sampled = self.sample_position_in_sequences(x)
-        elif self.persistent:
-            self.msa_sampled = self.gibbs_sample_sequences_nogaps(x)
         else:
             #Gibbs Sampling of sequences (each position of each sequence will be sampled this often: self.gibbs_steps)
             self.msa_sampled = self.gibbs_sample_sequences(x)
