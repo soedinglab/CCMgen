@@ -16,6 +16,21 @@ def get_neff(msa):
     return neff
 
 
+def calculate_global_aa_freq(msa, weights):
+
+    single_counts = ccmpred.counts.single_counts(msa, weights)
+    neff = np.sum(weights) if weights is not None else msa.shape[0]
+
+    #normalized with gaps
+    single_freq = single_counts / neff
+
+    #single freq counts normalized without gaps
+    single_freq = degap(single_freq, True)
+
+
+    return np.mean(single_freq[:, :20], axis=0)[np.newaxis, :][0]
+
+
 def calculate_frequencies_vanilla(msa):
 
     print("Calculating AA Frequencies as in C++ CCMpred vanilla: 1 pseudocount is added to single_counts")
