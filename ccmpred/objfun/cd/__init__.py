@@ -65,8 +65,7 @@ class ContrastiveDivergence():
 
         #number of sequences used for sampling: multiples of MSA and at least 1xMSA
         self.min_nseq_factorL = min_nseq_factorL
-        n_sequence_min_nseq_factorL =  self.min_nseq_factorL * self.ncol
-        self.n_samples_msa = np.ceil( n_sequence_min_nseq_factorL / float(self.nrow))
+        self.n_samples_msa = 1
 
 
         # init sample alignment as input MSA
@@ -82,7 +81,7 @@ class ContrastiveDivergence():
         n_sequence_min_nseq_factorL =  self.min_nseq_factorL * self.ncol
 
         #Use multiples of input MSA: at least 1xMSA
-        self.n_samples_msa = np.ceil( n_sequence_min_nseq_factorL / float(self.nrow))
+        self.n_samples_msa = int(np.ceil( n_sequence_min_nseq_factorL / float(self.nrow)))
 
 
 
@@ -220,7 +219,7 @@ class ContrastiveDivergence():
         )
 
         str += "\nSampling {0} sequences ({1} x N and {2} x L)  with {3} Gibbs steps.".format(
-            self.n_sequences, np.round(self.n_samples_msa, decimals=3),  np.round(self.n_sequences / self.ncol, decimals=3), self.gibbs_steps
+            (self.n_samples_msa * self.nrow), np.round(self.n_samples_msa, decimals=3),  np.round((self.n_samples_msa * self.nrow) / self.ncol, decimals=3), self.gibbs_steps
         )
 
         return str
