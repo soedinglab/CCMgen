@@ -116,10 +116,8 @@ void gibbs_sample_sequences(
 
 
 		#pragma omp for
-		for (k = 0; k < n_samples; k++) {
-
-			for (int s=0; s < steps; s++){
-
+		for (int s=0; s < steps; s++){
+			for (k = 0; k < n_samples; k++) {
 				shuffle(sequence_position_vector, ncol);
 
 				for (i=0; i < ncol; i++){
@@ -136,3 +134,41 @@ void gibbs_sample_sequences(
 
 }
 
+
+void gibbs_sample_sequences_nogaps(
+	unsigned char *seq,
+	const flt *const x,
+	const int steps,
+	const unsigned long n_samples,
+	const int ncol
+){
+
+	seed_rng();
+
+	#pragma omp parallel
+	{
+		int i;
+		unsigned long k;
+		flt *pcondcurr = fl_malloc(N_ALPHA);
+
+		//int array with elements 1..L
+		unsigned int sequence_position_vector[ncol];
+		for (unsigned int p=0; p < ncol; p++) sequence_position_vector[p] = p;
+
+
+		#pragma omp for
+		for (int s=0; s < steps; s++){
+			for (k = 0; k < n_samples; k++) {
+				shuffle(sequence_position_vector, ncol);
+
+				for (i=0; i < ncol; i++){
+					compute_conditional_probs(sequence_position_vector[i], pcondcurr, x, &seq[k * ncol], ncol);
+					seq[k * ncol + sequence_position_vector[i]] = pick_random_weighted(pcondcurr, N_ALPHA - 1);
+
+				}
+			}
+		}
+		fl_free(pcondcurr);
+	}
+
+}
