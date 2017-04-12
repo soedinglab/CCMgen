@@ -54,12 +54,13 @@ class Adam():
         self.qij_condition = qij_condition
 
         self.progress = pr.Progress(plotfile=None,
-                                    xnorm_diff=[], max_g=[], alpha=[], beta1=[], beta2=[])
+                                    xnorm_diff=[], max_g=[], alpha=[],
+                                    error1=[], error2=[], error3=[])
 
 
     def __repr__(self):
 
-        rep_str="Adam stochastic optimization ( beta1={0} beta2={1} learning_rate={2} noise={3} fix_v={4}) \n ".format(
+        rep_str="Adam stochastic optimization ( beta1={0} beta2={1} alpha0={2} noise={3} fix_v={4}) \n ".format(
             self.beta1, self.beta2, self.alpha0, self.noise, self.fix_v
         )
 
@@ -90,9 +91,10 @@ class Adam():
 
         subtitle = "L={0} N={1} Neff={2} <br>".format(objfun.ncol, objfun.nrow, np.round(objfun.neff, decimals=3))
         subtitle += self.__repr__().replace("\n", "<br>")
+        subtitle += objfun.__repr__().replace("\n", "<br>")
         self.progress.plot_options(
             plotfile,
-            [ '||x||', '||x_single||', '||x_pair||','||g||', '||g_single||', '||g_pair||','beta1','beta2', 'max_g', 'alpha'],
+            [ '||x||', '||x_single||', '||x_pair||','||g||', '||g_single||', '||g_pair||', 'error1', 'error2', 'error3', 'max_g', 'alpha'],
             subtitle
         )
         self.progress.begin_process()
@@ -101,6 +103,7 @@ class Adam():
         #initialize the moment vectors
         first_moment = np.zeros(objfun.nvar)
         second_moment = np.zeros(objfun.nvar)
+        x_moment = np.zeros(objfun.nvar)
 
         ret = {
             "code": 2,
@@ -109,21 +112,27 @@ class Adam():
 
         fx = -1
         alpha=self.alpha0
+        beta1=self.beta1
+        beta2=self.beta2
         for i in range(self.maxit):
 
 
             fx, g = objfun.evaluate(x)
 
             #update moment vectors
-            first_moment    = self.beta1 * first_moment + (1-self.beta1) * (g)
-            second_moment   = self.beta2 * second_moment + (1-self.beta2) * (g*g)
+            first_moment    = beta1 * first_moment + (1-beta1) * (g)
+            second_moment   = beta2 * second_moment + (1-beta2) * (g*g)
+            x_moment        = beta1 * x_moment + (1-beta1) * (x)
 
             #compute bias corrected moments
-            first_moment_corrected  = first_moment / (1 - np.power(self.beta1, i+1))
-            second_moment_corrected = second_moment / (1 - np.power(self.beta2, i+1))
+            first_moment_corrected  = first_moment / (1 - np.power(beta1, i+1))
+            second_moment_corrected = second_moment / (1 - np.power(beta2, i+1))
+            x_moment_corrected = x_moment / (1 - np.power(beta1, i+1))
 
             first_moment_corrected_single, first_moment_corrected_pair = objfun.linear_to_structured(first_moment_corrected, objfun.ncol)
             second_moment_corrected_single, second_moment_corrected_pair = objfun.linear_to_structured(second_moment_corrected, objfun.ncol)
+            x_moment_corrected_single, x_moment_corrected_pair = objfun.linear_to_structured(x_moment_corrected, objfun.ncol)
+
 
             #use same scaling of gradients for each group!, e.g v_i and w_ij
             if self.group_alpha:
@@ -151,22 +160,24 @@ class Adam():
                 xnorm_prev = self.progress.optimization_log['||x||'][-self.convergence_prev]
                 xnorm_diff = np.abs((xnorm_prev - xnorm)) / xnorm_prev
             else:
-                xnorm_diff = 1
+                xnorm_diff = np.nan
 
-
-
-            # step decay: reduce the learning rate by a constant (e.g. 0.5) whenever the xnorm < eps
-            if self.decay and xnorm_diff < self.start_decay and self.decay_type == "step":
-                alpha *= self.alpha_decay
-                self.beta1 *= self.alpha_decay
-                self.beta2 *= self.alpha_decay
-                self.start_decay *= 5e-1
 
             #update learning rate
-            if self.decay and self.it_succesfull_stop_condition > -1 and self.decay_type != "step":
-
-                    if self.decay_type == "sqrt":
+            if self.decay and self.it_succesfull_stop_condition > -1:
+                    if self.decay_type == "power":
+                        alpha *= self.alpha_decay
+                        #self.beta1 *= self.alpha_decay
+                        #self.beta2 *= self.alpha_decay
+                    elif self.decay_type == "step":
+                        alpha *= self.alpha_decay
+                        self.start_decay *= 5e-1
+                        # self.beta1 *= self.alpha_decay
+                        # self.beta2 *= self.alpha_decay
+                    elif self.decay_type == "sqrt":
                         alpha = self.alpha0 / np.sqrt(i - self.it_succesfull_stop_condition)
+                        #beta1 = self.beta1  * np.power(0.99, (i-self.it_succesfull_stop_condition))
+                        #beta2 = self.beta2  * np.power(0.99, (i-self.it_succesfull_stop_condition))
                     else:
                         alpha = self.alpha0 / (1 + (i - self.it_succesfull_stop_condition) / self.alpha_decay)
 
@@ -174,46 +185,40 @@ class Adam():
             if self.decay and xnorm_diff < self.start_decay and self.it_succesfull_stop_condition < 0:
                 self.it_succesfull_stop_condition = i
 
+            _, error1, error2, error3 = ccmpred.model_probabilities.compute_qij(
+                objfun.freqs_pair, x_pair, objfun.regularization.lambda_pair, objfun.Nij, verbose=False
+            )
 
             #print out progress
             self.progress.log_progress(i + 1,
                                        xnorm, np.sqrt(xnorm_single), np.sqrt(xnorm_pair),
                                        gnorm, np.sqrt(gnorm_single), np.sqrt(gnorm_pair),
-                                       xnorm_diff=xnorm_diff, max_g=max_g,
-                                       beta1=self.beta1,beta2=self.beta2, alpha=alpha)
+                                       xnorm_diff=xnorm_diff, max_g=max_g, alpha=alpha,
+                                       error1=error1, error2=error2, error3=error3)
+
+
+
 
             #stop condition
             if self.early_stopping:
                 if xnorm_diff < self.epsilon:
 
                     #compute q_ij
-                    nr_pairs_qij_error = 0
-                    if self.qij_condition:
-                        _, x_pair_centered = ccmpred.sanity_check.normalize_potentials(x_single, x_pair)
-                        model_prob_flat, nr_pairs_qij_error = ccmpred.model_probabilities.compute_qij(
-                            objfun.freqs_pair, x_pair_centered, objfun.regularization.lambda_pair, objfun.Nij, verbose=False
-                        )
-                    if nr_pairs_qij_error == 0:
-                        ret = {
-                            "code": 0,
-                            "message": "Stopping condition (xnorm diff < {0}).".format(self.epsilon)
-                        }
-                        if self.qij_condition:
-                            ret['message'] += " and all q_ijab > 0."
-                        return fx, x, ret
-                    else:
-                        print("Stopping condition (xnorm diff < {0}) successfull but {1} pair(s) with q_ijab < 0".format(
-                            self.epsilon, nr_pairs_qij_error)
-                        )
+                    # _, x_pair_centered = ccmpred.sanity_check.normalize_potentials(x_single, x_pair)
+                    _, error1, error2, error3 = ccmpred.model_probabilities.compute_qij(
+                        objfun.freqs_pair, x_pair, objfun.regularization.lambda_pair, objfun.Nij, verbose=True
+                    )
+
+                    print("Stopping condition (xnorm diff < {0}) successfull.".format(
+                           self.epsilon)
+                    )
 
 
             #update parameters
             if not self.fix_v:
-                x_single -= alpha * step_single
-            x_pair -= alpha * step_pair
+                x_single =x_moment_corrected_single - alpha * step_single
+            x_pair = x_moment_corrected_pair - alpha * step_pair
 
             x=objfun.structured_to_linear(x_single, x_pair)
-            #x -= alpha * first_moment_corrected / ( np.sqrt(second_moment_corrected) + self.noise)
-
 
         return fx, x, ret
