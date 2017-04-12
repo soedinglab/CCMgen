@@ -116,6 +116,8 @@ def parse_args():
     grp_out.add_argument("-b", "--write-msgpack",           dest="outmsgpackfile", default=None, help="Write potentials to MessagePack file")
     grp_out.add_argument("-m", "--write-modelprob-msgpack", dest="outmodelprobmsgpackfile", default=None, help="Write model probabilities as MessagePack file")
     grp_out.add_argument("--only_model_prob",               dest="only_model_prob", action="store_true", default=False, help="Only compute model probabilties and do not optimize (-i must be specified!).")
+    grp_out.add_argument("--no_centering_potentials",       dest="centering_potentials", action="store_false", default=True, help="Ensure that sum(wij)=0 by subtracting mean.")
+
 
     grp_of = parser.add_argument_group("Objective Functions")
     grp_of.add_argument("--ofn-pll",             dest="objfun", action="store_const", const="pll", default="pll", help="Use pseudo-log-likelihood (default)")
@@ -267,6 +269,17 @@ def main():
             sys.exit(0)
 
 
+    if opt.objfun == "cd" and not opt.initrawfile:
+        f = OBJ_FUNC["pll"](opt, msa, freqs, weights, raw_init, regularization)
+        x0 = f.x0
+        alg = ALGORITHMS["conjugate_gradients"](opt)
+        alg.set_epsilon(1e-2)
+        alg.set_maxit(100)
+        print("\n Initialize pair potentials with from pLL potentials after some iterations. \n")
+        fx, x, algret = alg.minimize(f, x0, None)
+        res = f.finalize(x, {})
+        raw_init.x_pair = res.x_pair
+
     #initialise objective function
     f = OBJ_FUNC[opt.objfun](opt, msa, freqs, weights, raw_init, regularization)
     x0 = f.x0
@@ -287,7 +300,7 @@ def main():
         plotfile=os.path.dirname(opt.matfile) + "/" + protein + ".opt_progress.html"
 
 
-    print("Will optimize {0} {1} variables wrt {2} and {3}".format(x0.size, x0.dtype, f, f.regularization))
+    print("\n Will optimize {0} {1} variables wrt {2} and {3}".format(x0.size, x0.dtype, f, f.regularization))
     print("Optimizer: {0}".format(alg))
     fx, x, algret = alg.minimize(f, x0, plotfile)
 
@@ -299,14 +312,15 @@ def main():
     res = f.finalize(x, meta)
 
 
-    #perform checks on potentials:
-    check_x_single  = ccmpred.sanity_check.check_single_potentials(res.x_single, verbose=0)
-    check_x_pair  = ccmpred.sanity_check.check_pair_potentials(res.x_pair, verbose=0)
+    if opt.centering_potentials:
+        #perform checks on potentials:
+        check_x_single  = ccmpred.sanity_check.check_single_potentials(res.x_single, verbose=0)
+        check_x_pair  = ccmpred.sanity_check.check_pair_potentials(res.x_pair, verbose=0)
 
-    #enforce sum(wij)=0 and sum(v_i)=0
-    if not check_x_single or not check_x_pair:
-        print("Enforce sum(v_i)=0 and sum(w_ij)=0 by centering parameters at zero.")
-        res.x_single, res.x_pair = ccmpred.sanity_check.normalize_potentials(res.x_single, res.x_pair)
+        #enforce sum(wij)=0 and sum(v_i)=0
+        if not check_x_single or not check_x_pair:
+            print("Enforce sum(v_i)=0 and sum(w_ij)=0 by centering potentials at zero.")
+            res.x_single, res.x_pair = ccmpred.sanity_check.centering_potentials(res.x_single, res.x_pair)
 
 
 

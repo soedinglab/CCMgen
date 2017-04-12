@@ -33,7 +33,7 @@ def check_pair_potentials(x_pair, verbose=0):
     return 1
 
 
-def normalize_potentials( x_single, x_pair):
+def centering_potentials( x_single, x_pair):
     """
 
     Enforce gauge choice that
@@ -42,7 +42,6 @@ def normalize_potentials( x_single, x_pair):
     :param x_pair:
     :return:
     """
-
 
     means = np.mean(np.mean(x_pair[:, :, :20, :20], axis=2), axis=2)
     x_pair[:, :, :20, :20] -=  means[:, :, np.newaxis, np.newaxis]
