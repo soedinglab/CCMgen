@@ -284,6 +284,7 @@ def main():
     plotfile=None
     if(opt.plot_opt_progress):
         plotfile=os.path.dirname(opt.matfile) + "/" + protein + ".opt_progress.html"
+        print("The optimization log file will be written to {0}".format(plotfile))
 
 
     print("\n Will optimize {0} {1} variables wrt {2} and {3}".format(x0.size, x0.dtype, f, f.regularization))
