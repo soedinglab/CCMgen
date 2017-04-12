@@ -35,7 +35,7 @@ def stream_or_file(mode='r'):
 def compute_qij(freqs_pair, x_pair, lambda_pair, Nij, verbose=0):
 
 
-    error = 0
+    error1, error2, error3 = [0,0,0]
 
     L = Nij.shape[0]
 
@@ -53,12 +53,13 @@ def compute_qij(freqs_pair, x_pair, lambda_pair, Nij, verbose=0):
     model_prob = np.zeros((L, L, 400))
     model_prob[indices_triu] = pair_freq[indices_triu] - (x_pair_nogaps[indices_triu] * lambda_pair / Nij[:,:, np.newaxis][indices_triu])
 
-    if any(model_prob[indices_triu].sum(1) < 0.999):
-        error += 1
-        nr_pairs_error = sum(model_prob[indices_triu].sum(1) < 0.999)
+    threshold=0.99
+    if any(model_prob[indices_triu].sum(1) < threshold):
+        nr_pairs_error = sum(model_prob[indices_triu].sum(1) < threshold)
+        error1 += nr_pairs_error
         if verbose:
-            print("Warning:  {0}/{1} pairs have sum(qij) < 0.999. Minimal sum(q_ij): {2}".format(nr_pairs_error, len(indices_triu[0]), np.min(model_prob[indices_triu].sum(1))))
-            indices = np.where(model_prob[indices_triu].sum(1) < 0.999)[0]
+            print("Warning:  {0}/{1} pairs have sum(qij) < {2}. Minimal sum(q_ij): {3}".format(nr_pairs_error, len(indices_triu[0]), threshold, np.min(model_prob[indices_triu].sum(1))))
+            indices = np.where(model_prob[indices_triu].sum(1) < threshold)[0]
             for ind in indices[:10]:
                 i = indices_triu[0][ind]
                 j = indices_triu[1][ind]
@@ -66,12 +67,13 @@ def compute_qij(freqs_pair, x_pair, lambda_pair, Nij, verbose=0):
                     i, j, min(model_prob[i,j]), sum(model_prob[i,j]), sum(pair_freq[i,j].flatten()), sum(x_pair_nogaps[i,j].flatten()), Nij[i,j])
                 )
 
-    if any(model_prob[indices_triu].sum(1) > 1.001):
-        error += 1
-        nr_pairs_error = sum(model_prob[indices_triu].sum(1) > 1.001)
+    threshold=1.01
+    if any(model_prob[indices_triu].sum(1) > threshold):
+        nr_pairs_error = sum(model_prob[indices_triu].sum(1) > threshold)
+        error2 += nr_pairs_error
         if verbose:
-            print("Warning:  {0}/{1} pairs have sum(qij) > 1.001. Max sum(q_ij): {2}".format(nr_pairs_error, len(indices_triu[0]), np.max(model_prob[indices_triu].sum(1))))
-            indices = np.where(model_prob[indices_triu].sum(1) > 1.001)[0]
+            print("Warning:  {0}/{1} pairs have sum(qij) > {2}. Max sum(q_ij): {3}".format(nr_pairs_error, len(indices_triu[0]), threshold, np.max(model_prob[indices_triu].sum(1))))
+            indices = np.where(model_prob[indices_triu].sum(1) > threshold)[0]
             for ind in indices[:10]:
                 i = indices_triu[0][ind]
                 j = indices_triu[1][ind]
@@ -81,7 +83,7 @@ def compute_qij(freqs_pair, x_pair, lambda_pair, Nij, verbose=0):
 
     if any(model_prob[indices_triu].min(1) < 0):
         nr_pairs_error = sum(model_prob[indices_triu].min(1) < 0)
-        error += nr_pairs_error
+        error3 += nr_pairs_error
         if verbose:
             print("Warning:  {0}/{1} pairs have min(q_ij) < 0. Minimal min(q_ij): {2}".format(nr_pairs_error, len(indices_triu[0]), np.min(model_prob[indices_triu].min(1))))
             indices = np.where(model_prob[indices_triu].min(1) < 0)[0]
@@ -102,7 +104,7 @@ def compute_qij(freqs_pair, x_pair, lambda_pair, Nij, verbose=0):
         # model_prob_flat[np.isnan(model_prob_flat)] = 0
 
 
-    return model_prob_flat, error
+    return model_prob_flat, error1, error2, error3
 
 
 @stream_or_file('wb')
@@ -132,7 +134,9 @@ def write_msgpack(outmsgpackfile, res, weights, msa, freqs, lambda_pair, verbose
     out['N_ij'] = Nij[np.tril_indices(res.ncol, k=-1)].tolist() #rowwise
 
     #compute q_ij
-    model_prob_flat, error = compute_qij(freqs_pair, res.x_pair, lambda_pair, Nij, verbose)
+    model_prob_flat, error1, error2, error3 = compute_qij(freqs_pair, res.x_pair, lambda_pair, Nij, verbose)
+
+    print error1, error2, error3
 
     out['q_ij'] = model_prob_flat.tolist()
     outmsgpackfile.write(msgpack.packb(out))
