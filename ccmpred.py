@@ -140,9 +140,9 @@ def parse_args():
     grp_als.add_argument("--ad-group_alpha",    dest="group_alpha",     action="store_true", default=False, help="Use min learning rate for each group v_i and w_ij. [default: %(default)s]")
     grp_als.add_argument("--alpha0",            dest="alpha0",          default=1e-3,       type=float,     help="Set initial learning rate. [default: %(default)s]")
     grp_als.add_argument("--decay",             dest="decay",           action="store_true", default=False, help="Use decaying learnign rate. Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
-    grp_als.add_argument("--start_decay",       dest="start_decay",     default=1e-4,       type=float,     help="Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
-    grp_als.add_argument("--alpha_decay",       dest="alpha_decay",     default=1e1,        type=float,     help="Set rate of decay for learning rate when --decay is on. [default: %(default)s]")
-    grp_als.add_argument("--decay-type",        dest="decay_type",      default="step",     type=str,       help="Decay type. One of: step, sqrt, exp. [default: %(default)s]")
+    grp_als.add_argument("--start-decay",       dest="start_decay",     default=1e-4,       type=float,     help="Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
+    grp_als.add_argument("--alpha-decay",       dest="alpha_decay",     default=1e1,        type=float,     help="Set rate of decay for learning rate when --decay is on. [default: %(default)s]")
+    grp_als.add_argument("--decay-type",        dest="decay_type",      default="step",     type=str,       choices=['step', 'sqrt', 'power', 'exp'], help="Decay type. One of: step, sqrt, exp, power. [default: %(default)s]")
 
 
     grp_con = parser.add_argument_group("Convergence Settings")
@@ -194,9 +194,6 @@ def parse_args():
     if args.only_model_prob and not args.initrawfile:
         parser.error("--only_model_prob is only supported when -i (--init-from-raw) is specified!")
 
-
-    if args.decay and args.decay_type not in ["step", "sqrt", "exp"]:
-        parser.error("--decay-type must be one of: step, sqrt, exp!")
 
     if (args.outmodelprobmsgpackfile and args.objfun != "cd") or args.only_model_prob:
         print("Note: when computing q_ij data: couplings should be computed from full likelihood (e.g. CD)")
@@ -268,17 +265,6 @@ def main():
             ccmpred.model_probabilities.write_msgpack(opt.outmodelprobmsgpackfile, raw_init, weights, msa, freqs, regularization.lambda_pair)
             sys.exit(0)
 
-
-    if opt.objfun == "cd" and not opt.initrawfile:
-        f = OBJ_FUNC["pll"](opt, msa, freqs, weights, raw_init, regularization)
-        x0 = f.x0
-        alg = ALGORITHMS["conjugate_gradients"](opt)
-        alg.set_epsilon(1e-2)
-        alg.set_maxit(100)
-        print("\n Initialize pair potentials with from pLL potentials after some iterations. \n")
-        fx, x, algret = alg.minimize(f, x0, None)
-        res = f.finalize(x, {})
-        raw_init.x_pair = res.x_pair
 
     #initialise objective function
     f = OBJ_FUNC[opt.objfun](opt, msa, freqs, weights, raw_init, regularization)
