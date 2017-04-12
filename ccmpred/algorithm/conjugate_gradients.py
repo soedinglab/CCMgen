@@ -23,111 +23,25 @@ class conjugateGradient():
                "convergence criteria: maxit={4} epsilon={5} convergence_prev={6} ".format(
             self.ftol, self.max_linesearch, self.alpha_mul, self.wolfe, self.maxit, self.epsilon, self.convergence_prev)
 
+    def set_epsilon(self, eps):
+        self.epsilon = eps
 
-    def begin_progress(self):
-
-        header_tokens = [('iter', 8), ('ls', 3), ('fx', 12), ('|x|', 12), ('|g|', 12)]
-        header_tokens += [('|x_single|', 12), ('|x_pair|', 12), ('|g_single|', 12), ('|g_pair|', 12)]
-        header_tokens += [('step', 12)]
-
-
-        headerline = (" ".join("{0:>{1}s}".format(ht, hw) for ht, hw in header_tokens))
-
-        self.optimization_log['||x||'] = []
-        self.optimization_log['||x_single||'] = []
-        self.optimization_log['||x_pair||'] = []
-        self.optimization_log['||g||'] = []
-        self.optimization_log['||g_single||'] = []
-        self.optimization_log['||g_pair||'] = []
-        self.optimization_log['step'] = []
-
-
-
-        if ccmpred.logo.is_tty:
-            print("\x1b[1;77m{0}\x1b[0m".format(headerline))
-        else:
-            print(headerline)
-
-    def progress(self, xnorm, x_single, x_pair, gnorm, g_single, g_pair, fx, n_iter, n_ls, step, plotfile):
-
-        xnorm_single = np.sum(x_single * x_single)
-        xnorm_pair = np.sum(x_pair *x_pair )
-
-        gnorm_single = np.sum(g_single * g_single)
-        gnorm_pair = np.sum(g_pair * g_pair)
-
-        data_tokens = [(n_iter, '8d'), (n_ls, '3d'), (fx, '12g'), (xnorm, '12g'), (gnorm, '12g')]
-        data_tokens += [(xnorm_single, '12g'), (xnorm_pair, '12g'), (gnorm_single, '12g'), (gnorm_pair, '12g')]
-        data_tokens += [(step, '12g')]
-
-        print(" ".join("{0:{1}}".format(dt, df) for dt, df in data_tokens))
-
-        if plotfile is not None:
-            self.optimization_log['||x||'].append(xnorm)
-            self.optimization_log['||x_single||'].append(xnorm_single)
-            self.optimization_log['||x_pair||'].append(xnorm_pair)
-            self.optimization_log['||g||'].append(gnorm)
-            self.optimization_log['||g_single||'].append(gnorm_single)
-            self.optimization_log['||g_pair||'].append(gnorm_pair)
-            self.optimization_log['step'].append(step)
-            self.plot_progress(plotfile)
-
-
-
-        sys.stdout.flush()
-
-
-    def plot_progress(self, plotfile):
-
-
-        title="Optimization Log <br>"
-        title += self.__repr__().replace("\n", "<br>")
-
-
-        data=[]
-        for k,v in self.optimization_log.iteritems():
-            data.append(
-                go.Scatter(
-                    x=range(1, len(v)+1),
-                    y=v,
-                    mode='lines',
-                    name=k
-                )
-            )
-
-        plot = {
-            "data": data,
-            "layout": go.Layout(
-                title = title,
-                xaxis1 = dict(
-                    title="iteration",
-                    exponentformat="e",
-                    showexponent='All'
-                ),
-                yaxis1 = dict(
-                    title="metric",
-                    exponentformat="e",
-                    showexponent='All'
-                ),
-            font = dict(size=18),
-            )
-        }
-
-        plotly_plot(plot, filename=plotfile, auto_open=False)
-
-
+    def set_maxit(self, maxit):
+        self.maxit = maxit
 
 
     def minimize(self, objfun, x, plotfile):
 
-        subtitle = " L={0} N={1} Neff={2}<br>".format(objfun.ncol, objfun.nrow, np.round(objfun.neff, decimals=3))
+
+        subtitle = "L={0} N={1} Neff={2} <br>".format(objfun.ncol, objfun.nrow, np.round(objfun.neff, decimals=3))
         subtitle += self.__repr__().replace("\n", "<br>")
         self.progress.plot_options(
             plotfile,
-            ['fx', '||x||', '||x_single||', '||x_pair||', '||g||', '||g_single||', '||g_pair||', 'max_g', 'step', 'rel_diff_fx'],
+            ['fx',  '||x||', '||x_single||', '||x_pair||','||g||', '||g_single||', '||g_pair||', 'max_g', 'step', 'n_linesearch', 'rel_diff_fx'],
             subtitle
         )
         self.progress.begin_process()
+
 
         #for initialization of linesearch
         fx, g = objfun.evaluate(x)
@@ -146,9 +60,9 @@ class conjugateGradient():
 
         # print out progress
         self.progress.log_progress(0,
-                                   xnorm_single, xnorm_pair,
-                                   gnorm_single, gnorm_pair,
-                                   fx=fx, max_g=max_g, step=0, n_linesearch=0, rel_diff_fx=0)
+                                   np.sqrt(xnorm_single + xnorm_pair), np.sqrt(xnorm_single), np.sqrt(xnorm_pair),
+                                   np.sqrt(gnorm_single + gnorm_pair), np.sqrt(gnorm_single), np.sqrt(gnorm_pair),
+                                   fx=fx, max_g=max_g, step=0, n_linesearch=0, rel_diff_fx=np.nan)
 
 
         gprevnorm = None
@@ -221,9 +135,10 @@ class conjugateGradient():
 
             # print out progress
             self.progress.log_progress(iteration,
-                                       xnorm_single, xnorm_pair,
-                                       gnorm_single, gnorm_pair,
-                                       fx = fx, max_g=max_g,  step=alpha, n_linesearch=n_linesearch, rel_diff_fx=rel_diff_fx)
+                                       np.sqrt(xnorm_single + xnorm_pair), np.sqrt(xnorm_single), np.sqrt(xnorm_pair),
+                                       np.sqrt(gnorm), np.sqrt(gnorm_single), np.sqrt(gnorm_pair),
+                                       fx=fx, max_g=max_g, step=alpha, n_linesearch=n_linesearch, rel_diff_fx=rel_diff_fx)
+
 
 
 
