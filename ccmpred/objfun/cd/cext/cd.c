@@ -164,7 +164,6 @@ void gibbs_sample_sequences_nogaps(
 				for (i=0; i < ncol; i++){
 					compute_conditional_probs(sequence_position_vector[i], pcondcurr, x, &seq[k * ncol], ncol);
 					seq[k * ncol + sequence_position_vector[i]] = pick_random_weighted(pcondcurr, N_ALPHA - 1);
-
 				}
 			}
 		}

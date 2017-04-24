@@ -55,7 +55,7 @@ class Adam():
 
         self.progress = pr.Progress(plotfile=None,
                                     xnorm_diff=[], max_g=[], alpha=[],
-                                    error1=[], error2=[], error3=[])
+                                    qij_less_1=[], qij_greater_1=[], neg_qijab=[])
 
 
     def __repr__(self):
@@ -74,11 +74,11 @@ class Adam():
             )
 
         if self.early_stopping:
-            rep_str+="convergence criteria: maxit={0} early_stopping={1} epsilon={2} prev={3}".format(
+            rep_str+="convergence criteria: maxit={0} early_stopping={1} epsilon={2} prev={3}\n".format(
                 self.maxit, self.early_stopping, self.epsilon, self.convergence_prev
             )
         else:
-            rep_str+="convergence criteria: maxit={0} early_stopping={1}".format(
+            rep_str+="convergence criteria: maxit={0} early_stopping={1}\n".format(
                 self.maxit, self.early_stopping
             )
 
@@ -94,7 +94,10 @@ class Adam():
         subtitle += objfun.__repr__().replace("\n", "<br>")
         self.progress.plot_options(
             plotfile,
-            [ '||x||', '||x_single||', '||x_pair||','||g||', '||g_single||', '||g_pair||', 'error1', 'error2', 'error3', 'max_g', 'alpha'],
+            [ '||x||', '||x_single||', '||x_pair||','||g||', '||g_single||', '||g_pair||',
+              'qij_less_1', 'qij_greater_1', 'neg_qijab',
+              'max_g', 'alpha'
+              ],
             subtitle
         )
         self.progress.begin_process()
@@ -185,33 +188,44 @@ class Adam():
             if self.decay and xnorm_diff < self.start_decay and self.it_succesfull_stop_condition < 0:
                 self.it_succesfull_stop_condition = i
 
-            _, error1, error2, error3 = ccmpred.model_probabilities.compute_qij(
-                objfun.freqs_pair, x_pair, objfun.regularization.lambda_pair, objfun.Nij, verbose=False
-            )
+
+            #compute number of problems with qij
+            problems = ccmpred.model_probabilities.get_nr_problematic_qij(
+                objfun.freqs_pair, x_pair, objfun.regularization.lambda_pair, objfun.Nij, verbose=False)
+
 
             #print out progress
             self.progress.log_progress(i + 1,
                                        xnorm, np.sqrt(xnorm_single), np.sqrt(xnorm_pair),
                                        gnorm, np.sqrt(gnorm_single), np.sqrt(gnorm_pair),
                                        xnorm_diff=xnorm_diff, max_g=max_g, alpha=alpha,
-                                       error1=error1, error2=error2, error3=error3)
-
-
+                                       qij_less_1=problems['qij_less_1'],
+                                       qij_greater_1=problems['qij_greater_1'],
+                                       neg_qijab=problems['neg_qijab'])
 
 
             #stop condition
             if self.early_stopping:
                 if xnorm_diff < self.epsilon:
 
-                    #compute q_ij
-                    # _, x_pair_centered = ccmpred.sanity_check.normalize_potentials(x_single, x_pair)
-                    _, error1, error2, error3 = ccmpred.model_probabilities.compute_qij(
-                        objfun.freqs_pair, x_pair, objfun.regularization.lambda_pair, objfun.Nij, verbose=True
-                    )
 
-                    print("Stopping condition (xnorm diff < {0}) successfull.".format(
-                           self.epsilon)
-                    )
+                    if self.qij_condition:
+                        if problems['qij_less_1'] == 0 and problems['qij_greater_1'] == 0 and problems['neg_qijab'] == 0:
+                            ret = {
+                            "code": 1,
+                            "message": "Stopping condition (xnorm diff < {0}) successfull and correct qij.".format(
+                                self.epsilon)
+                             }
+                            return fx, x, ret
+
+
+                    if not self.qij_condition:
+                        ret = {
+                            "code": 1,
+                            "message": "Stopping condition (xnorm diff < {0}) successfull.".format(
+                               self.epsilon)
+                        }
+                        return fx, x, ret
 
 
             #update parameters
