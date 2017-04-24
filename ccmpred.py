@@ -188,7 +188,7 @@ def parse_args():
 
     args = parser.parse_args()
 
-    if args.cd_alnfile and args.objfun not in (cd.ContrastiveDivergence, treecd.TreeContrastiveDivergence):
+    if args.cd_alnfile and args.objfun != "cd":
         parser.error("--write-cd-alignment is only supported for (tree) contrastive divergence!")
 
     if args.only_model_prob and not args.initrawfile:
@@ -215,8 +215,9 @@ def main():
     weights = opt.weight(msa, opt.ignore_gaps)
 
     protein=os.path.basename(opt.alnfile).split(".")[0]
-    print("Alignment for protein {0} (L={1}) has {2} sequences and Neff(HHsuite-like)={3}".format(protein, msa.shape[1], msa.shape[0], ccmpred.pseudocounts.get_neff(msa)))
-    print("Reweighted sequences to Sum(weights)={0:g} using {1} and ignore_gaps={2})".format(np.sum(weights), opt.weight.__name__, opt.ignore_gaps))
+    print("Alignment for protein {0} (L={1}) has {2} sequences".format(protein, msa.shape[1], msa.shape[0]))
+    print("Number of effective sequences after {0} reweighting (id-threshold={1}, ignore_gaps={2}): {3:g}. Neff(HHsuite-like)={4}".format(opt.weight.__name__,0.8,opt.ignore_gaps, np.sum(weights),ccmpred.pseudocounts.get_neff(msa)))
+
 
 
     if not hasattr(opt, "objfun_args"):
@@ -337,7 +338,7 @@ def main():
         if opt.dev_center_v:
             freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, ccmpred.pseudocounts.constant_pseudocounts, pseudocount_n_single=1, pseudocount_n_pair=1, remove_gaps=True)
 
-        ccmpred.model_probabilities.write_msgpack(opt.outmodelprobmsgpackfile, res, weights, msa, freqs, regularization.lambda_pair, True)
+        ccmpred.model_probabilities.write_msgpack(opt.outmodelprobmsgpackfile, res, weights, freqs, regularization.lambda_pair)
 
     #write contact map and meta data info matfile
     ccmpred.io.contactmatrix.write_matrix(opt.matfile, res, meta, disable_apc=opt.disable_apc)
