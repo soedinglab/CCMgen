@@ -70,7 +70,11 @@ class ContrastiveDivergence():
 
         # init sample alignment as input MSA
         self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL)
-        self.msa_sampled_weights = ccmpred.weighting.weights_simple(self.msa_sampled)
+        if self.persistent:
+            self.msa_sampled_weights = np.ones(self.msa_sampled.shape[0], dtype='float64')
+            #self.msa_sampled_weights = ccmpred.weighting.weights_simple(self.msa_sampled)
+        else:
+            self.msa_sampled_weights = ccmpred.weighting.weights_simple(self.msa_sampled)
 
     def init_sample_alignment(self, min_nseq_factorL):
 
@@ -129,6 +133,65 @@ class ContrastiveDivergence():
 
         return overall_sampled_counts_single, overall_sampled_counts_pair
 
+    def con_prob(self, x_single, x_pair, seq, pos):
+        '''
+        log P(x_i = a| v, w, (x1...L\{xi})) prop_to v_i(a) + w_ij(a, x_j)
+
+        :param x_single:    single emissions
+        :param x_pair:      pair emissions
+        :param seq:         sequence for sampling
+        :param pos:         position for sampling
+        :return:
+        '''
+
+
+        conditional_prob = [0] * 20
+
+        conditional_prob += x_single[pos, :20]
+
+        for j in range(self.ncol):
+            conditional_prob += x_pair[pos, j, :20, seq[j]]
+        conditional_prob -= x_pair[pos, pos, :20, seq[pos]]
+
+        #normalize exponentials
+        max_log_prob = np.max(conditional_prob)
+        conditional_prob = np.exp(conditional_prob - max_log_prob)
+        conditional_prob /= np.sum(conditional_prob)
+
+        return conditional_prob
+
+    def gibbs_sampling_slow(self, msa, x, k_steps):
+        '''
+        Python implementation of Gibbs Sampling just for debugging as
+        it is much slower than the C version
+
+        :param msa:
+        :param x:
+        :param k_steps:
+        :return:
+        '''
+
+        x_single, x_pair = self.linear_to_structured(x, self.ncol)
+
+        for n in range(msa.shape[0]):
+
+            #get all non gapped positions in sequence
+            positions = np.where(msa[n] != 20)[0]
+
+            #permutation vector
+            #np.random.shuffle(positions)
+
+            #choose random positions with replacement
+            positions = np.random.choice(positions, size=k_steps * len(positions), replace=True)
+
+            #sample every non-gapped position of sequence
+            for pos in positions:
+                conditonal_prob = self.con_prob(x_single, x_pair, msa[n], pos)
+                msa[n, pos] = np.random.choice(range(20), p=conditonal_prob) #gap==20
+
+        return msa
+
+
     def evaluate(self, x):
 
 
@@ -141,7 +204,7 @@ class ContrastiveDivergence():
         else:
             #Gibbs Sampling of sequences (each position of each sequence will be sampled this often: self.gibbs_steps)
             self.msa_sampled = self.gibbs_sample_sequences(x)
-
+            #self.msa_sampled = self.gibbs_sampling_slow(self.msa_sampled, x, self.gibbs_steps)
 
         #careful with the weights: sum(sample_counts) should equal sum(msa_counts) !
         sample_counts_single, sample_counts_pair = ccmpred.counts.both_counts(self.msa_sampled, self.msa_sampled_weights)
