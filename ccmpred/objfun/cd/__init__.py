@@ -71,8 +71,8 @@ class ContrastiveDivergence():
         # init sample alignment as input MSA
         self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL)
         if self.persistent:
-            self.msa_sampled_weights = np.ones(self.msa_sampled.shape[0], dtype='float64')
-            #self.msa_sampled_weights = ccmpred.weighting.weights_simple(self.msa_sampled)
+            #self.msa_sampled_weights = np.ones(self.msa_sampled.shape[0], dtype='float64')
+            self.msa_sampled_weights = ccmpred.weighting.weights_simple(self.msa_sampled)
         else:
             self.msa_sampled_weights = ccmpred.weighting.weights_simple(self.msa_sampled)
 
