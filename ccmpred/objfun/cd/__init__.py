@@ -50,6 +50,11 @@ class ContrastiveDivergence():
         self.msa_counts_single = self.freqs_single * self.neff
         self.msa_counts_pair = self.freqs_pair * self.neff
 
+        #intialise sample counts with 0
+        self.sample_counts_single   = np.zeros_like(self.msa_counts_single)
+        self.sample_counts_pair     = np.zeros_like(self.msa_counts_pair)
+
+
         #do not use pseudo counts!
         #self.msa_counts_single, self.msa_counts_pair = ccmpred.counts.both_counts(msa, self.weights)
 
@@ -67,14 +72,9 @@ class ContrastiveDivergence():
         self.min_nseq_factorL = np.max([min_nseq_factorL, 1])
         self.n_samples_msa = 1
 
-
         # init sample alignment as input MSA
         self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL)
-        if self.persistent:
-            #self.msa_sampled_weights = np.ones(self.msa_sampled.shape[0], dtype='float64')
-            self.msa_sampled_weights = ccmpred.weighting.weights_simple(self.msa_sampled)
-        else:
-            self.msa_sampled_weights = ccmpred.weighting.weights_simple(self.msa_sampled)
+        self.msa_sampled_weights = ccmpred.weighting.weights_simple(self.msa_sampled, ignore_gaps=True)
 
     def init_sample_alignment(self, min_nseq_factorL):
 
@@ -90,12 +90,10 @@ class ContrastiveDivergence():
             return self.msa.copy()
         else:
             seq_id = range(self.nrow) * self.n_samples_msa
+            #seq_id = np.random.choice(self.nrow, n_sequence_min_nseq_factorL)
             msa_sampled = self.msa[seq_id]
 
             return msa_sampled.copy()
-
-
-
 
 
     def finalize(self, x, meta):
@@ -191,13 +189,13 @@ class ContrastiveDivergence():
 
         return msa
 
-
     def evaluate(self, x):
 
 
         #reset the msa for sampling in caes of CD
         if not self.persistent:
             self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL)
+            #self.msa_sampled_weights = ccmpred.weighting.weights_simple(self.msa_sampled)
 
         if self.pll:
             self.msa_sampled = self.sample_position_in_sequences(x)
@@ -217,22 +215,27 @@ class ContrastiveDivergence():
 
 
         if self.average_sample_counts:
-            sample_counts_single, sample_counts_pair = self.compute_sample_count_averages(sample_counts_single, sample_counts_pair)
-
+            #sample_counts_single, sample_counts_pair = self.compute_sample_count_averages(sample_counts_single, sample_counts_pair)
+            self.sample_counts_single   += sample_counts_single #0.99 * self.sample_counts_single + 0.01 * sample_counts_single
+            self.sample_counts_pair     += sample_counts_pair#0.99 * self.sample_counts_pair + 0.01 * sample_counts_pair
+        else:
+            self.sample_counts_single   = sample_counts_single #0.99 * self.sample_counts_single + 0.01 * sample_counts_single
+            self.sample_counts_pair     = sample_counts_pair#0.99 * self.sample_counts_pair + 0.01 * sample_counts_pair
 
         # number of non_gapped counts per position(pair)
-        Ni_sampled  = sample_counts_single.sum(1) + 1e-10
-        Nij_sampled = sample_counts_pair.sum(3).sum(2) + 1e-10
+        Ni_sampled  = self.sample_counts_single.sum(1) + 1e-10
+        Nij_sampled = self.sample_counts_pair.sum(3).sum(2) + 1e-10
 
         # normalize counts according to input msa counts
-        sampled_freq_single     = sample_counts_single / Ni_sampled[:, np.newaxis]
-        sampled_freq_pair       = sample_counts_pair / Nij_sampled[:, :, np.newaxis, np.newaxis]
+        sampled_freq_single     = self.sample_counts_single / Ni_sampled[:, np.newaxis]
+        sampled_freq_pair       = self.sample_counts_pair / Nij_sampled[:, :, np.newaxis, np.newaxis]
         sample_counts_single    = sampled_freq_single * self.Ni[:, np.newaxis]
         sample_counts_pair      = sampled_freq_pair * self.Nij[:, :, np.newaxis, np.newaxis]
 
         #actually compute the gradients
         g_single = sample_counts_single - self.msa_counts_single
         g_pair = sample_counts_pair - self.msa_counts_pair
+
 
 
         #sanity check

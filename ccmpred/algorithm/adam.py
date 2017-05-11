@@ -31,13 +31,14 @@ class Adam():
 
     """
 
-    def __init__(self, maxit=100, alpha0=1e-3, alpha_decay=1e1, beta1=0.9, beta2=0.999, noise=1e-8,
+    def __init__(self, maxit=100, alpha0=1e-3, alpha_decay=1e1, beta1=0.9, beta2=0.999, beta3=0.9, noise=1e-8,
                  epsilon=1e-5, convergence_prev=5, early_stopping=False, decay_type="step",
                  decay=False, start_decay=1e-4, fix_v=False, group_alpha=False, qij_condition=False):
         self.maxit = maxit
         self.alpha0 = alpha0
         self.beta1 = beta1
         self.beta2 = beta2
+        self.beta3 = beta3
         self.noise = noise
         self.decay=decay
         self.alpha_decay = alpha_decay
@@ -55,13 +56,13 @@ class Adam():
 
         self.progress = pr.Progress(plotfile=None,
                                     xnorm_diff=[], max_g=[], alpha=[],
-                                    qij_less_1=[], qij_greater_1=[], neg_qijab=[])
+                                    sum_qij_uneq_1=[], neg_qijab=[], sum_wij_uneq_0=[])
 
 
     def __repr__(self):
 
-        rep_str="Adam stochastic optimization ( beta1={0} beta2={1} alpha0={2} noise={3} fix_v={4}) \n ".format(
-            self.beta1, self.beta2, self.alpha0, self.noise, self.fix_v
+        rep_str="Adam stochastic optimization ( beta1={0} beta2={1} beta3={2} alpha0={3} noise={4} fix_v={5}) \n ".format(
+            self.beta1, self.beta2, self.beta3, self.alpha0, self.noise, self.fix_v
         )
 
         if self.decay:
@@ -95,13 +96,12 @@ class Adam():
         self.progress.plot_options(
             plotfile,
             [ '||x||', '||x_single||', '||x_pair||','||g||', '||g_single||', '||g_pair||',
-              'qij_less_1', 'qij_greater_1', 'neg_qijab',
+              'sum_qij_uneq_1', 'neg_qijab', 'sum_wij_uneq_0',
               'max_g', 'alpha'
               ],
             subtitle
         )
         self.progress.begin_process()
-
 
         #initialize the moment vectors
         first_moment = np.zeros(objfun.nvar)
@@ -117,20 +117,25 @@ class Adam():
         alpha=self.alpha0
         beta1=self.beta1
         beta2=self.beta2
+        beta3=self.beta3
+
         for i in range(self.maxit):
 
+            #finish burn-in phase
+            if i == 10:
+                objfun.average_sample_counts = True
 
             fx, g = objfun.evaluate(x)
 
             #update moment vectors
             first_moment    = beta1 * first_moment + (1-beta1) * (g)
             second_moment   = beta2 * second_moment + (1-beta2) * (g*g)
-            x_moment        = beta1 * x_moment + (1-beta1) * (x)
+            x_moment        = beta3 * x_moment + (1-beta3) * (x)
 
             #compute bias corrected moments
             first_moment_corrected  = first_moment / (1 - np.power(beta1, i+1))
             second_moment_corrected = second_moment / (1 - np.power(beta2, i+1))
-            x_moment_corrected = x_moment / (1 - np.power(beta1, i+1))
+            x_moment_corrected = x_moment / (1 - np.power(beta3, i+1))
 
             first_moment_corrected_single, first_moment_corrected_pair = objfun.linear_to_structured(first_moment_corrected, objfun.ncol)
             second_moment_corrected_single, second_moment_corrected_pair = objfun.linear_to_structured(second_moment_corrected, objfun.ncol)
@@ -158,23 +163,33 @@ class Adam():
             gnorm = np.sqrt(gnorm_single + gnorm_pair)
             max_g = np.max(np.abs(g))
 
+            #compute number of problems with qij
+            problems = ccmpred.model_probabilities.get_nr_problematic_qij(
+                objfun.freqs_pair, x_pair, objfun.regularization.lambda_pair, objfun.Nij, epsilon=1e-2, verbose=False)
+
 
             if i > self.convergence_prev:
-                xnorm_prev = self.progress.optimization_log['||x||'][-self.convergence_prev]
-                xnorm_diff = np.abs((xnorm_prev - xnorm)) / xnorm_prev
+                xnorm_prev = self.progress.optimization_log['||x||'][-self.convergence_prev-1]
+                xnorm_diff = np.abs(xnorm_prev - xnorm) / xnorm_prev
+                wij_diff = len(np.unique(
+                    self.progress.optimization_log['sum_wij_uneq_0'][-self.convergence_prev - 1:] + [problems['sum_wij_uneq_0']])) - 1
             else:
                 xnorm_diff = np.nan
-
+                wij_diff = np.nan
 
             #update learning rate
             if self.decay and self.it_succesfull_stop_condition > -1:
                     if self.decay_type == "power":
                         alpha *= self.alpha_decay
-                        #self.beta1 *= self.alpha_decay
-                        #self.beta2 *= self.alpha_decay
+                        #beta1 *= self.alpha_decay
+                        #beta2 *= self.alpha_decay
+                        #beta3 *= self.alpha_decay
+                    elif self.decay_type == "lin":
+                        alpha = self.alpha0  /(i - self.it_succesfull_stop_condition)
                     elif self.decay_type == "step":
                         alpha *= self.alpha_decay
                         self.start_decay *= 5e-1
+                        self.it_succesfull_stop_condition = -1
                         # self.beta1 *= self.alpha_decay
                         # self.beta2 *= self.alpha_decay
                     elif self.decay_type == "sqrt":
@@ -189,37 +204,34 @@ class Adam():
                 self.it_succesfull_stop_condition = i
 
 
-            #compute number of problems with qij
-            problems = ccmpred.model_probabilities.get_nr_problematic_qij(
-                objfun.freqs_pair, x_pair, objfun.regularization.lambda_pair, objfun.Nij, verbose=False)
 
 
-            #print out progress
+
+            #print out (and possiblly plot) progress
             self.progress.log_progress(i + 1,
                                        xnorm, np.sqrt(xnorm_single), np.sqrt(xnorm_pair),
                                        gnorm, np.sqrt(gnorm_single), np.sqrt(gnorm_pair),
                                        xnorm_diff=xnorm_diff, max_g=max_g, alpha=alpha,
-                                       qij_less_1=problems['qij_less_1'],
-                                       qij_greater_1=problems['qij_greater_1'],
-                                       neg_qijab=problems['neg_qijab'])
+                                       sum_qij_uneq_1=problems['sum_qij_uneq_1'],
+                                       neg_qijab=problems['neg_qijab'],
+                                       sum_wij_uneq_0=problems['sum_wij_uneq_0']
+                                       )
 
 
             #stop condition
             if self.early_stopping:
-                if xnorm_diff < self.epsilon:
 
+                if self.qij_condition:
+                    if (problems['sum_qij_uneq_1'] == 0) and (problems['neg_qijab'] == 0) and (wij_diff == 0):
 
-                    if self.qij_condition:
-                        if problems['qij_less_1'] == 0 and problems['qij_greater_1'] == 0 and problems['neg_qijab'] == 0:
-                            ret = {
-                            "code": 1,
-                            "message": "Stopping condition (xnorm diff < {0}) successfull and correct qij.".format(
-                                self.epsilon)
-                             }
-                            return fx, x, ret
+                        ret = {
+                        "code": 1,
+                        "message": "Stopping condition (wij_diff == 0 and sum of qij violations = 0 ) successfull.".format(
+                            self.epsilon)
+                         }
+                        return fx, x, ret
 
-
-                    if not self.qij_condition:
+                elif xnorm_diff < self.epsilon:
                         ret = {
                             "code": 1,
                             "message": "Stopping condition (xnorm diff < {0}) successfull.".format(
@@ -230,8 +242,8 @@ class Adam():
 
             #update parameters
             if not self.fix_v:
-                x_single =x_moment_corrected_single - alpha * step_single
-            x_pair = x_moment_corrected_pair - alpha * step_pair
+                x_single =x_moment_corrected_single - alpha * step_single#x_single - alpha * step_single#
+            x_pair = x_moment_corrected_pair - alpha * step_pair#x_pair - alpha * step_pair#
 
             x=objfun.structured_to_linear(x_single, x_pair)
 

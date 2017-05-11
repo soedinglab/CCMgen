@@ -32,7 +32,7 @@ def stream_or_file(mode='r'):
     return inner
 
 
-def compute_qij(freqs_pair, x_pair, lambda_pair, Nij):
+def compute_qij(freqs_pair, x_pair, lambda_pair, Nij, epsilon, verbose=1):
 
 
     L = Nij.shape[0]
@@ -50,6 +50,8 @@ def compute_qij(freqs_pair, x_pair, lambda_pair, Nij):
     model_prob = np.zeros((L, L, 400))
     model_prob[indices_triu] = pair_freq[indices_triu] - (x_pair_nogaps[indices_triu] * lambda_pair / Nij[:,:, np.newaxis][indices_triu])
 
+    #check whether qij are positive and sum to 1
+    problems = check_qij(model_prob, indices_triu, pair_freq, x_pair_nogaps, Nij, epsilon=epsilon, verbose=verbose)
 
     model_prob_flat = model_prob[indices_triu].flatten()  # row-wise upper triangular indices
 
@@ -60,52 +62,34 @@ def compute_qij(freqs_pair, x_pair, lambda_pair, Nij):
 
     return model_prob_flat
 
-def get_nr_problematic_qij(freqs_pair, x_pair, lambda_pair, Nij, epsilon=0.01, verbose=0):
 
-    L = Nij.shape[0]
-
-    #renormalize pair frequencies without gaps + reshape row-wise
-    pair_freq = ccmpred.pseudocounts.degap(freqs_pair).reshape(L,L,400)
-
-    #couplings without gaps + reshape row-wise
-    x_pair_nogaps = x_pair[:,:,:20,:20].reshape(L,L, 400)
-
-    #indices for i<j row-wise
-    indices_triu = np.triu_indices(L, 1)
-
-    #compute model probabilties for i<j
-    model_prob = np.zeros((L, L, 400))
-    model_prob[indices_triu] = pair_freq[indices_triu] - (x_pair_nogaps[indices_triu] * lambda_pair / Nij[:,:, np.newaxis][indices_triu])
-
-
-
+def check_qij(model_prob, indices_triu, pair_freq, x_pair_nogaps, Nij, epsilon=1e-3, verbose=0):
 
     problems = {}
-    problems['qij_less_1'] = 0
-    problems['qij_greater_1'] = 0
+    problems['sum_qij_uneq_1'] = 0
     problems['neg_qijab'] = 0
+    problems['sum_wij_uneq_0'] = 0
 
-
-    threshold=1-epsilon
-    if any(model_prob[indices_triu].sum(1) < threshold):
-        nr_pairs_error = sum(model_prob[indices_triu].sum(1) < threshold)
-        problems['qij_less_1'] += nr_pairs_error
-        if verbose:
-            print("Warning:  {0}/{1} pairs have sum(qij) < {2}. Minimal sum(q_ij): {3}".format(nr_pairs_error, len(indices_triu[0]), threshold, np.min(model_prob[indices_triu].sum(1))))
-            indices = np.where(model_prob[indices_triu].sum(1) < threshold)[0]
-            for ind in indices[:10]:
-                i = indices_triu[0][ind]
-                j = indices_triu[1][ind]
-                print("e.g: i={0:<2} j={1:<2}: min(qij)={2:<20} sum(qij)={3:<20} sum(pair_freq)={4:<20} sum(x_pair)={5:<20} N_ij={6}".format(
-                    i, j, min(model_prob[i,j]), sum(model_prob[i,j]), sum(pair_freq[i,j].flatten()), sum(x_pair_nogaps[i,j].flatten()), Nij[i,j])
-                )
+    # threshold=1-epsilon
+    # nr_pairs_error = sum(model_prob[indices_triu].sum(1) < threshold)
+    # if nr_pairs_error > 0:
+    #     problems['qij_less_1'] += nr_pairs_error
+    #     if verbose:
+    #         print("Warning:  {0}/{1} pairs have sum(qij) < {2}. Minimal sum(q_ij): {3}".format(nr_pairs_error, len(indices_triu[0]), threshold, np.min(model_prob[indices_triu].sum(1))))
+    #         indices = np.where(model_prob[indices_triu].sum(1) < threshold)[0]
+    #         for ind in indices[:10]:
+    #             i = indices_triu[0][ind]
+    #             j = indices_triu[1][ind]
+    #             print("e.g: i={0:<2} j={1:<2}: min(qij)={2:<20} sum(qij)={3:<20} sum(pair_freq)={4:<20} sum(x_pair)={5:<20} N_ij={6}".format(
+    #                 i, j, min(model_prob[i,j]), sum(model_prob[i,j]), sum(pair_freq[i,j].flatten()), sum(x_pair_nogaps[i,j].flatten()), Nij[i,j])
+    #             )
 
     threshold=1+epsilon
-    if any(model_prob[indices_triu].sum(1) > threshold):
-        nr_pairs_error = sum(model_prob[indices_triu].sum(1) > threshold)
-        problems['qij_greater_1'] += nr_pairs_error
+    nr_pairs_error = sum(np.abs(model_prob[indices_triu].sum(1)) > threshold)
+    if nr_pairs_error  > 0:
+        problems['sum_qij_uneq_1'] += nr_pairs_error
         if verbose:
-            print("Warning:  {0}/{1} pairs have sum(qij) > {2}. Max sum(q_ij): {3}".format(nr_pairs_error, len(indices_triu[0]), threshold, np.max(model_prob[indices_triu].sum(1))))
+            print("Warning:  {0}/{1} pairs have |sum(qij)| > {2}. Max sum(q_ij): {3}".format(nr_pairs_error, len(indices_triu[0]), threshold, np.max(model_prob[indices_triu].sum(1))))
             indices = np.where(model_prob[indices_triu].sum(1) > threshold)[0]
             for ind in indices[:10]:
                 i = indices_triu[0][ind]
@@ -114,8 +98,8 @@ def get_nr_problematic_qij(freqs_pair, x_pair, lambda_pair, Nij, epsilon=0.01, v
                     i, j, min(model_prob[i,j]), sum(model_prob[i,j]), sum(pair_freq[i,j].flatten()), sum(x_pair_nogaps[i,j].flatten()), Nij[i,j])
                 )
 
-    if any(model_prob[indices_triu].min(1) < 0):
-        nr_pairs_error = sum(model_prob[indices_triu].min(1) < 0)
+    nr_pairs_error = sum(model_prob[indices_triu].min(1) < 0)
+    if nr_pairs_error  > 0 :
         problems['neg_qijab'] += nr_pairs_error
         if verbose:
             print("Warning:  {0}/{1} pairs have min(q_ij) < 0. Minimal min(q_ij): {2}".format(nr_pairs_error, len(indices_triu[0]), np.min(model_prob[indices_triu].min(1))))
@@ -127,6 +111,43 @@ def get_nr_problematic_qij(freqs_pair, x_pair, lambda_pair, Nij, epsilon=0.01, v
                     i, j, min(model_prob[i,j]), sum(model_prob[i,j]), sum(pair_freq[i,j].flatten()), sum(x_pair_nogaps[i,j].flatten()), Nij[i,j])
                 )
 
+    threshold=epsilon
+    nr_pairs_error = sum(np.abs(x_pair_nogaps[indices_triu].sum(1)) > threshold)
+    if nr_pairs_error  > 0:
+        problems['sum_wij_uneq_0'] += nr_pairs_error
+        if verbose:
+            print("Warning:  {0}/{1} pairs have |sum(wij)| > {2}. Max |sum(w_ij)|: {3}".format(nr_pairs_error, len(indices_triu[0]), threshold, np.max(np.abs(x_pair_nogaps[indices_triu].sum(1)))))
+            indices = np.where(np.abs(x_pair_nogaps[indices_triu].sum(1)) > threshold)[0]
+            for ind in indices[:10]:
+                i = indices_triu[0][ind]
+                j = indices_triu[1][ind]
+                print("e.g: i={0:<2} j={1:<2}: min(qij)={2:<20} sum(qij)={3:<20} sum(pair_freq)={4:<20} sum(x_pair)={5:<20} N_ij={6}".format(
+                    i, j, min(model_prob[i,j]), sum(model_prob[i,j]), sum(pair_freq[i,j].flatten()), sum(x_pair_nogaps[i,j].flatten()), Nij[i,j])
+                )
+
+    return problems
+
+
+
+def get_nr_problematic_qij(freqs_pair, x_pair, lambda_pair, Nij, epsilon=1e-3, verbose=0):
+
+    L = Nij.shape[0]
+
+    #renormalize pair frequencies without gaps + reshape row-wise
+    pair_freq = ccmpred.pseudocounts.degap(freqs_pair).reshape(L,L,400)
+
+    #couplings without gaps + reshape row-wise
+    x_pair_nogaps = x_pair[:,:,:20,:20].reshape(L,L, 400)
+
+    #indices for i<j row-wise
+    indices_triu = np.triu_indices(L, 1)
+
+    #compute model probabilties for i<j
+    model_prob = np.zeros((L, L, 400))
+    model_prob[indices_triu] = pair_freq[indices_triu] - (x_pair_nogaps[indices_triu] * lambda_pair / Nij[:,:, np.newaxis][indices_triu])
+
+
+    problems = check_qij(model_prob, indices_triu, pair_freq, x_pair_nogaps, Nij, epsilon=epsilon, verbose=verbose)
 
     return problems
 
@@ -158,7 +179,8 @@ def write_msgpack(outmsgpackfile, res, weights, freqs, lambda_pair):
     out['N_ij'] = Nij[np.tril_indices(res.ncol, k=-1)].tolist() #rowwise
 
     #compute q_ij
-    model_prob_flat = compute_qij(freqs_pair, res.x_pair, lambda_pair, Nij)
+    model_prob_flat = compute_qij(freqs_pair, res.x_pair, lambda_pair, Nij, epsilon=1e-2, verbose=1)
 
     out['q_ij'] = model_prob_flat.tolist()
     outmsgpackfile.write(msgpack.packb(out))
+

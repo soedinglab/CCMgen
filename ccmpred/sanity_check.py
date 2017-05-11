@@ -1,29 +1,29 @@
 import numpy as np
 
 
-def check_single_potentials(x_single, verbose=0):
+def check_single_potentials(x_single, verbose=0, epsilon=1e-5):
 
-    if any(np.abs(x_single.sum(1)) > 1e-10):
-        print("Warning: Some single potentials do not sum to 0")
+    nr_pot_sum_not_zero = np.where(np.abs(x_single.sum(1)) > epsilon)[0]
+    if len(nr_pot_sum_not_zero) > 0:
+        print("Warning: {0} single potentials do not sum to 0".format(len(nr_pot_sum_not_zero)))
 
         if verbose:
-            indices = np.where(np.abs(x_single.sum(1)) > 1e-10)[0]
-            for ind in indices[:10]:
+            for ind in nr_pot_sum_not_zero[:10]:
                 print "eg: i={0:<2} has sum_a(v_ia)={1}".format(ind+1, np.sum(x_single[ind]))
 
         return 0
 
     return 1
 
-def check_pair_potentials(x_pair, verbose=0):
+def check_pair_potentials(x_pair, verbose=0, epsilon=1e-5):
 
-    if any(np.abs(x_pair.sum(2).sum(2)[np.triu_indices(x_pair.shape[0], k=1)]) > 1e-10):
-        print("Warning: Some pair potentials do not sum to 0")
+    indices_triu = np.triu_indices(x_pair.shape[0], 1)
+    nr_pot_sum_not_zero = np.where(np.abs(x_pair.sum(2).sum(2)[indices_triu]) > epsilon)[0]
+    if len(nr_pot_sum_not_zero):
+        print("Warning: {0}/{1} pair potentials do not sum to 0".format(len(nr_pot_sum_not_zero), len(indices_triu[0])))
 
         if verbose:
-            indices_triu = np.triu_indices(x_pair.shape[0], 1)
-            indices = np.where(np.abs(x_pair.sum(2).sum(2)[indices_triu]) > 1e-10)[0]
-            for ind in indices[:10]:
+            for ind in nr_pot_sum_not_zero[:10]:
                 i = indices_triu[0][ind]
                 j = indices_triu[1][ind]
                 print "eg: i={0:<2} j={1:<2} has sum_ab(w_ijab)={2}".format(i+1, j+1, np.sum(x_pair[i,j]))

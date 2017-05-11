@@ -45,7 +45,7 @@ ALGORITHMS = {
         epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping
     ),
     "adam": lambda opt: ad.Adam(
-        maxit=opt.maxit, alpha0=opt.alpha0, beta1=opt.beta1, beta2=opt.beta2, epsilon=opt.epsilon,
+        maxit=opt.maxit, alpha0=opt.alpha0, beta1=opt.beta1, beta2=opt.beta2, beta3=opt.beta3, epsilon=opt.epsilon,
         convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping, decay=opt.decay,
         alpha_decay=opt.alpha_decay, start_decay=opt.start_decay, fix_v=opt.fix_v,
         group_alpha=opt.group_alpha, qij_condition=opt.qij_condition,
@@ -135,14 +135,15 @@ def parse_args():
     grp_al.add_argument("--alg-ad", dest="algorithm", action="store_const", const='adam', help='Use Adam')
 
     grp_als = parser.add_argument_group("Algorithm specific settings")
-    grp_als.add_argument("--ad-beta1",          dest="beta1",           default=0.9,        type=float,     help="Set beta 1 parameter for Adam. [default: %(default)s]")
-    grp_als.add_argument("--ad-beta2",          dest="beta2",           default=0.999,      type=float,     help="Set beta 2 parameter for Adam. [default: %(default)s]")
+    grp_als.add_argument("--ad-beta1",          dest="beta1",           default=0.9,        type=float,     help="Set beta 1 parameter for Adam (moemntum). [default: %(default)s]")
+    grp_als.add_argument("--ad-beta2",          dest="beta2",           default=0.999,      type=float,     help="Set beta 2 parameter for Adam (adaptivity) [default: %(default)s]")
+    grp_als.add_argument("--ad-beta3",          dest="beta3",           default=0.9,      type=float,       help="Set beta 3 parameter for Adam (temporal averaging) [default: %(default)s]")
     grp_als.add_argument("--ad-group_alpha",    dest="group_alpha",     action="store_true", default=False, help="Use min learning rate for each group v_i and w_ij. [default: %(default)s]")
     grp_als.add_argument("--alpha0",            dest="alpha0",          default=1e-3,       type=float,     help="Set initial learning rate. [default: %(default)s]")
     grp_als.add_argument("--decay",             dest="decay",           action="store_true", default=False, help="Use decaying learnign rate. Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
     grp_als.add_argument("--start-decay",       dest="start_decay",     default=1e-4,       type=float,     help="Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
     grp_als.add_argument("--alpha-decay",       dest="alpha_decay",     default=1e1,        type=float,     help="Set rate of decay for learning rate when --decay is on. [default: %(default)s]")
-    grp_als.add_argument("--decay-type",        dest="decay_type",      default="step",     type=str,       choices=['step', 'sqrt', 'power', 'exp'], help="Decay type. One of: step, sqrt, exp, power. [default: %(default)s]")
+    grp_als.add_argument("--decay-type",        dest="decay_type",      default="step",     type=str,       choices=['step', 'sqrt', 'power', 'exp', 'lin'], help="Decay type. One of: step, sqrt, exp, power, lin. [default: %(default)s]")
 
 
     grp_con = parser.add_argument_group("Convergence Settings")
@@ -281,6 +282,7 @@ def main():
 
     alg = ALGORITHMS[opt.algorithm](opt)
 
+
     #whether to plot progress of optimization
     plotfile=None
     if(opt.plot_opt_progress):
@@ -301,9 +303,10 @@ def main():
 
 
     if opt.centering_potentials:
+
         #perform checks on potentials:
-        check_x_single  = ccmpred.sanity_check.check_single_potentials(res.x_single, verbose=0)
-        check_x_pair  = ccmpred.sanity_check.check_pair_potentials(res.x_pair, verbose=0)
+        check_x_single  = ccmpred.sanity_check.check_single_potentials(res.x_single, verbose=1, epsilon=1e-3)
+        check_x_pair  = ccmpred.sanity_check.check_pair_potentials(res.x_pair, verbose=1, epsilon=1e-3)
 
         #enforce sum(wij)=0 and sum(v_i)=0
         if not check_x_single or not check_x_pair:
