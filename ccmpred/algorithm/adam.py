@@ -61,7 +61,7 @@ class Adam():
 
     def __repr__(self):
 
-        rep_str="Adam stochastic optimization ( beta1={0} beta2={1} beta3={2} alpha0={3} noise={4} fix_v={5}) \n ".format(
+        rep_str="Adam (beta1={0} beta2={1} beta3={2} alpha0={3} noise={4} fix_v={5}) \n ".format(
             self.beta1, self.beta2, self.beta3, self.alpha0, self.noise, self.fix_v
         )
 
@@ -121,11 +121,9 @@ class Adam():
 
         for i in range(self.maxit):
 
-            #finish burn-in phase
-            if i == 10:
-                objfun.average_sample_counts = True
+            fx, gplot, greg = objfun.evaluate(x)
 
-            fx, g = objfun.evaluate(x)
+            g = gplot + greg
 
             #update moment vectors
             first_moment    = beta1 * first_moment + (1-beta1) * (g)
@@ -161,6 +159,13 @@ class Adam():
             gnorm_single = np.sum(g_single * g_single)
             gnorm_pair = np.sum(g_pair * g_pair)
             gnorm = np.sqrt(gnorm_single + gnorm_pair)
+
+
+            g_plot_single, g_plot_pair = objfun.linear_to_structured(gplot, objfun.ncol)
+            gnorm_plot_single = np.sum(g_plot_single * g_plot_single)
+            gnorm_plot_pair = np.sum(g_plot_pair * g_plot_pair)
+            gnorm_plot = np.sqrt(gnorm_plot_single + gnorm_plot_pair)
+
             max_g = np.max(np.abs(g))
 
             #compute number of problems with qij
@@ -181,9 +186,9 @@ class Adam():
             if self.decay and self.it_succesfull_stop_condition > -1:
                     if self.decay_type == "power":
                         alpha *= self.alpha_decay
-                        #beta1 *= self.alpha_decay
-                        #beta2 *= self.alpha_decay
-                        #beta3 *= self.alpha_decay
+                        #beta1 *= 0.9999
+                        #beta2 *= 0.9999
+                        #beta3 *= 0.9999
                     elif self.decay_type == "lin":
                         alpha = self.alpha0  /(i - self.it_succesfull_stop_condition)
                     elif self.decay_type == "step":
@@ -202,15 +207,12 @@ class Adam():
             #start decay at iteration i
             if self.decay and xnorm_diff < self.start_decay and self.it_succesfull_stop_condition < 0:
                 self.it_succesfull_stop_condition = i
-
-
-
-
+                #objfun.average_sample_counts = True
 
             #print out (and possiblly plot) progress
             self.progress.log_progress(i + 1,
                                        xnorm, np.sqrt(xnorm_single), np.sqrt(xnorm_pair),
-                                       gnorm, np.sqrt(gnorm_single), np.sqrt(gnorm_pair),
+                                       gnorm_plot, np.sqrt(gnorm_plot_single), np.sqrt(gnorm_plot_pair),
                                        xnorm_diff=xnorm_diff, max_g=max_g, alpha=alpha,
                                        sum_qij_uneq_1=problems['sum_qij_uneq_1'],
                                        neg_qijab=problems['neg_qijab'],
@@ -221,17 +223,18 @@ class Adam():
             #stop condition
             if self.early_stopping:
 
-                if self.qij_condition:
-                    if (problems['sum_qij_uneq_1'] == 0) and (problems['neg_qijab'] == 0) and (wij_diff == 0):
+                if xnorm_diff < self.epsilon:
 
-                        ret = {
-                        "code": 1,
-                        "message": "Stopping condition (wij_diff == 0 and sum of qij violations = 0 ) successfull.".format(
-                            self.epsilon)
-                         }
-                        return fx, x, ret
+                    if self.qij_condition:
+                        if (problems['sum_qij_uneq_1'] == 0) and (problems['neg_qijab'] == 0) and (wij_diff == 0):
 
-                elif xnorm_diff < self.epsilon:
+                            ret = {
+                            "code": 1,
+                            "message": "Stopping condition (xnorm diff < {0} and wij_diff == 0 and #qij violations = 0 ) successfull.".format(
+                                self.epsilon)
+                             }
+                            return fx, x, ret
+                    else:
                         ret = {
                             "code": 1,
                             "message": "Stopping condition (xnorm diff < {0}) successfull.".format(

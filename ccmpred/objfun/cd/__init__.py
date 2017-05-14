@@ -95,6 +95,10 @@ class ContrastiveDivergence():
 
             return msa_sampled.copy()
 
+    def reset_sample_counts(self):
+        #intialise sample counts with 0
+        self.sample_counts_single   = np.zeros_like(self.msa_counts_single)
+        self.sample_counts_pair     = np.zeros_like(self.msa_counts_pair)
 
     def finalize(self, x, meta):
         x_single, x_pair = self.linear_to_structured(x, self.ncol, add_gap_state=True)
@@ -102,10 +106,10 @@ class ContrastiveDivergence():
         return ccmpred.raw.CCMRaw(self.ncol, x_single, x_pair, meta)
 
     def gibbs_sample_sequences(self, x):
-        return ccmpred.objfun.cd.cext.gibbs_sample_sequences(self.msa_sampled,  x, self.gibbs_steps)
+        return ccmpred.objfun.cd.cext.gibbs_sample_sequences(self.msa_sampled,  x, 1)
 
     def gibbs_sample_sequences_nogaps(self, x):
-        return ccmpred.objfun.cd.cext.gibbs_sample_sequences_nogaps(self.msa_sampled,  x, self.gibbs_steps)
+        return ccmpred.objfun.cd.cext.gibbs_sample_sequences_nogaps(self.msa_sampled,  x, 1)
 
     def sample_position_in_sequences(self, x):
         return ccmpred.objfun.cd.cext.sample_position_in_sequences(self.msa_sampled, x)
@@ -191,36 +195,43 @@ class ContrastiveDivergence():
 
     def evaluate(self, x):
 
-
         #reset the msa for sampling in caes of CD
         if not self.persistent:
             self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL)
             #self.msa_sampled_weights = ccmpred.weighting.weights_simple(self.msa_sampled)
 
-        if self.pll:
-            self.msa_sampled = self.sample_position_in_sequences(x)
-        else:
-            #Gibbs Sampling of sequences (each position of each sequence will be sampled this often: self.gibbs_steps)
-            self.msa_sampled = self.gibbs_sample_sequences(x)
-            #self.msa_sampled = self.gibbs_sampling_slow(self.msa_sampled, x, self.gibbs_steps)
+        #intialise sample counts with 0
+        self.sample_counts_single   = np.zeros_like(self.msa_counts_single)
+        self.sample_counts_pair     = np.zeros_like(self.msa_counts_pair)
 
-        #careful with the weights: sum(sample_counts) should equal sum(msa_counts) !
-        sample_counts_single, sample_counts_pair = ccmpred.counts.both_counts(self.msa_sampled, self.msa_sampled_weights)
+        for k in range(self.gibbs_steps):
+
+            if self.pll:
+                self.msa_sampled = self.sample_position_in_sequences(x)
+            else:
+                #Gibbs Sampling of sequences (each position of each sequence will be sampled this often: self.gibbs_steps)
+                self.msa_sampled = self.gibbs_sample_sequences(x)
+                #self.msa_sampled = self.gibbs_sampling_slow(self.msa_sampled, x, self.gibbs_steps)
+
+            #careful with the weights: sum(sample_counts) should equal sum(msa_counts) !
+            sample_counts_single, sample_counts_pair = ccmpred.counts.both_counts(self.msa_sampled, self.msa_sampled_weights)
+
+            #reset gap counts for sampled msa
+            sample_counts_single[:, 20] = 0
+            sample_counts_pair[:, :, :, 20] = 0
+            sample_counts_pair[:, :, 20, :] = 0
+
+            self.sample_counts_single   += sample_counts_single
+            self.sample_counts_pair     += sample_counts_pair
 
 
-        #reset gap counts for sampled msa
-        sample_counts_single[:, 20] = 0
-        sample_counts_pair[:, :, :, 20] = 0
-        sample_counts_pair[:, :, 20, :] = 0
-
-
-        if self.average_sample_counts:
-            #sample_counts_single, sample_counts_pair = self.compute_sample_count_averages(sample_counts_single, sample_counts_pair)
-            self.sample_counts_single   += sample_counts_single #0.99 * self.sample_counts_single + 0.01 * sample_counts_single
-            self.sample_counts_pair     += sample_counts_pair#0.99 * self.sample_counts_pair + 0.01 * sample_counts_pair
-        else:
-            self.sample_counts_single   = sample_counts_single #0.99 * self.sample_counts_single + 0.01 * sample_counts_single
-            self.sample_counts_pair     = sample_counts_pair#0.99 * self.sample_counts_pair + 0.01 * sample_counts_pair
+        # if self.average_sample_counts:
+        #     #sample_counts_single, sample_counts_pair = self.compute_sample_count_averages(sample_counts_single, sample_counts_pair)
+        #     self.sample_counts_single   = 0.99 * self.sample_counts_single + 0.01 * sample_counts_single
+        #     self.sample_counts_pair     = 0.99 * self.sample_counts_pair   + 0.01 * sample_counts_pair
+        # else:
+        #     self.sample_counts_single   = sample_counts_single #0.99 * self.sample_counts_single + 0.01 * sample_counts_single
+        #     self.sample_counts_pair     = sample_counts_pair#0.99 * self.sample_counts_pair + 0.01 * sample_counts_pair
 
         # number of non_gapped counts per position(pair)
         Ni_sampled  = self.sample_counts_single.sum(1) + 1e-10
@@ -260,18 +271,18 @@ class ContrastiveDivergence():
         _, g_single_reg, g_pair_reg = self.regularization(x_single, x_pair)
 
         g_reg = self.structured_to_linear(g_single_reg[:, :20], g_pair_reg)
-        g += g_reg
+        #g += g_reg
 
-        return -1, g
+        return -1, g, g_reg
 
     def __repr__(self):
 
-        str = "{0}{1}contrastive divergence".format(
+        str = "{0}{1}contrastive divergence: ".format(
             "PERSISTENT " if (self.persistent) else "",
             "PLL " if (self.pll) else ""
         )
 
-        str += "\nSampling {0} sequences ({1} x N and {2} x L)  with {3} Gibbs steps.".format(
+        str += "#samples={0} ({1} x N and {2} x L)  Gibbs steps={3}".format(
             (self.n_samples_msa * self.nrow), np.round(self.n_samples_msa, decimals=3),  np.round((self.n_samples_msa * self.nrow) / float(self.ncol), decimals=3), self.gibbs_steps
         )
 
