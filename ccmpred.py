@@ -42,7 +42,7 @@ ALGORITHMS = {
     "conjugate_gradients": lambda opt: cg.conjugateGradient(maxit=opt.maxit, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev),
     "gradient_descent": lambda opt: gd.gradientDescent(
         maxit=opt.maxit, alpha0=opt.alpha0, decay=opt.decay, start_decay=opt.start_decay, alpha_decay=opt.alpha_decay,
-        epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping
+        epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping, fix_v=opt.fix_v
     ),
     "adam": lambda opt: ad.Adam(
         maxit=opt.maxit, alpha0=opt.alpha0, beta1=opt.beta1, beta2=opt.beta2, beta3=opt.beta3, epsilon=opt.epsilon,

@@ -3,12 +3,13 @@ import ccmpred.logo
 import sys
 from collections import deque
 import ccmpred.monitor.progress as pr
-
+import ccmpred.model_probabilities
 
 class gradientDescent():
     """Optimize objective function using gradient descent"""
 
-    def __init__(self, maxit=100, alpha0=5e-3, decay=True,  start_decay=1e-3, alpha_decay=10, epsilon=1e-5, convergence_prev=5, early_stopping=False):
+    def __init__(self, maxit=100, alpha0=5e-3, decay=True,  start_decay=1e-3, alpha_decay=10, fix_v=False,
+                 epsilon=1e-5, convergence_prev=5, early_stopping=False):
 
         self.maxit = maxit
         self.decay=decay
@@ -16,12 +17,16 @@ class gradientDescent():
         self.alpha0 = alpha0
         self.alpha_decay = alpha_decay
 
+        self.fix_v=fix_v
+
         self.early_stopping = early_stopping
         self.epsilon = epsilon
         self.convergence_prev=convergence_prev
 
         self.progress = pr.Progress(plotfile=None,
-                            xnorm_diff=[], max_g=[], alpha=[])
+                            xnorm_diff=[], max_g=[], alpha=[],
+                            sum_qij_uneq_1=[], neg_qijab=[], sum_wij_uneq_0=[], sum_deviation_wij=[], mean_deviation_wij=[]
+                                    )
 
     def __repr__(self):
         return "Gradient descent optimization (alpha0={0} alpha_decay={1}) \n" \
@@ -35,7 +40,9 @@ class gradientDescent():
         subtitle += self.__repr__().replace("\n", "<br>")
         self.progress.plot_options(
             plotfile,
-            ['||x||', '||x_single||', '||x_pair||', '||g||', '||g_single||', '||g_pair||','max_g', 'alpha'],
+            ['||x||', '||x_single||', '||x_pair||', '||g||', '||g_single||', '||g_pair||',
+             'sum_qij_uneq_1', 'neg_qijab', 'sum_wij_uneq_0', 'sum_deviation_wij', 'mean_deviation_wij',
+             'max_g', 'alpha'],
             subtitle
         )
         self.progress.begin_process()
@@ -51,7 +58,8 @@ class gradientDescent():
         alpha = self.alpha0
         for i in range(self.maxit):
 
-            fx, g = objfun.evaluate(x)
+            fx, gplot, greg = objfun.evaluate(x)
+            g = gplot + greg
 
 
 
@@ -78,11 +86,22 @@ class gradientDescent():
             if self.decay and xnorm_diff < self.start_decay:
                 alpha = self.alpha0 / (1 + i / self.alpha_decay)
 
+            #compute number of problems with qij
+            problems = ccmpred.model_probabilities.get_nr_problematic_qij(
+                objfun.freqs_pair, x_pair, objfun.regularization.lambda_pair, objfun.Nij, epsilon=1e-2, verbose=False)
+
+
             #print out progress
             self.progress.log_progress(i + 1,
                                        xnorm, np.sqrt(xnorm_single), np.sqrt(xnorm_pair),
                                        gnorm, np.sqrt(gnorm_single), np.sqrt(gnorm_pair),
-                                       xnorm_diff=xnorm_diff, max_g=max_g, alpha=alpha)
+                                       xnorm_diff=xnorm_diff, max_g=max_g, alpha=alpha,
+                                       sum_qij_uneq_1=problems['sum_qij_uneq_1'],
+                                       neg_qijab=problems['neg_qijab'],
+                                       sum_wij_uneq_0=problems['sum_wij_uneq_0'],
+                                       sum_deviation_wij=problems['sum_deviation_wij'],
+                                       mean_deviation_wij=problems['mean_deviation_wij'],
+                                       )
             # ========================================================================================
 
             #stop condition
@@ -94,9 +113,14 @@ class gradientDescent():
                     }
                     return fx, x, ret
 
+            # update parameters
+            if not self.fix_v:
+                x_single -= alpha * g_single  # x_single - alpha * step_single#
+            x_pair -=  alpha * g_pair  # x_pair - alpha * step_pair#
 
-            #update parameters
-            x -= alpha * g
+            x = objfun.structured_to_linear(x_single, x_pair)
+
+
 
 
 
