@@ -66,6 +66,8 @@ def compute_qij(freqs_pair, x_pair, lambda_pair, Nij, epsilon, verbose=1):
 def check_qij(model_prob, indices_triu, pair_freq, x_pair_nogaps, Nij, epsilon=1e-3, verbose=0):
 
     problems = {}
+    problems['sum_deviation_wij'] = 0
+    problems['mean_deviation_wij'] = 0
     problems['sum_qij_uneq_1'] = 0
     problems['neg_qijab'] = 0
     problems['sum_wij_uneq_0'] = 0
@@ -124,6 +126,14 @@ def check_qij(model_prob, indices_triu, pair_freq, x_pair_nogaps, Nij, epsilon=1
                 print("e.g: i={0:<2} j={1:<2}: min(qij)={2:<20} sum(qij)={3:<20} sum(pair_freq)={4:<20} sum(x_pair)={5:<20} N_ij={6}".format(
                     i, j, min(model_prob[i,j]), sum(model_prob[i,j]), sum(pair_freq[i,j].flatten()), sum(x_pair_nogaps[i,j].flatten()), Nij[i,j])
                 )
+
+
+    #sum upp all deviations
+    sum_deviation = np.sum(np.abs(x_pair_nogaps[indices_triu].sum(1)))
+    problems['sum_deviation_wij'] += sum_deviation
+
+    sum_deviation = np.mean(np.abs(x_pair_nogaps[indices_triu].sum(1)))
+    problems['mean_deviation_wij'] += sum_deviation
 
     return problems
 
