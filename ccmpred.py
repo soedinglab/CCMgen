@@ -45,9 +45,9 @@ ALGORITHMS = {
         epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping, fix_v=opt.fix_v
     ),
     "adam": lambda opt: ad.Adam(
-        maxit=opt.maxit, alpha0=opt.alpha0, beta1=opt.beta1, beta2=opt.beta2, beta3=opt.beta3, epsilon=opt.epsilon,
-        convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping, decay=opt.decay,
-        alpha_decay=opt.alpha_decay, start_decay=opt.start_decay, fix_v=opt.fix_v,
+        maxit=opt.maxit, alpha0=opt.alpha0, beta1=opt.beta1, beta2=opt.beta2, beta3=opt.beta3,
+        epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping,
+        decay=opt.decay, alpha_decay=opt.alpha_decay, start_decay=opt.start_decay, fix_v=opt.fix_v,
         group_alpha=opt.group_alpha, qij_condition=opt.qij_condition,
         decay_type=opt.decay_type
     ),
@@ -61,7 +61,12 @@ OBJ_FUNC = {
     ),
     "cd":   lambda opt, msa, freqs, weights, raw_init, regularization: cd.ContrastiveDivergence(
         msa, freqs, weights, raw_init, regularization,
-        opt.cd_gibbs_steps, opt.cd_persistent, opt.cd_min_nseq_factorl, opt.cd_pll
+        gibbs_steps=opt.cd_gibbs_steps,
+        persistent=opt.cd_persistent,
+        min_nseq_factorL=opt.cd_min_nseq_factorl,
+        minibatches=opt.cd_minibatches,
+        pll=opt.cd_pll,
+        compute_avg_samples=opt.cd_compute_avg_samples, num_averages=opt.cd_num_averages, average_freqency=opt.cd_average_freqency
     ),
 
 }
@@ -126,7 +131,12 @@ def parse_args():
     grp_of.add_argument("--cd-persistent",       dest="cd_persistent", action="store_true",  default=False, help="Setting for CD: Use Persistent Contrastive Divergence: do not restart Markov Chain in each iteration.[default: %(default)s] ")
     grp_of.add_argument("--cd-min_nseq_factorl", dest="cd_min_nseq_factorl", default=0,      type=int, help="Setting for CD: Sample at least MIN_NSEQ_FACTORL * L  sequences (taken from input MSA).[default: %(default)s] ")
     grp_of.add_argument("--cd-gibbs_steps",      dest="cd_gibbs_steps", default=1,      type=int, help="Setting for CD: Perform GIBBS_STEPS of Gibbs sampling per sequence. [default: %(default)s]")
+    grp_of.add_argument("--cd-compute_avg_samples", dest="cd_compute_avg_samples", action="store_true", default=False, help="Use a minibatch of this size in each iteration. [default: %(default)s]")
+    grp_of.add_argument("--cd-num_averages",     dest="cd_num_averages", default=0, type=int,help="Use a minibatch of this size in each iteration. [default: %(default)s]")
+    grp_of.add_argument("--cd-average_freqency", dest="cd_average_freqency", default=10, type=int,  help="Use a minibatch of this size in each iteration. [default: %(default)s]")
+    grp_of.add_argument("--cd-minibatches",      dest="cd_minibatches", default=0, type=int, help="Use a minibatch of this size in each iteration. [default: %(default)s]")
     grp_of.add_argument("--ofn-tree-cd", action=TreeCDAction, metavar=("TREEFILE", "ANCESTORFILE"), nargs=2, type=str, help="Use Tree-controlled Contrastive Divergence, loading tree data from TREEFILE and ancestral sequence data from ANCESTORFILE")
+
 
     grp_al = parser.add_argument_group("Algorithms")
     grp_al.add_argument("--alg-cg", dest="algorithm", action="store_const", const='conjugate_gradients', default='conjugate_gradients', help='Use conjugate gradients (default)')

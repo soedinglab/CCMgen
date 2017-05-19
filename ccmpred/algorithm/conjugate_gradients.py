@@ -2,6 +2,8 @@ import numpy as np
 import ccmpred.logo
 import sys
 import ccmpred.monitor.progress as pr
+import ccmpred.model_probabilities
+
 
 class conjugateGradient():
     """Optimize objective function usign conjugate gradients"""
@@ -16,7 +18,8 @@ class conjugateGradient():
         self.convergence_prev = convergence_prev
 
         self.progress = pr.Progress(plotfile=None,
-                                    fx=[], max_g=[], step=[], n_linesearch=[], rel_diff_fx=[])
+                                    fx=[], max_g=[], step=[], n_linesearch=[], rel_diff_fx=[],
+                                    sum_qij_uneq_1=[], neg_qijab=[], sum_wij_uneq_0=[])
 
     def __repr__(self):
         return "conjugate gradient optimization (ftol={0} max_linesearch={1} alpha_mul={2} wolfe={3}) \n" \
@@ -37,7 +40,9 @@ class conjugateGradient():
         subtitle += self.__repr__().replace("\n", "<br>")
         self.progress.plot_options(
             plotfile,
-            ['fx',  '||x||', '||x_single||', '||x_pair||','||g||', '||g_single||', '||g_pair||', 'max_g', 'step', 'n_linesearch', 'rel_diff_fx'],
+            ['fx',  '||x||', '||x_single||', '||x_pair||','||g||', '||g_single||', '||g_pair||',
+             'sum_qij_uneq_1', 'neg_qijab', 'sum_wij_uneq_0',
+             'max_g', 'step', 'n_linesearch', 'rel_diff_fx'],
             subtitle
         )
         self.progress.begin_process()
@@ -62,7 +67,8 @@ class conjugateGradient():
         self.progress.log_progress(0,
                                    np.sqrt(xnorm_single + xnorm_pair), np.sqrt(xnorm_single), np.sqrt(xnorm_pair),
                                    np.sqrt(gnorm_single + gnorm_pair), np.sqrt(gnorm_single), np.sqrt(gnorm_pair),
-                                   fx=fx, max_g=max_g, step=0, n_linesearch=0, rel_diff_fx=np.nan)
+                                   fx=fx, max_g=max_g, step=0, n_linesearch=0, rel_diff_fx=np.nan,
+                                   sum_qij_uneq_1=0, neg_qijab=0, sum_wij_uneq_0=0)
 
 
         gprevnorm = None
@@ -133,11 +139,20 @@ class conjugateGradient():
 
             iteration += 1
 
+
+            #compute number of problems with qij
+            problems = ccmpred.model_probabilities.get_nr_problematic_qij(
+                objfun.freqs_pair, x_pair, objfun.regularization.lambda_pair, objfun.Nij, epsilon=1e-2, verbose=False)
+
+
             # print out progress
             self.progress.log_progress(iteration,
                                        np.sqrt(xnorm_single + xnorm_pair), np.sqrt(xnorm_single), np.sqrt(xnorm_pair),
                                        np.sqrt(gnorm), np.sqrt(gnorm_single), np.sqrt(gnorm_pair),
-                                       fx=fx, max_g=max_g, step=alpha, n_linesearch=n_linesearch, rel_diff_fx=rel_diff_fx)
+                                       fx=fx, max_g=max_g, step=alpha, n_linesearch=n_linesearch, rel_diff_fx=rel_diff_fx,
+                                       sum_qij_uneq_1=problems['sum_qij_uneq_1'],
+                                       neg_qijab=problems['neg_qijab'],
+                                       sum_wij_uneq_0=problems['sum_wij_uneq_0'])
 
 
 

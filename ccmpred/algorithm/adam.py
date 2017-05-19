@@ -56,7 +56,9 @@ class Adam():
 
         self.progress = pr.Progress(plotfile=None,
                                     xnorm_diff=[], max_g=[], alpha=[],
-                                    sum_qij_uneq_1=[], neg_qijab=[], sum_wij_uneq_0=[])
+                                    sum_qij_uneq_1=[], neg_qijab=[], sum_wij_uneq_0=[], sum_deviation_wij=[], mean_deviation_wij=[],
+                                    m=[], sqrtv=[], step=[], norm_g_reg_pair=[]
+                                    )
 
 
     def __repr__(self):
@@ -90,13 +92,16 @@ class Adam():
 
     def minimize(self, objfun, x, plotfile):
 
-        subtitle = "L={0} N={1} Neff={2} <br>".format(objfun.ncol, objfun.nrow, np.round(objfun.neff, decimals=3))
+        diversity = np.sqrt(objfun.neff)/objfun.ncol
+        subtitle = "L={0} N={1} Neff={2} Diversity={3}<br>".format(objfun.ncol, objfun.nrow, np.round(objfun.neff, decimals=3), np.round(diversity,decimals=3))
         subtitle += self.__repr__().replace("\n", "<br>")
         subtitle += objfun.__repr__().replace("\n", "<br>")
         self.progress.plot_options(
             plotfile,
-            [ '||x||', '||x_single||', '||x_pair||','||g||', '||g_single||', '||g_pair||',
-              'sum_qij_uneq_1', 'neg_qijab', 'sum_wij_uneq_0',
+            [ '||x_pair||', #'||x||', '||x_single||',
+              '||g_pair||', #'||g||', '||g_single||',
+              'sum_qij_uneq_1', 'neg_qijab', 'sum_wij_uneq_0', 'sum_deviation_wij', 'mean_deviation_wij',
+              'm','sqrtv','step', 'norm_g_reg_pair',
               'max_g', 'alpha'
               ],
             subtitle
@@ -114,26 +119,21 @@ class Adam():
         }
 
         fx = -1
-        alpha=self.alpha0
-        beta1=self.beta1
-        beta2=self.beta2
-        beta3=self.beta3
-
+        alpha=self.alpha0 * diversity
         for i in range(self.maxit):
 
             fx, gplot, greg = objfun.evaluate(x)
-
             g = gplot + greg
 
             #update moment vectors
-            first_moment    = beta1 * first_moment + (1-beta1) * (g)
-            second_moment   = beta2 * second_moment + (1-beta2) * (g*g)
-            x_moment        = beta3 * x_moment + (1-beta3) * (x)
+            first_moment    = self.beta1 * first_moment + (1-self.beta1) * (g)
+            second_moment   = self.beta2 * second_moment + (1-self.beta2) * (g*g)
+            x_moment        = self.beta3 * x_moment + (1-self.beta3) * (x)
 
             #compute bias corrected moments
-            first_moment_corrected  = first_moment / (1 - np.power(beta1, i+1))
-            second_moment_corrected = second_moment / (1 - np.power(beta2, i+1))
-            x_moment_corrected = x_moment / (1 - np.power(beta3, i+1))
+            first_moment_corrected  = first_moment / (1 - np.power(self.beta1, i+1))
+            second_moment_corrected = second_moment / (1 - np.power(self.beta2, i+1))
+            x_moment_corrected = x_moment / (1 - np.power(self.beta3, i+1))
 
             first_moment_corrected_single, first_moment_corrected_pair = objfun.linear_to_structured(first_moment_corrected, objfun.ncol)
             second_moment_corrected_single, second_moment_corrected_pair = objfun.linear_to_structured(second_moment_corrected, objfun.ncol)
@@ -166,6 +166,9 @@ class Adam():
             gnorm_plot_pair = np.sum(g_plot_pair * g_plot_pair)
             gnorm_plot = np.sqrt(gnorm_plot_single + gnorm_plot_pair)
 
+            g_reg_plot_single, g_reg_plot_pair = objfun.linear_to_structured(greg, objfun.ncol)
+            gnorm_reg_plot_pair = np.sum(g_reg_plot_pair * g_reg_plot_pair)
+
             max_g = np.max(np.abs(g))
 
             #compute number of problems with qij
@@ -186,7 +189,7 @@ class Adam():
             if self.decay and self.it_succesfull_stop_condition > -1:
                     if self.decay_type == "power":
                         alpha *= self.alpha_decay
-                        #beta1 *= 0.9999
+                        #self.beta1 *= 0.9999
                         #beta2 *= 0.9999
                         #beta3 *= 0.9999
                     elif self.decay_type == "lin":
@@ -207,7 +210,6 @@ class Adam():
             #start decay at iteration i
             if self.decay and xnorm_diff < self.start_decay and self.it_succesfull_stop_condition < 0:
                 self.it_succesfull_stop_condition = i
-                #objfun.average_sample_counts = True
 
             #print out (and possiblly plot) progress
             self.progress.log_progress(i + 1,
@@ -216,7 +218,13 @@ class Adam():
                                        xnorm_diff=xnorm_diff, max_g=max_g, alpha=alpha,
                                        sum_qij_uneq_1=problems['sum_qij_uneq_1'],
                                        neg_qijab=problems['neg_qijab'],
-                                       sum_wij_uneq_0=problems['sum_wij_uneq_0']
+                                       sum_wij_uneq_0=problems['sum_wij_uneq_0'],
+                                       sum_deviation_wij=problems['sum_deviation_wij'],
+                                       mean_deviation_wij=problems['mean_deviation_wij'],
+                                       sqrtv=np.sqrt(np.sum(second_moment_corrected_pair)),
+                                       m=np.sqrt(np.sum(first_moment_corrected_pair*first_moment_corrected_pair)),
+                                       step=np.sqrt(np.sum(step_pair*step_pair)),
+                                       norm_g_reg_pair=np.sqrt(gnorm_reg_plot_pair)
                                        )
 
 
@@ -225,9 +233,17 @@ class Adam():
 
                 if xnorm_diff < self.epsilon:
 
-                    if self.qij_condition:
-                        if (problems['sum_qij_uneq_1'] == 0) and (problems['neg_qijab'] == 0) and (wij_diff == 0):
+                    # objfun.compute_avg_samples = True
+                    # self.epsilon *= 1e-10
+                    # print("turn on averaging")
 
+                    if self.qij_condition:
+
+                        # if (wij_diff == 0) and problems['sum_wij_uneq_0'] != 0:
+                        #     #objfun.average_sample_counts = True
+                        #     alpha *= 10
+                        #     print("turn on averaging")
+                        if (problems['sum_qij_uneq_1'] == 0) and (problems['neg_qijab'] == 0) and (wij_diff == 0):
                             ret = {
                             "code": 1,
                             "message": "Stopping condition (xnorm diff < {0} and wij_diff == 0 and #qij violations = 0 ) successfull.".format(
