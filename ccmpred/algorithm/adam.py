@@ -33,6 +33,7 @@ class Adam():
 
     def __init__(self, maxit=100, alpha0=1e-3, alpha_decay=1e1, beta1=0.9, beta2=0.999, beta3=0.9, noise=1e-8,
                  epsilon=1e-5, convergence_prev=5, early_stopping=False, decay_type="step",
+                 start_avg = 1e-5,
                  decay=False, start_decay=1e-4, fix_v=False, group_alpha=False, qij_condition=False):
         self.maxit = maxit
         self.alpha0 = alpha0
@@ -44,6 +45,8 @@ class Adam():
         self.alpha_decay = alpha_decay
         self.start_decay = start_decay
         self.decay_type  = decay_type
+
+        self.start_avg = start_avg
 
         self.fix_v = fix_v
         self.group_alpha = group_alpha
@@ -119,7 +122,7 @@ class Adam():
         }
 
         fx = -1
-        alpha=self.alpha0 * diversity
+        alpha=self.alpha0
         for i in range(self.maxit):
 
             fx, gplot, greg = objfun.evaluate(x)
@@ -227,6 +230,8 @@ class Adam():
                                        norm_g_reg_pair=np.sqrt(gnorm_reg_plot_pair)
                                        )
 
+            # if xnorm_diff < self.start_avg:
+            #     objfun.compute_avg_samples = True
 
             #stop condition
             if self.early_stopping:

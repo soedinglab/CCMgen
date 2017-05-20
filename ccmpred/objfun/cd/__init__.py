@@ -14,7 +14,6 @@ import ccmpred.weighting
 class ContrastiveDivergence():
 
     def __init__(self, msa, freqs, weights, raw, regularization, gibbs_steps=1, persistent=False, min_nseq_factorL=1,
-                 minibatches=0,
                  pll=False,
                  compute_avg_samples=False, num_averages=5, average_freqency=10):
 
@@ -50,9 +49,6 @@ class ContrastiveDivergence():
         self.deque_sample_counts_single = deque([], maxlen=num_averages*average_freqency)
         self.deque_sample_counts_pair = deque([], maxlen=num_averages*average_freqency)
 
-        #whether to use minibatches in each iteration
-        self.minbatches=np.min([minibatches, self.nrow])
-
         # get constant alignment counts
         self.freqs_single, self.freqs_pair = freqs
         self.msa_counts_single = self.freqs_single * self.neff
@@ -73,36 +69,16 @@ class ContrastiveDivergence():
         self.n_samples_msa = 1
 
         # init sample alignment as input MSA
-        self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL, self.minbatches)
+        self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL)
         self.msa_sampled_weights = ccmpred.weighting.weights_simple(self.msa_sampled)
 
-    def compute_statistics(self, alignment):
-
-        weights = ccmpred.weighting.weights_simple(self.msa_sampled)
-        msa_counts_single, msa_counts_pair = ccmpred.counts.both_counts(
-            alignment, weights)
 
 
-        # reset gap counts
-        msa_counts_single[:, 20] = 0
-        msa_counts_pair[:, :, :, 20] = 0
-        msa_counts_pair[:, :, 20, :] = 0
-
-        #non_gapped counts
-        Ni = msa_counts_single.sum(1) + 1e-10
-        Nij = msa_counts_pair.sum(3).sum(2) + 1e-10
-
-        return msa_counts_single, msa_counts_pair, Ni, Nij, weights
-
-
-    def init_sample_alignment(self, min_nseq_factorL, minibatches):
+    def init_sample_alignment(self, min_nseq_factorL):
 
         # nr of sequences = min_nseq_factorL * L
         self.min_nseq_factorL = np.max([min_nseq_factorL, 1])
         n_sequence_min_nseq_factorL = self.min_nseq_factorL * self.ncol
-
-
-
 
         # Use multiples of input MSA: at least 1xMSA
         self.n_samples_msa = int(np.ceil(n_sequence_min_nseq_factorL / float(self.nrow)))
@@ -209,10 +185,7 @@ class ContrastiveDivergence():
 
         #reset the msa for sampling in caes of CD
         if not self.persistent:
-            self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL, self.minbatches)
-            if self.minbatches < self.nrow:
-                self.msa_counts_single, self.msa_counts_pair, self.Ni, self.Nij, self.msa_sampled_weights = self.compute_statistics(self.msa_sampled)
-
+            self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL)
 
         if self.pll:
             self.msa_sampled = self.sample_position_in_sequences(x)
@@ -224,7 +197,6 @@ class ContrastiveDivergence():
 
         #counts from sample
         sample_counts_single, sample_counts_pair = ccmpred.counts.both_counts(self.msa_sampled, self.msa_sampled_weights)
-
 
         # reset gap counts
         sample_counts_single[:, 20] = 0
@@ -257,8 +229,8 @@ class ContrastiveDivergence():
         g_pair = sample_counts_pair - self.msa_counts_pair
 
         #sanity check
-        if(np.abs(np.sum(sample_counts_single[10,:20]) - np.sum(self.msa_counts_single[10,:20])) > 1e-5):
-            print("Warning: sample aa counts ({0}) do not equal input msa aa counts ({1})!".format(np.sum(sample_counts_single[10,:20]), np.sum(self.msa_counts_single[10,:20])))
+        if(np.abs(np.sum(sample_counts_single[1,:20]) - np.sum(self.msa_counts_single[1,:20])) > 1e-5):
+            print("Warning: sample aa counts ({0}) do not equal input msa aa counts ({1})!".format(np.sum(sample_counts_single[1,:20]), np.sum(self.msa_counts_single[1,:20])))
 
 
         # set gradients for gap states to 0

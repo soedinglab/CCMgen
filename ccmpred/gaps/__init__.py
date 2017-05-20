@@ -31,6 +31,7 @@ def remove_gapped_positions(msa, max_gap_percentage):
         return msa, []
 
     msa_gap_counts = (msa == 20).sum(0)
+
     max_gap_count = (max_gap_percentage/100.0 * msa.shape[0])
 
     ungapped_positions  = np.where(msa_gap_counts <  max_gap_count)

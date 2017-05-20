@@ -28,7 +28,7 @@ class PseudoLikelihood():
 
         #use msa counts with pseudo counts - numerically more stable?? but gradient does not fit ll fct!!
         #neff = np.sum(weights)
-        #freqs_single, freqs_pair = freqs
+        self.freqs_single, self.freqs_pair = freqs
         #msa_counts_single, msa_counts_pair = neff * freqs_single, neff * freqs_pair
         #use msa counts without pseudo counts
         msa_counts_single, msa_counts_pair = ccmpred.counts.both_counts(msa, weights)

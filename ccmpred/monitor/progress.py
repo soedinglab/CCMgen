@@ -104,6 +104,7 @@ class Progress():
                     showexponent='All'
                 ),
                 font=dict(size=18),
+                titlefont=dict(size=14)
             )
         }
 
