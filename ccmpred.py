@@ -64,7 +64,6 @@ OBJ_FUNC = {
         gibbs_steps=opt.cd_gibbs_steps,
         persistent=opt.cd_persistent,
         min_nseq_factorL=opt.cd_min_nseq_factorl,
-        minibatches=opt.cd_minibatches,
         pll=opt.cd_pll,
         compute_avg_samples=opt.cd_compute_avg_samples, num_averages=opt.cd_num_averages, average_freqency=opt.cd_average_freqency
     ),
@@ -134,7 +133,6 @@ def parse_args():
     grp_of.add_argument("--cd-compute_avg_samples", dest="cd_compute_avg_samples", action="store_true", default=False, help="Use a minibatch of this size in each iteration. [default: %(default)s]")
     grp_of.add_argument("--cd-num_averages",     dest="cd_num_averages", default=0, type=int,help="Use a minibatch of this size in each iteration. [default: %(default)s]")
     grp_of.add_argument("--cd-average_freqency", dest="cd_average_freqency", default=10, type=int,  help="Use a minibatch of this size in each iteration. [default: %(default)s]")
-    grp_of.add_argument("--cd-minibatches",      dest="cd_minibatches", default=0, type=int, help="Use a minibatch of this size in each iteration. [default: %(default)s]")
     grp_of.add_argument("--ofn-tree-cd", action=TreeCDAction, metavar=("TREEFILE", "ANCESTORFILE"), nargs=2, type=str, help="Use Tree-controlled Contrastive Divergence, loading tree data from TREEFILE and ancestral sequence data from ANCESTORFILE")
 
 
