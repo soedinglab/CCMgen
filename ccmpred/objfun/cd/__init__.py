@@ -13,7 +13,8 @@ import ccmpred.weighting
 
 class ContrastiveDivergence():
 
-    def __init__(self, msa, freqs, weights, raw, regularization, gibbs_steps=1, persistent=False, min_nseq_factorL=1,
+    def __init__(self, msa, freqs, weights, raw, regularization, gibbs_steps=1, persistent=False,
+                 min_nseq_factorL=1, min_nseq_factorN=1,
                  pll=False,
                  compute_avg_samples=False, num_averages=5, average_freqency=10):
 
@@ -43,11 +44,10 @@ class ContrastiveDivergence():
         self.pll = pll
 
         #whether to compute average counts from last X sampled MSA's
-        self.compute_avg_samples=compute_avg_samples
-        self.num_averages = num_averages
-        self.average_freqency = average_freqency
-        self.deque_sample_counts_single = deque([], maxlen=num_averages*average_freqency)
-        self.deque_sample_counts_pair = deque([], maxlen=num_averages*average_freqency)
+        self.compute_avg_samples = compute_avg_samples
+        if self.compute_avg_samples:
+            self.initialize_deck_for_averaging(num_averages, average_freqency)
+
 
         # get constant alignment counts
         self.freqs_single, self.freqs_pair = freqs
@@ -67,26 +67,56 @@ class ContrastiveDivergence():
         #number of sequences used for sampling: multiples of MSA and at least 1xMSA
         self.min_nseq_factorL = np.max([min_nseq_factorL, 1])
         self.n_samples_msa = 1
+        self.min_nseq_factorN = np.max([min_nseq_factorN, 1])
+
 
         # init sample alignment as input MSA
-        self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL)
+        self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL, self.min_nseq_factorN)
         self.msa_sampled_weights = ccmpred.weighting.weights_simple(self.msa_sampled)
 
+    def __repr__(self):
 
+        str = "{0}{1}contrastive divergence: ".format(
+            "PERSISTENT " if (self.persistent) else "",
+            "PLL " if (self.pll) else ""
+        )
 
-    def init_sample_alignment(self, min_nseq_factorL):
+        str += "#samples={0} ({1} x N and {2} x L)  Gibbs steps={3} ".format(
+            (self.n_samples_msa * self.nrow), np.round(self.n_samples_msa, decimals=3),  np.round((self.n_samples_msa * self.nrow) / float(self.ncol), decimals=3), self.gibbs_steps
+        )
+
+        if(self.compute_avg_samples):
+            str +="#averages={0} #avg_freq={1}".format(self.num_averages, self.average_freqency)
+
+        return str
+
+    def init_sample_alignment(self, min_nseq_factorL, min_nseq_factorN):
 
         # nr of sequences = min_nseq_factorL * L
         self.min_nseq_factorL = np.max([min_nseq_factorL, 1])
         n_sequence_min_nseq_factorL = self.min_nseq_factorL * self.ncol
 
+        # nr of sequences = min_nseq_factorN * N
+        self.min_nseq_factorN = np.max([min_nseq_factorN, 1])
+        n_sequence_min_nseq_factorN = self.min_nseq_factorN * self.nrow
+
+        print
+        n_seq = np.max([n_sequence_min_nseq_factorL, n_sequence_min_nseq_factorN])
+
         # Use multiples of input MSA: at least 1xMSA
-        self.n_samples_msa = int(np.ceil(n_sequence_min_nseq_factorL / float(self.nrow)))
+        self.n_samples_msa = int(np.ceil(n_seq / float(self.nrow)))
         seq_id = range(self.nrow) * self.n_samples_msa
         #seq_id = np.random.choice(self.nrow, n_sequence_min_nseq_factorL)
         msa_sampled = self.msa[seq_id]
 
         return msa_sampled.copy()
+
+    def initialize_deck_for_averaging(self, num_averages, average_freqency):
+        self.compute_avg_samples = True
+        self.num_averages = num_averages
+        self.average_freqency = average_freqency
+        self.deque_sample_counts_single = deque([], maxlen=num_averages * average_freqency)
+        self.deque_sample_counts_pair = deque([], maxlen=num_averages * average_freqency)
 
     def finalize(self, x, meta):
         x_single, x_pair = self.linear_to_structured(x, self.ncol, add_gap_state=True)
@@ -101,27 +131,6 @@ class ContrastiveDivergence():
 
     def sample_position_in_sequences(self, x):
         return ccmpred.objfun.cd.cext.sample_position_in_sequences(self.msa_sampled, x)
-
-
-    def compute_sample_count_averages(self, sample_counts_single, sample_counts_pair):
-        # store sample counts
-        self.collection_sample_counts_single.append(sample_counts_single)
-        self.collection_sample_counts_pair.append(sample_counts_pair)
-
-
-        n_samples_msa = float(self.n_sequences / self.nrow)
-
-        # keep only N_SAMPLES_MSA latest counts
-        if len(self.collection_sample_counts_single) > n_samples_msa:
-
-            self.collection_sample_counts_single.popleft()
-            self.collection_sample_counts_pair.popleft()
-
-        # Sum counts over all stored sample counts
-        overall_sampled_counts_single = np.sum(self.collection_sample_counts_single, axis=0)
-        overall_sampled_counts_pair = np.sum(self.collection_sample_counts_pair, axis=0)
-
-        return overall_sampled_counts_single, overall_sampled_counts_pair
 
     def con_prob(self, x_single, x_pair, seq, pos):
         '''
@@ -181,11 +190,13 @@ class ContrastiveDivergence():
 
         return msa
 
+
+
     def evaluate(self, x):
 
         #reset the msa for sampling in caes of CD
         if not self.persistent:
-            self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL)
+            self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL, self.min_nseq_factorN)
 
         if self.pll:
             self.msa_sampled = self.sample_position_in_sequences(x)
@@ -195,7 +206,9 @@ class ContrastiveDivergence():
             #self.msa_sampled = self.gibbs_sampling_slow(self.msa_sampled, x, self.gibbs_steps)
 
 
+
         #counts from sample
+        self.msa_sampled_weights = ccmpred.weighting.weights_simple(self.msa_sampled)
         sample_counts_single, sample_counts_pair = ccmpred.counts.both_counts(self.msa_sampled, self.msa_sampled_weights)
 
         # reset gap counts
@@ -204,15 +217,15 @@ class ContrastiveDivergence():
         sample_counts_pair[:, :, 20, :] = 0
 
 
-        if self.num_averages > 0:
-            self.deque_sample_counts_single.append(sample_counts_single)
-            self.deque_sample_counts_pair.append(sample_counts_pair)
+        # if self.compute_avg_samples:
+        #     self.deque_sample_counts_single.append(sample_counts_single)
+        #     self.deque_sample_counts_pair.append(sample_counts_pair)
+        #
+        #     if (len(self.deque_sample_counts_single) == self.deque_sample_counts_single.maxlen):
+        #         indices=range(0, self.deque_sample_counts_single.maxlen, self.average_freqency)
+        #         sample_counts_single = np.array(self.deque_sample_counts_single)[indices].sum(0)
+        #         sample_counts_pair = np.array(self.deque_sample_counts_pair)[indices].sum(0)
 
-
-        if (len(self.deque_sample_counts_single) == self.deque_sample_counts_single.maxlen) and self.compute_avg_samples:
-            indices=range(0, self.deque_sample_counts_single.maxlen, self.average_freqency)
-            sample_counts_single = np.array(self.deque_sample_counts_single)[indices].sum(0)
-            sample_counts_pair = np.array(self.deque_sample_counts_pair)[indices].sum(0)
 
 
         Ni_sampled = sample_counts_single.sum(1) + 1e-10
@@ -254,21 +267,7 @@ class ContrastiveDivergence():
 
         return -1, g, g_reg
 
-    def __repr__(self):
 
-        str = "{0}{1}contrastive divergence: ".format(
-            "PERSISTENT " if (self.persistent) else "",
-            "PLL " if (self.pll) else ""
-        )
-
-        str += "#samples={0} ({1} x N and {2} x L)  Gibbs steps={3} ".format(
-            (self.n_samples_msa * self.nrow), np.round(self.n_samples_msa, decimals=3),  np.round((self.n_samples_msa * self.nrow) / float(self.ncol), decimals=3), self.gibbs_steps
-        )
-
-        if(self.compute_avg_samples):
-            str +="#averages={0} #avg_freq={1}".format(self.num_averages, self.average_freqency)
-
-        return str
 
     @staticmethod
     def linear_to_structured(x, ncol, add_gap_state=False):

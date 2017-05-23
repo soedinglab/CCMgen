@@ -60,7 +60,8 @@ class Adam():
         self.progress = pr.Progress(plotfile=None,
                                     xnorm_diff=[], max_g=[], alpha=[],
                                     sum_qij_uneq_1=[], neg_qijab=[], sum_wij_uneq_0=[], sum_deviation_wij=[], mean_deviation_wij=[],
-                                    m=[], sqrtv=[], step=[], norm_g_reg_pair=[]
+                                    #m=[], sqrtv=[], step=[],
+                                    norm_g_reg_pair=[]
                                     )
 
 
@@ -104,12 +105,19 @@ class Adam():
             [ '||x_pair||', #'||x||', '||x_single||',
               '||g_pair||', #'||g||', '||g_single||',
               'sum_qij_uneq_1', 'neg_qijab', 'sum_wij_uneq_0', 'sum_deviation_wij', 'mean_deviation_wij',
-              'm','sqrtv','step', 'norm_g_reg_pair',
+              #'m','sqrtv','step',
+              'norm_g_reg_pair',
               'max_g', 'alpha'
               ],
             subtitle
         )
         self.progress.begin_process()
+
+
+        #scale learning rate with diversity of alignment
+        self.alpha0 /= diversity
+        alpha=self.alpha0
+
 
         #initialize the moment vectors
         first_moment = np.zeros(objfun.nvar)
@@ -122,7 +130,6 @@ class Adam():
         }
 
         fx = -1
-        alpha=self.alpha0
         for i in range(self.maxit):
 
             fx, gplot, greg = objfun.evaluate(x)
@@ -182,11 +189,24 @@ class Adam():
             if i > self.convergence_prev:
                 xnorm_prev = self.progress.optimization_log['||x||'][-self.convergence_prev-1]
                 xnorm_diff = np.abs(xnorm_prev - xnorm) / xnorm_prev
-                wij_diff = len(np.unique(
-                    self.progress.optimization_log['sum_wij_uneq_0'][-self.convergence_prev - 1:] + [problems['sum_wij_uneq_0']])) - 1
+
+                wij_deviation_prev = self.progress.optimization_log['sum_deviation_wij'][-self.convergence_prev-1]
+                wij_deviation_diff = np.abs(wij_deviation_prev - problems['sum_deviation_wij']) / wij_deviation_prev
+
             else:
                 xnorm_diff = np.nan
-                wij_diff = np.nan
+                wij_deviation_diff = np.nan
+
+
+            #start decay at iteration i
+            if self.decay and xnorm_diff < self.start_decay and self.it_succesfull_stop_condition < 0:
+                self.it_succesfull_stop_condition = i
+
+
+
+            if self.decay and wij_deviation_diff < 1e-3:
+                self.alpha_decay += 0.1
+
 
             #update learning rate
             if self.decay and self.it_succesfull_stop_condition > -1:
@@ -196,7 +216,7 @@ class Adam():
                         #beta2 *= 0.9999
                         #beta3 *= 0.9999
                     elif self.decay_type == "lin":
-                        alpha = self.alpha0  /(i - self.it_succesfull_stop_condition)
+                        alpha = self.alpha0 / (1 + (i - self.it_succesfull_stop_condition) / self.alpha_decay)
                     elif self.decay_type == "step":
                         alpha *= self.alpha_decay
                         self.start_decay *= 5e-1
@@ -204,15 +224,10 @@ class Adam():
                         # self.beta1 *= self.alpha_decay
                         # self.beta2 *= self.alpha_decay
                     elif self.decay_type == "sqrt":
-                        alpha = self.alpha0 / np.sqrt(i - self.it_succesfull_stop_condition)
+                        alpha = self.alpha0  / (1 + (np.sqrt(1 + i - self.it_succesfull_stop_condition)) / self.alpha_decay)
                         #beta1 = self.beta1  * np.power(0.99, (i-self.it_succesfull_stop_condition))
                         #beta2 = self.beta2  * np.power(0.99, (i-self.it_succesfull_stop_condition))
-                    else:
-                        alpha = self.alpha0 / (1 + (i - self.it_succesfull_stop_condition) / self.alpha_decay)
 
-            #start decay at iteration i
-            if self.decay and xnorm_diff < self.start_decay and self.it_succesfull_stop_condition < 0:
-                self.it_succesfull_stop_condition = i
 
             #print out (and possiblly plot) progress
             self.progress.log_progress(i + 1,
@@ -224,14 +239,12 @@ class Adam():
                                        sum_wij_uneq_0=problems['sum_wij_uneq_0'],
                                        sum_deviation_wij=problems['sum_deviation_wij'],
                                        mean_deviation_wij=problems['mean_deviation_wij'],
-                                       sqrtv=np.sqrt(np.sum(second_moment_corrected_pair)),
-                                       m=np.sqrt(np.sum(first_moment_corrected_pair*first_moment_corrected_pair)),
-                                       step=np.sqrt(np.sum(step_pair*step_pair)),
+                                       #sqrtv=np.sqrt(np.sum(second_moment_corrected_pair)),
+                                       #m=np.sqrt(np.sum(first_moment_corrected_pair*first_moment_corrected_pair)),
+                                       #step=np.sqrt(np.sum(step_pair*step_pair)),
                                        norm_g_reg_pair=np.sqrt(gnorm_reg_plot_pair)
                                        )
 
-            # if xnorm_diff < self.start_avg:
-            #     objfun.compute_avg_samples = True
 
             #stop condition
             if self.early_stopping:
@@ -248,10 +261,10 @@ class Adam():
                         #     #objfun.average_sample_counts = True
                         #     alpha *= 10
                         #     print("turn on averaging")
-                        if (problems['sum_qij_uneq_1'] == 0) and (problems['neg_qijab'] == 0) and (wij_diff == 0):
+                        if (problems['sum_qij_uneq_1'] == 0) and (problems['neg_qijab'] == 0):
                             ret = {
                             "code": 1,
-                            "message": "Stopping condition (xnorm diff < {0} and wij_diff == 0 and #qij violations = 0 ) successfull.".format(
+                            "message": "Stopping condition (xnorm diff < {0} and #qij violations = 0 ) successfull.".format(
                                 self.epsilon)
                              }
                             return fx, x, ret
