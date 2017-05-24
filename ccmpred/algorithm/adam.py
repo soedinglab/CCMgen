@@ -33,7 +33,6 @@ class Adam():
 
     def __init__(self, maxit=100, alpha0=1e-3, alpha_decay=1e1, beta1=0.9, beta2=0.999, beta3=0.9, noise=1e-8,
                  epsilon=1e-5, convergence_prev=5, early_stopping=False, decay_type="step",
-                 start_avg = 1e-5,
                  decay=False, start_decay=1e-4, fix_v=False, group_alpha=False, qij_condition=False):
         self.maxit = maxit
         self.alpha0 = alpha0
@@ -46,7 +45,7 @@ class Adam():
         self.start_decay = start_decay
         self.decay_type  = decay_type
 
-        self.start_avg = start_avg
+        self.refinement = False
 
         self.fix_v = fix_v
         self.group_alpha = group_alpha
@@ -68,12 +67,12 @@ class Adam():
     def __repr__(self):
 
         rep_str="Adam (beta1={0} beta2={1} beta3={2} alpha0={3} noise={4} fix_v={5}) \n ".format(
-            self.beta1, self.beta2, self.beta3, self.alpha0, self.noise, self.fix_v
+            self.beta1, self.beta2, self.beta3, np.round(self.alpha0, decimals=3), self.noise, self.fix_v
         )
 
         if self.decay:
             rep_str+="decay: decay={0} alpha_decay={1} start_decay={2} decay_type={3}\n".format(
-                self.decay, self.alpha_decay, self.start_decay, self.decay_type
+                self.decay, np.round(self.alpha_decay, decimals=3), self.start_decay, self.decay_type
             )
         else:
             rep_str+="decay: decay={0}\n".format(
@@ -96,7 +95,15 @@ class Adam():
 
     def minimize(self, objfun, x, plotfile):
 
-        diversity = np.sqrt(objfun.neff)/objfun.ncol
+        diversity = np.sqrt(objfun.nrow)/objfun.ncol
+        L = objfun.ncol
+
+        #scale learning rate with diversity of alignment
+        self.alpha0 = diversity/10 # 1.0 / np.sqrt(objfun.neff)
+        alpha=self.alpha0
+        self.alpha_decay = 100.0*diversity #L/2.0 #np.sqrt(objfun.neff)
+
+
         subtitle = "L={0} N={1} Neff={2} Diversity={3}<br>".format(objfun.ncol, objfun.nrow, np.round(objfun.neff, decimals=3), np.round(diversity,decimals=3))
         subtitle += self.__repr__().replace("\n", "<br>")
         subtitle += objfun.__repr__().replace("\n", "<br>")
@@ -114,9 +121,7 @@ class Adam():
         self.progress.begin_process()
 
 
-        #scale learning rate with diversity of alignment
-        self.alpha0 /= diversity
-        alpha=self.alpha0
+
 
 
         #initialize the moment vectors
@@ -204,10 +209,6 @@ class Adam():
 
 
 
-            if self.decay and wij_deviation_diff < 1e-3:
-                self.alpha_decay += 0.1
-
-
             #update learning rate
             if self.decay and self.it_succesfull_stop_condition > -1:
                     if self.decay_type == "power":
@@ -251,23 +252,23 @@ class Adam():
 
                 if xnorm_diff < self.epsilon:
 
-                    # objfun.compute_avg_samples = True
-                    # self.epsilon *= 1e-10
-                    # print("turn on averaging")
 
                     if self.qij_condition:
 
-                        # if (wij_diff == 0) and problems['sum_wij_uneq_0'] != 0:
-                        #     #objfun.average_sample_counts = True
-                        #     alpha *= 10
-                        #     print("turn on averaging")
                         if (problems['sum_qij_uneq_1'] == 0) and (problems['neg_qijab'] == 0):
-                            ret = {
-                            "code": 1,
-                            "message": "Stopping condition (xnorm diff < {0} and #qij violations = 0 ) successfull.".format(
-                                self.epsilon)
-                             }
-                            return fx, x, ret
+
+                            if self.refinement and objfun.gibbs_steps == 1:
+                                print("Start Refinement...")
+                                self.epsilon *= 1e-3
+                                objfun.gibbs_steps = 10
+
+                            else:
+                                ret = {
+                                    "code": 1,
+                                    "message": "Stopping condition (xnorm diff < {0} and #qij violations = 0 ) successfull.".format(
+                                        self.epsilon)
+                                 }
+                                return fx, x, ret
                     else:
                         ret = {
                             "code": 1,
@@ -285,3 +286,4 @@ class Adam():
             x=objfun.structured_to_linear(x_single, x_pair)
 
         return fx, x, ret
+

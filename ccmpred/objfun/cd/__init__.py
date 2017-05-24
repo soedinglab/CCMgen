@@ -217,14 +217,15 @@ class ContrastiveDivergence():
         sample_counts_pair[:, :, 20, :] = 0
 
 
-        # if self.compute_avg_samples:
-        #     self.deque_sample_counts_single.append(sample_counts_single)
-        #     self.deque_sample_counts_pair.append(sample_counts_pair)
-        #
-        #     if (len(self.deque_sample_counts_single) == self.deque_sample_counts_single.maxlen):
-        #         indices=range(0, self.deque_sample_counts_single.maxlen, self.average_freqency)
-        #         sample_counts_single = np.array(self.deque_sample_counts_single)[indices].sum(0)
-        #         sample_counts_pair = np.array(self.deque_sample_counts_pair)[indices].sum(0)
+        if self.compute_avg_samples:
+            self.deque_sample_counts_single.append(sample_counts_single)
+            self.deque_sample_counts_pair.append(sample_counts_pair)
+
+            if (len(self.deque_sample_counts_single) == self.deque_sample_counts_single.maxlen):
+                indices=range(0, self.deque_sample_counts_single.maxlen, self.average_freqency)
+                print indices
+                sample_counts_single = np.array(self.deque_sample_counts_single)[indices].sum(0)
+                sample_counts_pair = np.array(self.deque_sample_counts_pair)[indices].sum(0)
 
 
 
