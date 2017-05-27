@@ -16,7 +16,8 @@ class ContrastiveDivergence():
     def __init__(self, msa, freqs, weights, raw, regularization, gibbs_steps=1, persistent=False,
                  min_nseq_factorL=1, min_nseq_factorN=1,
                  pll=False,
-                 compute_avg_samples=False, num_averages=5, average_freqency=10):
+                 compute_avg_samples=False, num_averages=5, average_freqency=10,
+                 minibatch_size=5):
 
 
         if msa.shape[1] != raw.ncol:
@@ -34,6 +35,11 @@ class ContrastiveDivergence():
         self.nvar = self.nsingle + self.ncol * self.ncol * 21 * 21
 
 
+        if (minibatch_size * self.ncol) >= self.nrow:
+            self.minibatch_size = 0
+        else:
+            self.minibatch_size = minibatch_size * self.ncol
+
         #perform x steps of sampling (all variables)
         self.gibbs_steps = np.max([gibbs_steps, 1])
 
@@ -49,7 +55,7 @@ class ContrastiveDivergence():
             self.initialize_deck_for_averaging(num_averages, average_freqency)
 
 
-        # get constant alignment counts
+        # get constant alignment counts - including pseudo counts
         self.freqs_single, self.freqs_pair = freqs
         self.msa_counts_single = self.freqs_single * self.neff
         self.msa_counts_pair = self.freqs_pair * self.neff
@@ -62,7 +68,8 @@ class ContrastiveDivergence():
         #non_gapped counts
         self.Ni = self.msa_counts_single.sum(1)
         self.Nij = self.msa_counts_pair.sum(3).sum(2)
-
+        self.Ni_minibatch = self.Ni
+        self.Nij_minibatch = self.Nij
 
         #number of sequences used for sampling: multiples of MSA and at least 1xMSA
         self.min_nseq_factorL = np.max([min_nseq_factorL, 1])
@@ -70,9 +77,12 @@ class ContrastiveDivergence():
         self.min_nseq_factorN = np.max([min_nseq_factorN, 1])
 
 
-        # init sample alignment as input MSA
+        # init minibatch MSA
+        if self.minibatch_size != 0:
+            self.msa_minibatch = self.init_minibatch_alignment()
+
+        # init sample alignment for gradient approx
         self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL, self.min_nseq_factorN)
-        self.msa_sampled_weights = ccmpred.weighting.weights_simple(self.msa_sampled)
 
     def __repr__(self):
 
@@ -81,8 +91,8 @@ class ContrastiveDivergence():
             "PLL " if (self.pll) else ""
         )
 
-        str += "#samples={0} ({1} x N and {2} x L)  Gibbs steps={3} ".format(
-            (self.n_samples_msa * self.nrow), np.round(self.n_samples_msa, decimals=3),  np.round((self.n_samples_msa * self.nrow) / float(self.ncol), decimals=3), self.gibbs_steps
+        str += "#samples={0} ({1} x N and {2} x L) Minibatch size={3} Gibbs steps={4} ".format(
+            (self.msa_sampled.shape[0]), np.round(self.n_samples_msa, decimals=3),  np.round(self.msa_sampled.shape[0] / float(self.ncol), decimals=3), self.minibatch_size, self.gibbs_steps
         )
 
         if(self.compute_avg_samples):
@@ -98,18 +108,49 @@ class ContrastiveDivergence():
 
         # nr of sequences = min_nseq_factorN * N
         self.min_nseq_factorN = np.max([min_nseq_factorN, 1])
-        n_sequence_min_nseq_factorN = self.min_nseq_factorN * self.nrow
+        if self.minibatch_size != 0:
+            n_sequence_min_nseq_factorN = self.min_nseq_factorN * self.msa_minibatch.shape[0]
+        else:
+            n_sequence_min_nseq_factorN = self.min_nseq_factorN * self.nrow
 
-        print
         n_seq = np.max([n_sequence_min_nseq_factorL, n_sequence_min_nseq_factorN])
 
         # Use multiples of input MSA: at least 1xMSA
-        self.n_samples_msa = int(np.ceil(n_seq / float(self.nrow)))
-        seq_id = range(self.nrow) * self.n_samples_msa
-        #seq_id = np.random.choice(self.nrow, n_sequence_min_nseq_factorL)
-        msa_sampled = self.msa[seq_id]
+        if self.minibatch_size != 0:
+
+            self.n_samples_msa = int(np.ceil(n_seq / float(self.minibatch_size)))
+            seq_id = range(self.minibatch_size) * self.n_samples_msa
+            msa_sampled = self.msa_minibatch[seq_id]
+        else:
+            self.n_samples_msa = int(np.ceil(n_seq / float(self.nrow)))
+            seq_id = range(self.nrow) * self.n_samples_msa
+            msa_sampled = self.msa[seq_id]
+
+        self.msa_sampled_weights = ccmpred.weighting.weights_simple(msa_sampled)
 
         return msa_sampled.copy()
+
+    def init_minibatch_alignment(self):
+
+        seq_id = np.random.choice(self.nrow, self.minibatch_size, replace=False)
+        msa_sampled = self.msa[seq_id]
+
+        self.msa_sampled_weights = ccmpred.weighting.weights_simple(msa_sampled)
+
+        #counts from sample
+        self.msa_counts_single, self.msa_counts_pair = ccmpred.counts.both_counts(msa_sampled, self.msa_sampled_weights)
+
+        # reset gap counts
+        self.msa_counts_single[:, 20] = 0
+        self.msa_counts_pair[:, :, :, 20] = 0
+        self.msa_counts_pair[:, :, 20, :] = 0
+
+        #non_gapped counts
+        self.Ni_minibatch = self.msa_counts_single.sum(1) + 1e-10
+        self.Nij_minibatch = self.msa_counts_pair.sum(3).sum(2) + 1e-10
+
+        return msa_sampled.copy()
+
 
     def initialize_deck_for_averaging(self, num_averages, average_freqency):
         self.compute_avg_samples = True
@@ -194,9 +235,15 @@ class ContrastiveDivergence():
 
     def evaluate(self, x):
 
-        #reset the msa for sampling in caes of CD
+        if self.minibatch_size != 0:
+            self.msa_minibatch = self.init_minibatch_alignment()
+
         if not self.persistent:
             self.msa_sampled = self.init_sample_alignment(self.min_nseq_factorL, self.min_nseq_factorN)
+
+        if self.persistent:
+            self.msa_sampled_weights = ccmpred.weighting.weights_uniform(self.msa_sampled)
+
 
         if self.pll:
             self.msa_sampled = self.sample_position_in_sequences(x)
@@ -206,9 +253,7 @@ class ContrastiveDivergence():
             #self.msa_sampled = self.gibbs_sampling_slow(self.msa_sampled, x, self.gibbs_steps)
 
 
-
         #counts from sample
-        self.msa_sampled_weights = ccmpred.weighting.weights_simple(self.msa_sampled)
         sample_counts_single, sample_counts_pair = ccmpred.counts.both_counts(self.msa_sampled, self.msa_sampled_weights)
 
         # reset gap counts
@@ -235,8 +280,8 @@ class ContrastiveDivergence():
         # normalize counts according to input msa counts
         sampled_freq_single     = sample_counts_single / Ni_sampled[:, np.newaxis]
         sampled_freq_pair       = sample_counts_pair / Nij_sampled[:, :, np.newaxis, np.newaxis]
-        sample_counts_single    = sampled_freq_single * self.Ni[:, np.newaxis]
-        sample_counts_pair      = sampled_freq_pair * self.Nij[:, :, np.newaxis, np.newaxis]
+        sample_counts_single    = sampled_freq_single * self.Ni_minibatch[:, np.newaxis]
+        sample_counts_pair      = sampled_freq_pair * self.Nij_minibatch[:, :, np.newaxis, np.newaxis]
 
         #actually compute the gradients
         g_single = sample_counts_single - self.msa_counts_single
@@ -255,13 +300,27 @@ class ContrastiveDivergence():
         for i in range(self.ncol):
             g_pair[i, i, :, :] = 0
 
+        g_single /= self.Ni_minibatch[:, np.newaxis]
+        g_pair /= self.Nij_minibatch[:, :, np.newaxis, np.newaxis]
 
         #gradient for x_single only L x 20
         g = self.structured_to_linear(g_single[:, :20], g_pair)
 
+
         #add regularization
         x_single, x_pair = self.linear_to_structured(x, self.ncol)
         _, g_single_reg, g_pair_reg = self.regularization(x_single, x_pair)
+
+
+        #if using minibatches: scale gradient of regularizer accordingly
+        if self.minibatch_size != 0:
+            scale_Ni        = self.Ni_minibatch/self.Ni
+            scale_Nij       = self.Nij_minibatch/self.Nij
+            g_single_reg    *= scale_Ni[:, np.newaxis]
+            g_pair_reg      *= scale_Nij[:, :, np.newaxis, np.newaxis]
+            g_single_reg    /= self.Ni_minibatch[:, np.newaxis]
+            g_pair_reg      /= self.Nij_minibatch[:, :, np.newaxis, np.newaxis]
+
 
         g_reg = self.structured_to_linear(g_single_reg[:, :20], g_pair_reg)
         #g += g_reg
