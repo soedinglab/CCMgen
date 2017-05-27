@@ -5,6 +5,7 @@
 #include <time.h>
 #include <math.h>
 #include <float.h>
+#include <omp.h>
 
 #include "cd.h"
 #include "cdutil.h"
@@ -103,6 +104,7 @@ void gibbs_sample_sequences(
 ){
 
 	seed_rng();
+	omp_set_dynamic(0);
 
 	#pragma omp parallel
 	{
@@ -114,10 +116,15 @@ void gibbs_sample_sequences(
 		unsigned int sequence_position_vector[ncol];
 		for (unsigned int p=0; p < ncol; p++) sequence_position_vector[p] = p;
 
+		int num_threads = omp_get_num_threads();
+		//printf("max thread num %d ", num_threads);
 
-		#pragma omp for
-		for (int s=0; s < steps; s++){
-			for (k = 0; k < n_samples; k++) {
+		#pragma omp for private(k)
+		for (k = 0; k < n_samples; k++) {
+			int this_thread = omp_get_thread_num();
+			//printf("Compute seq %zu with thread %d \n", k,  this_thread);
+
+			for (int s=0; s < steps; s++){
 				shuffle(sequence_position_vector, ncol);
 
 				for (i=0; i < ncol; i++){
@@ -131,6 +138,8 @@ void gibbs_sample_sequences(
 		}
 		fl_free(pcondcurr);
 	}
+
+
 
 }
 
