@@ -12,80 +12,62 @@ class Progress():
 
     """
 
-    def __init__(self, plotfile=None, **kwargs):
-
-
-        self.plotfile = plotfile
+    def __init__(self, metrics ):
 
         self.optimization_log={}
-        self.optimization_log['||x||'] = []
-        self.optimization_log['||x_single||'] = []
-        self.optimization_log['||x_pair||'] = []
-        self.optimization_log['||g||'] = []
-        self.optimization_log['||g_single||'] = []
-        self.optimization_log['||g_pair||'] = []
+        for m in metrics:
+            self.optimization_log[m] = []
 
-        self.optimization_log.update(kwargs)
-
-        self.plot_metrics = []
-        self.subtitle =  ""
-
+        self.plotfile=None
+        self.title=None
 
     def begin_process(self):
 
         headerline ="{0:>{1}s}".format('iter', 8)
-        headerline += (" ".join("{0:>{1}s}".format(ht, 12) for ht in sorted(self.optimization_log.keys())))
+        headerline += (" ".join("{0:>{1}s}".format(ht, 20) for ht in sorted(self.optimization_log.keys())))
 
         if ccmpred.logo.is_tty:
             print("\x1b[2;37m{0}\x1b[0m".format(headerline))
         else:
             print(headerline)
 
-    def plot_options(self, plotfile, plot_metrics, subtitle):
-        self.plotfile = plotfile
-        self.plot_metrics = plot_metrics
-        self.subtitle =  subtitle
+    def set_plot_options(self, plotfile, title):
+        self.plotfile=plotfile
+        self.title=title
 
-
-    def log_progress(self, n_iter, xnorm, xnorm_single, xnorm_pair, gnorm, gnorm_single, gnorm_pair, **kwargs):
-
-
-
-        self.optimization_log['||x||'].append(xnorm)
-        self.optimization_log['||x_single||'].append(xnorm_single)
-        self.optimization_log['||x_pair||'].append(xnorm_pair)
-        self.optimization_log['||g||'].append(gnorm)
-        self.optimization_log['||g_single||'].append(gnorm_single)
-        self.optimization_log['||g_pair||'].append(gnorm_pair)
-
-        for name, metric in kwargs.iteritems():
-            self.optimization_log[name].append(metric)
+    def log_progress(self, n_iter, **kwargs):
 
 
         log = "{0:>{1}}".format(n_iter, '8g')
-        print log + " ".join("{0:>{1}}".format(self.optimization_log[key][-1], '12g') for key in sorted(self.optimization_log.keys()))
+        for name, metric in sorted(kwargs.iteritems()):
+            self.optimization_log[name].append(metric)
+            log += "{0:>{1}}".format(metric, '20g')
+        print(log)
+
+        # log = "{0:>{1}}".format(n_iter, '8g')
+        # print(log + " ".join("{0:>{1}}".format(self.optimization_log[key][-1], '15g') for key in sorted(self.optimization_log.keys())))
 
         if self.plotfile is not None:
             self.plot_progress()
 
-
         sys.stdout.flush()
 
 
-    def plot_progress(self):
+    def plot_progress(self, ):
+
         protein = os.path.basename(self.plotfile).split(".")[0]
         title = "Optimization Log for {0} ".format(protein)
-        title += self.subtitle
+        title += self.title
 
         data = []
-        for metric in self.plot_metrics:
+        for name, metric in self.optimization_log.iteritems():
             data.append(
                 go.Scatter(
-                    x=range(1, len(self.optimization_log[metric]) + 1),
-                    y=self.optimization_log[metric],
+                    x=range(1, len(self.optimization_log[name]) + 1),
+                    y=metric,
                     mode='lines',
                     visible="legendonly",
-                    name=metric
+                    name=name
                 )
             )
 
