@@ -31,18 +31,20 @@ class Adam():
 
     """
 
-    def __init__(self, maxit=100, alpha0=1e-3, alpha_decay=1e1, beta1=0.9, beta2=0.999, beta3=0.9, noise=1e-8,
+    def __init__(self, maxit=100, alpha0=1e-3, decay_rate=1e1, beta1=0.9, beta2=0.999, beta3=0.9, noise=1e-8,
                  epsilon=1e-5, convergence_prev=5, early_stopping=False, decay_type="step",
-                 decay=False, start_decay=1e-4, fix_v=False, group_alpha=False, qij_condition=False):
-        self.maxit = maxit
+                 decay=False, decay_start=1e-4, fix_v=False, group_alpha=False, qij_condition=False):
+
         self.alpha0 = alpha0
         self.beta1 = beta1
         self.beta2 = beta2
         self.beta3 = beta3
         self.noise = noise
+
         self.decay=decay
-        self.alpha_decay = alpha_decay
-        self.start_decay = start_decay
+        self.it_succesfull_stop_condition=-1
+        self.decay_rate = decay_rate
+        self.decay_start = decay_start
         self.decay_type  = decay_type
 
         self.refinement = False
@@ -50,19 +52,19 @@ class Adam():
         self.fix_v = fix_v
         self.group_alpha = group_alpha
 
+        self.maxit = maxit
         self.early_stopping = early_stopping
-        self.it_succesfull_stop_condition=-1
         self.epsilon = epsilon
         self.convergence_prev=convergence_prev
         self.qij_condition = qij_condition
 
-        self.progress = pr.Progress(plotfile=None,
-                                    xnorm_diff=[], max_g=[], alpha=[],
-                                    sum_qij_uneq_1=[], neg_qijab=[], sum_wij_uneq_0=[], sum_deviation_wij=[], mean_deviation_wij=[],
-                                    #m=[], sqrtv=[], step=[],
-                                    norm_g_reg_pair=[]
-                                    )
 
+        metrics=['xnorm_pair', 'gnorm_pair', 'norm_g_reg_pair', 'xnorm_diff', 'max_g', 'alpha',
+                 'sum_qij_uneq_1', 'neg_qijab', 'sum_wij_uneq_0', 'sum_deviation_wij']
+        if not self.fix_v:
+            metrics += ['xnorm', 'xnorm_single', 'gnorm', 'gnrom_single||']
+
+        self.progress = pr.Progress(metrics=metrics)
 
     def __repr__(self):
 
@@ -71,8 +73,8 @@ class Adam():
         )
 
         if self.decay:
-            rep_str+="decay: decay={0} alpha_decay={1} start_decay={2} decay_type={3}\n".format(
-                self.decay, np.round(self.alpha_decay, decimals=3), self.start_decay, self.decay_type
+            rep_str+="decay: decay={0} decay_rate={1} decay_start={2} decay_type={3}\n".format(
+                self.decay, np.round(self.decay_rate, decimals=3), self.decay_start, self.decay_type
             )
         else:
             rep_str+="decay: decay={0}\n".format(
@@ -99,29 +101,16 @@ class Adam():
         L = objfun.ncol
 
         #scale learning rate with diversity of alignment
-        self.alpha0 = diversity/10 # 1.0 / np.sqrt(objfun.neff)
+        #self.alpha0 = diversity/1 # 1.0 / np.sqrt(objfun.neff)
         alpha=self.alpha0
-        self.alpha_decay = 100.0*diversity #L/2.0 #np.sqrt(objfun.neff)
+        #self.decay_rate = 10.0*diversity #L/2.0 #np.sqrt(objfun.neff)
 
 
         subtitle = "L={0} N={1} Neff={2} Diversity={3}<br>".format(objfun.ncol, objfun.nrow, np.round(objfun.neff, decimals=3), np.round(diversity,decimals=3))
         subtitle += self.__repr__().replace("\n", "<br>")
         subtitle += objfun.__repr__().replace("\n", "<br>")
-        self.progress.plot_options(
-            plotfile,
-            [ '||x_pair||', #'||x||', '||x_single||',
-              '||g_pair||', #'||g||', '||g_single||',
-              'sum_qij_uneq_1', 'neg_qijab', 'sum_wij_uneq_0', 'sum_deviation_wij', 'mean_deviation_wij',
-              #'m','sqrtv','step',
-              'norm_g_reg_pair',
-              'max_g', 'alpha'
-              ],
-            subtitle
-        )
+        self.progress.set_plot_options(plotfile, subtitle)
         self.progress.begin_process()
-
-
-
 
 
         #initialize the moment vectors
@@ -192,8 +181,9 @@ class Adam():
 
 
             if i > self.convergence_prev:
-                xnorm_prev = self.progress.optimization_log['||x||'][-self.convergence_prev-1]
-                xnorm_diff = np.abs(xnorm_prev - xnorm) / xnorm_prev
+                xnorm_prev = self.progress.optimization_log['xnorm_pair'][-self.convergence_prev-1]
+                xnorm_diff = np.abs((xnorm_prev - np.sqrt(xnorm_pair))) / xnorm_prev
+
 
                 wij_deviation_prev = self.progress.optimization_log['sum_deviation_wij'][-self.convergence_prev-1]
                 wij_deviation_diff = np.abs(wij_deviation_prev - problems['sum_deviation_wij']) / wij_deviation_prev
@@ -204,7 +194,7 @@ class Adam():
 
 
             #start decay at iteration i
-            if self.decay and xnorm_diff < self.start_decay and self.it_succesfull_stop_condition < 0:
+            if self.decay and xnorm_diff < self.decay_start and self.it_succesfull_stop_condition < 0:
                 self.it_succesfull_stop_condition = i
 
 
@@ -212,34 +202,34 @@ class Adam():
             #update learning rate
             if self.decay and self.it_succesfull_stop_condition > -1:
                     if self.decay_type == "power":
-                        alpha *= self.alpha_decay
+                        alpha *= self.decay_rate
                         #self.beta1 *= 0.9999
                         #beta2 *= 0.9999
                         #beta3 *= 0.9999
                     elif self.decay_type == "lin":
-                        alpha = self.alpha0 / (1 + (i - self.it_succesfull_stop_condition) / self.alpha_decay)
+                        alpha = self.alpha0 / (1 + (i - self.it_succesfull_stop_condition) / self.decay_rate)
                     elif self.decay_type == "step":
-                        alpha *= self.alpha_decay
-                        self.start_decay *= 5e-1
+                        alpha *= self.decay_rate
+                        self.decay_start *= 5e-1
                         self.it_succesfull_stop_condition = -1
                         # self.beta1 *= self.alpha_decay
                         # self.beta2 *= self.alpha_decay
                     elif self.decay_type == "sqrt":
-                        alpha = self.alpha0  / (1 + (np.sqrt(1 + i - self.it_succesfull_stop_condition)) / self.alpha_decay)
+                        alpha = self.alpha0  / (1 + (np.sqrt(1 + i - self.it_succesfull_stop_condition)) / self.decay_rate)
                         #beta1 = self.beta1  * np.power(0.99, (i-self.it_succesfull_stop_condition))
                         #beta2 = self.beta2  * np.power(0.99, (i-self.it_succesfull_stop_condition))
 
 
             #print out (and possiblly plot) progress
             self.progress.log_progress(i + 1,
-                                       xnorm, np.sqrt(xnorm_single), np.sqrt(xnorm_pair),
-                                       gnorm_plot, np.sqrt(gnorm_plot_single), np.sqrt(gnorm_plot_pair),
-                                       xnorm_diff=xnorm_diff, max_g=max_g, alpha=alpha,
+                                       xnorm_pair=np.sqrt(xnorm_pair),
+                                       gnorm_pair=np.sqrt(gnorm_plot_pair),
+                                       xnorm_diff=xnorm_diff,
+                                       max_g=max_g, alpha=alpha,
                                        sum_qij_uneq_1=problems['sum_qij_uneq_1'],
                                        neg_qijab=problems['neg_qijab'],
                                        sum_wij_uneq_0=problems['sum_wij_uneq_0'],
                                        sum_deviation_wij=problems['sum_deviation_wij'],
-                                       mean_deviation_wij=problems['mean_deviation_wij'],
                                        #sqrtv=np.sqrt(np.sum(second_moment_corrected_pair)),
                                        #m=np.sqrt(np.sum(first_moment_corrected_pair*first_moment_corrected_pair)),
                                        #step=np.sqrt(np.sum(step_pair*step_pair)),

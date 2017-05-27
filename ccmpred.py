@@ -41,13 +41,13 @@ REG_L2_SCALING= {
 ALGORITHMS = {
     "conjugate_gradients": lambda opt: cg.conjugateGradient(maxit=opt.maxit, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev),
     "gradient_descent": lambda opt: gd.gradientDescent(
-        maxit=opt.maxit, alpha0=opt.alpha0, decay=opt.decay, start_decay=opt.start_decay, alpha_decay=opt.alpha_decay,
+        maxit=opt.maxit, alpha0=opt.alpha0, decay=opt.decay, decay_start=opt.decay_start, decay_rate=opt.decay_rate,
         epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping, fix_v=opt.fix_v
     ),
     "adam": lambda opt: ad.Adam(
         maxit=opt.maxit, alpha0=opt.alpha0, beta1=opt.beta1, beta2=opt.beta2, beta3=opt.beta3,
         epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping,
-        decay=opt.decay, alpha_decay=opt.alpha_decay, start_decay=opt.start_decay, fix_v=opt.fix_v,
+        decay=opt.decay, decay_rate=opt.decay_rate, decay_start=opt.decay_start, fix_v=opt.fix_v,
         group_alpha=opt.group_alpha, qij_condition=opt.qij_condition,
         decay_type=opt.decay_type
     ),
@@ -65,6 +65,7 @@ OBJ_FUNC = {
         persistent=opt.cd_persistent,
         min_nseq_factorL=opt.cd_min_nseq_factorl,
         min_nseq_factorN=opt.cd_min_nseq_factorn,
+        minibatch_size=opt.minibatch_size,
         pll=opt.cd_pll,
         compute_avg_samples=opt.cd_compute_avg_samples, num_averages=opt.cd_num_averages, average_freqency=opt.cd_average_freqency
     ),
@@ -107,6 +108,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Recover direct couplings from a multiple sequence alignment", epilog=EPILOG)
 
     parser.add_argument("-i", "--init-from-raw",        dest="initrawfile", default=None, help="Init potentials from raw file")
+    parser.add_argument("-t", "--num_threads",          dest="num_threads", type=int, default=1, help="Specify the number of threads")
     parser.add_argument("-A", "--disable_apc",          dest="disable_apc", action="store_true", default=False, help="Disable average product correction (APC)")
     parser.add_argument("--aln-format",                 dest="aln_format", default="psicov", help="File format for MSAs [default: \"%(default)s\"]")
     parser.add_argument("--no-logo",                    dest="logo", default=True, action="store_false", help="Disable showing the CCMpred logo")
@@ -131,6 +133,7 @@ def parse_args():
     grp_of.add_argument("--cd-persistent",       dest="cd_persistent", action="store_true",  default=False, help="Setting for CD: Use Persistent Contrastive Divergence: do not restart Markov Chain in each iteration.[default: %(default)s] ")
     grp_of.add_argument("--cd-min_nseq_factorl", dest="cd_min_nseq_factorl", default=0,      type=int, help="Setting for CD: Sample at least MIN_NSEQ_FACTORL * L  sequences (taken from input MSA).[default: %(default)s] ")
     grp_of.add_argument("--cd-min_nseq_factorn", dest="cd_min_nseq_factorn", default=1,      type=int, help="Setting for CD: Sample at least MIN_NSEQ_FACTORL * N  sequences (taken from input MSA).[default: %(default)s] ")
+    grp_of.add_argument("--cd-minibatch_size",   dest="minibatch_size", default=0,      type=int, help="Minibatch size as multiples of protein length L [X*L].[default: %(default)s] ")
     grp_of.add_argument("--cd-gibbs_steps",      dest="cd_gibbs_steps", default=1,      type=int, help="Setting for CD: Perform GIBBS_STEPS of Gibbs sampling per sequence. [default: %(default)s]")
     grp_of.add_argument("--cd-compute_avg_samples", dest="cd_compute_avg_samples", action="store_true", default=False, help="Use a minibatch of this size in each iteration. [default: %(default)s]")
     grp_of.add_argument("--cd-num_averages",     dest="cd_num_averages", default=0, type=int,help="Average over so many sample counts. [default: %(default)s]")
@@ -151,8 +154,8 @@ def parse_args():
     grp_als.add_argument("--ad-group_alpha",    dest="group_alpha",     action="store_true", default=False, help="Use min learning rate for each group v_i and w_ij. [default: %(default)s]")
     grp_als.add_argument("--alpha0",            dest="alpha0",          default=1e-3,       type=float,     help="Set initial learning rate. [default: %(default)s]")
     grp_als.add_argument("--decay",             dest="decay",           action="store_true", default=False, help="Use decaying learnign rate. Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
-    grp_als.add_argument("--start-decay",       dest="start_decay",     default=1e-4,       type=float,     help="Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
-    grp_als.add_argument("--alpha-decay",       dest="alpha_decay",     default=1e1,        type=float,     help="Set rate of decay for learning rate when --decay is on. [default: %(default)s]")
+    grp_als.add_argument("--decay-start",       dest="decay_start",     default=1e-4,       type=float,     help="Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
+    grp_als.add_argument("--decay-rate",        dest="decay_rate",     default=1e1,        type=float,     help="Set rate of decay for learning rate when --decay is on. [default: %(default)s]")
     grp_als.add_argument("--decay-type",        dest="decay_type",      default="step",     type=str,       choices=['step', 'sqrt', 'power', 'exp', 'lin'], help="Decay type. One of: step, sqrt, exp, power, lin. [default: %(default)s]")
 
 
@@ -220,13 +223,17 @@ def main():
     if opt.logo:
         ccmpred.logo.logo()
 
+    #set OMP environment variable for number of threads
+    os.environ['OMP_NUM_THREADS'] = str(opt.num_threads)
+    print("Using {0} threads for OMP parallelization.".format(os.environ["OMP_NUM_THREADS"]))
+
     msa = ccmpred.io.alignment.read_msa(opt.alnfile, opt.aln_format)
     msa, gapped_positions = ccmpred.gaps.remove_gapped_positions(msa, opt.max_gap_ratio)
 
     weights = opt.weight(msa, opt.ignore_gaps)
 
     protein=os.path.basename(opt.alnfile).split(".")[0]
-    print("Alignment for protein {0} (L={1}) has {2} sequences".format(protein, msa.shape[1], msa.shape[0]))
+    print("{0} is of length L={1} and has {2} sequences.".format(protein, msa.shape[1], msa.shape[0]))
     print("Number of effective sequences after {0} reweighting (id-threshold={1}, ignore_gaps={2}): {3:g}. Neff(HHsuite-like)={4}".format(opt.weight.__name__,0.8,opt.ignore_gaps, np.sum(weights),ccmpred.pseudocounts.get_neff(msa)))
 
 
@@ -243,7 +250,6 @@ def main():
         freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, opt.pseudocounts[0], pseudocount_n_single=opt.pseudocounts[1], pseudocount_n_pair=opt.pseudocount_pair_count, remove_gaps=False)
 
 
-    print opt.reg_type
 
     #setup regularization properties
     if opt.dev_center_v or opt.reg_type == "center-v":
