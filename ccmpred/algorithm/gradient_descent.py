@@ -17,7 +17,7 @@ class gradientDescent():
         #decay settings
         self.decay=decay
         self.decay_start = decay_start
-        self.decay_rate = decay_rate
+        self.decay_rate = np.float(decay_rate)
         self.it_succesfull_stop_condition=-1
 
         self.fix_v=fix_v
@@ -56,7 +56,11 @@ class gradientDescent():
 
     def minimize(self, objfun, x, plotfile):
 
-        subtitle = "L={0} N={1} Neff={2}<br>".format(objfun.ncol, objfun.nrow, np.round(objfun.neff, decimals=3))
+        diversity = np.sqrt(objfun.nrow)/objfun.ncol
+
+        self.decay_rate = 100.0*diversity
+
+        subtitle = "L={0} N={1} Neff={2} Diversity={3}<br>".format(objfun.ncol, objfun.nrow, np.round(objfun.neff, decimals=3), np.round(diversity,decimals=3))
         subtitle += self.__repr__().replace("\n", "<br>")
         subtitle += objfun.__repr__().replace("\n", "<br>")
         self.progress.set_plot_options(plotfile, subtitle)
@@ -111,8 +115,8 @@ class gradientDescent():
                 self.it_succesfull_stop_condition = i
 
             #new step size
-            if self.decay and xnorm_diff < self.decay_start:
-                alpha = self.alpha0 / (1 + (i - self.it_succesfull_stop_condition) / np.float(self.decay_rate))
+            if self.it_succesfull_stop_condition > 0:
+                alpha = self.alpha0 / (1 + (i - self.it_succesfull_stop_condition) /self.decay_rate)
 
             #compute number of problems with qij
             problems = ccmpred.model_probabilities.get_nr_problematic_qij(
