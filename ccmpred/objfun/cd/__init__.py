@@ -300,14 +300,8 @@ class ContrastiveDivergence():
         for i in range(self.ncol):
             g_pair[i, i, :, :] = 0
 
-        g_single /= self.Ni_minibatch[:, np.newaxis]
-        g_pair /= self.Nij_minibatch[:, :, np.newaxis, np.newaxis]
 
-        #gradient for x_single only L x 20
-        g = self.structured_to_linear(g_single[:, :20], g_pair)
-
-
-        #add regularization
+        #compute regularization
         x_single, x_pair = self.linear_to_structured(x, self.ncol)
         _, g_single_reg, g_pair_reg = self.regularization(x_single, x_pair)
 
@@ -318,10 +312,18 @@ class ContrastiveDivergence():
             scale_Nij       = self.Nij_minibatch/self.Nij
             g_single_reg    *= scale_Ni[:, np.newaxis]
             g_pair_reg      *= scale_Nij[:, :, np.newaxis, np.newaxis]
-            g_single_reg    /= self.Ni_minibatch[:, np.newaxis]
-            g_pair_reg      /= self.Nij_minibatch[:, :, np.newaxis, np.newaxis]
 
 
+        #normalize gradients wrt to alignment depth
+        # g_single        /= self.Ni_minibatch[:, np.newaxis]
+        # g_pair          /= self.Nij_minibatch[:, :, np.newaxis, np.newaxis]
+        #
+        # g_single_reg    /= self.Ni_minibatch[:, np.newaxis]
+        # g_pair_reg      /= self.Nij_minibatch[:, :, np.newaxis, np.newaxis]
+
+
+        #gradient for x_single only L x 20
+        g = self.structured_to_linear(g_single[:, :20], g_pair)
         g_reg = self.structured_to_linear(g_single_reg[:, :20], g_pair_reg)
         #g += g_reg
 
