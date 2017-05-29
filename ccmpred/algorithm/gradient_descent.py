@@ -58,7 +58,8 @@ class gradientDescent():
 
         diversity = np.sqrt(objfun.nrow)/objfun.ncol
 
-        self.decay_rate = 100.0*diversity
+        if self.decay_rate == 0:
+            self.decay_rate = 100.0*diversity
 
         subtitle = "L={0} N={1} Neff={2} Diversity={3}<br>".format(objfun.ncol, objfun.nrow, np.round(objfun.neff, decimals=3), np.round(diversity,decimals=3))
         subtitle += self.__repr__().replace("\n", "<br>")
