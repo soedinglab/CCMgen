@@ -16,7 +16,6 @@ class ContrastiveDivergence():
     def __init__(self, msa, freqs, weights, raw, regularization, gibbs_steps=1, persistent=False,
                  min_nseq_factorL=1, min_nseq_factorN=1,
                  pll=False,
-                 compute_avg_samples=False, num_averages=5, average_freqency=10,
                  minibatch_size=5):
 
 
@@ -45,9 +44,9 @@ class ContrastiveDivergence():
         self.pll = pll
 
         #whether to compute average counts from last X sampled MSA's
-        self.compute_avg_samples = compute_avg_samples
-        if self.compute_avg_samples:
-            self.initialize_deck_for_averaging(num_averages, average_freqency)
+        # self.compute_avg_samples = compute_avg_samples
+        # if self.compute_avg_samples:
+        #     self.initialize_deck_for_averaging(num_averages, average_freqency)
 
         # get constant alignment counts - including pseudo counts
         self.freqs_single, self.freqs_pair = freqs
@@ -261,15 +260,15 @@ class ContrastiveDivergence():
         sample_counts_pair[:, :, 20, :] = 0
 
 
-        if self.compute_avg_samples:
-            self.deque_sample_counts_single.append(sample_counts_single)
-            self.deque_sample_counts_pair.append(sample_counts_pair)
-
-            if (len(self.deque_sample_counts_single) == self.deque_sample_counts_single.maxlen):
-                indices=range(0, self.deque_sample_counts_single.maxlen, self.average_freqency)
-                print indices
-                sample_counts_single = np.array(self.deque_sample_counts_single)[indices].sum(0)
-                sample_counts_pair = np.array(self.deque_sample_counts_pair)[indices].sum(0)
+        # if self.compute_avg_samples:
+        #     self.deque_sample_counts_single.append(sample_counts_single)
+        #     self.deque_sample_counts_pair.append(sample_counts_pair)
+        #
+        #     if (len(self.deque_sample_counts_single) == self.deque_sample_counts_single.maxlen):
+        #         indices=range(0, self.deque_sample_counts_single.maxlen, self.average_freqency)
+        #         print indices
+        #         sample_counts_single = np.array(self.deque_sample_counts_single)[indices].sum(0)
+        #         sample_counts_pair = np.array(self.deque_sample_counts_pair)[indices].sum(0)
 
 
         Ni_sampled = sample_counts_single.sum(1) + 1e-10

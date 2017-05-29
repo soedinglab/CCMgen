@@ -66,9 +66,8 @@ OBJ_FUNC = {
         min_nseq_factorL=opt.cd_min_nseq_factorl,
         min_nseq_factorN=opt.cd_min_nseq_factorn,
         minibatch_size=opt.minibatch_size,
-        pll=opt.cd_pll,
-        compute_avg_samples=opt.cd_compute_avg_samples, num_averages=opt.cd_num_averages, average_freqency=opt.cd_average_freqency
-    ),
+        pll=opt.cd_pll
+    )
 
 }
 
@@ -135,9 +134,6 @@ def parse_args():
     grp_of.add_argument("--cd-min_nseq_factorn", dest="cd_min_nseq_factorn", default=1,      type=int, help="Setting for CD: Sample at least MIN_NSEQ_FACTORL * N  sequences (taken from input MSA).[default: %(default)s] ")
     grp_of.add_argument("--cd-minibatch_size",   dest="minibatch_size", default=0,      type=int, help="Minibatch size as multiples of protein length L [X*L].[default: %(default)s] ")
     grp_of.add_argument("--cd-gibbs_steps",      dest="cd_gibbs_steps", default=1,      type=int, help="Setting for CD: Perform GIBBS_STEPS of Gibbs sampling per sequence. [default: %(default)s]")
-    grp_of.add_argument("--cd-compute_avg_samples", dest="cd_compute_avg_samples", action="store_true", default=False, help="Use a minibatch of this size in each iteration. [default: %(default)s]")
-    grp_of.add_argument("--cd-num_averages",     dest="cd_num_averages", default=0, type=int,help="Average over so many sample counts. [default: %(default)s]")
-    grp_of.add_argument("--cd-average_freqency", dest="cd_average_freqency", default=10, type=int,  help="Ignore this many samples in between averaging. [default: %(default)s]")
     grp_of.add_argument("--ofn-tree-cd", action=TreeCDAction, metavar=("TREEFILE", "ANCESTORFILE"), nargs=2, type=str, help="Use Tree-controlled Contrastive Divergence, loading tree data from TREEFILE and ancestral sequence data from ANCESTORFILE")
 
 
