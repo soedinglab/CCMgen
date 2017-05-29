@@ -17,9 +17,15 @@ class conjugateGradient():
         self.epsilon = epsilon
         self.convergence_prev = convergence_prev
 
-        self.progress = pr.Progress(plotfile=None,
-                                    fx=[], max_g=[], step=[], n_linesearch=[], rel_diff_fx=[],
-                                    sum_qij_uneq_1=[], neg_qijab=[], sum_wij_uneq_0=[])
+        metrics=['xnorm', 'xnorm_single','xnorm_pair', 'gnorm', 'gnorm_single', 'gnorm_pair',
+                 'fx', 'step','n_linesearch', 'xnorm_pair', 'rel_diff_fx', 'max_g',
+                 'sum_deviation_wij']
+
+        self.progress = pr.Progress(metrics=metrics)
+
+
+
+
 
     def __repr__(self):
         return "conjugate gradient optimization (ftol={0} max_linesearch={1} alpha_mul={2} wolfe={3}) \n" \
@@ -36,16 +42,13 @@ class conjugateGradient():
     def minimize(self, objfun, x, plotfile):
 
 
-        subtitle = "L={0} N={1} Neff={2} <br>".format(objfun.ncol, objfun.nrow, np.round(objfun.neff, decimals=3))
+        diversity = np.sqrt(objfun.nrow)/objfun.ncol
+        subtitle = "L={0} N={1} Neff={2} Diversity={3}<br>".format(objfun.ncol, objfun.nrow, np.round(objfun.neff, decimals=3), np.round(diversity,decimals=3))
         subtitle += self.__repr__().replace("\n", "<br>")
-        self.progress.plot_options(
-            plotfile,
-            ['fx',  '||x||', '||x_single||', '||x_pair||','||g||', '||g_single||', '||g_pair||',
-             'sum_qij_uneq_1', 'neg_qijab', 'sum_wij_uneq_0',
-             'max_g', 'step', 'n_linesearch', 'rel_diff_fx'],
-            subtitle
-        )
+        subtitle += objfun.__repr__().replace("\n", "<br>")
+        self.progress.set_plot_options(plotfile, subtitle)
         self.progress.begin_process()
+
 
 
         #for initialization of linesearch
@@ -64,11 +67,21 @@ class conjugateGradient():
         max_g = np.max(g)
 
         # print out progress
-        self.progress.log_progress(0,
-                                   np.sqrt(xnorm_single + xnorm_pair), np.sqrt(xnorm_single), np.sqrt(xnorm_pair),
-                                   np.sqrt(gnorm_single + gnorm_pair), np.sqrt(gnorm_single), np.sqrt(gnorm_pair),
-                                   fx=fx, max_g=max_g, step=0, n_linesearch=0, rel_diff_fx=np.nan,
-                                   sum_qij_uneq_1=0, neg_qijab=0, sum_wij_uneq_0=0)
+        self.progress.log_progress(
+            0,
+            xnorm= np.sqrt(xnorm_single+xnorm_pair),
+            xnorm_single= np.sqrt(xnorm_single),
+            xnorm_pair= np.sqrt(xnorm_pair),
+            gnorm=np.sqrt(gnorm_single+gnorm_pair),
+            gnorm_single=np.sqrt(gnorm_single),
+            gnorm_pair=np.sqrt(gnorm_pair),
+            fx=fx,
+            step=0,
+            n_linesearch=0,
+            max_g=max_g,
+            rel_diff_fx=np.nan,
+            sum_deviation_wij=0
+        )
 
 
         gprevnorm = None
@@ -146,14 +159,21 @@ class conjugateGradient():
 
 
             # print out progress
-            self.progress.log_progress(iteration,
-                                       np.sqrt(xnorm_single + xnorm_pair), np.sqrt(xnorm_single), np.sqrt(xnorm_pair),
-                                       np.sqrt(gnorm), np.sqrt(gnorm_single), np.sqrt(gnorm_pair),
-                                       fx=fx, max_g=max_g, step=alpha, n_linesearch=n_linesearch, rel_diff_fx=rel_diff_fx,
-                                       sum_qij_uneq_1=problems['sum_qij_uneq_1'],
-                                       neg_qijab=problems['neg_qijab'],
-                                       sum_wij_uneq_0=problems['sum_wij_uneq_0'])
-
+            self.progress.log_progress(
+                iteration,
+                xnorm=np.sqrt(xnorm_single + xnorm_pair),
+                xnorm_single=np.sqrt(xnorm_single),
+                xnorm_pair=np.sqrt(xnorm_pair),
+                gnorm=np.sqrt(gnorm_single + gnorm_pair),
+                gnorm_single=np.sqrt(gnorm_single),
+                gnorm_pair=np.sqrt(gnorm_pair),
+                fx=fx,
+                step=alpha,
+                n_linesearch=n_linesearch,
+                max_g=max_g,
+                rel_diff_fx=rel_diff_fx,
+                sum_deviation_wij=problems['sum_deviation_wij']
+            )
 
 
 
