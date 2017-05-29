@@ -270,6 +270,10 @@ def main():
 
 
     if opt.initrawfile:
+        if not os.path.exists(opt.initrawfile):
+            print("Init file {0} does not exist! Exit".format(opt.initrawfile))
+            sys.exit(0)
+
         raw_init = ccmpred.raw.parse(opt.initrawfile)
         #only compute model frequencies and exit
         if opt.only_model_prob and opt.outmodelprobmsgpackfile:
