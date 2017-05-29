@@ -59,7 +59,7 @@ class Adam():
         self.qij_condition = qij_condition
 
 
-        metrics=['xnorm_pair', 'gnorm_pair', 'norm_g_reg_pair', 'xnorm_diff', 'max_g', 'alpha',
+        metrics=['xnorm_pair', 'gnorm_pair', 'norm_g_reg_pair', 'wij_diff', 'max_g', 'alpha',
                  'sum_qij_uneq_1', 'neg_qijab', 'sum_wij_uneq_0', 'sum_deviation_wij']
         if not self.fix_v:
             metrics += ['xnorm', 'xnorm_single', 'gnorm', 'gnrom_single||']
@@ -97,13 +97,17 @@ class Adam():
 
     def minimize(self, objfun, x, plotfile):
 
-        diversity = np.sqrt(objfun.nrow)/objfun.ncol
+        diversity = np.sqrt(objfun.neff)/objfun.ncol
         L = objfun.ncol
 
         #scale learning rate with diversity of alignment
         #self.alpha0 = diversity/1 # 1.0 / np.sqrt(objfun.neff)
-        alpha=self.alpha0
-        #self.decay_rate = 10.0*diversity #L/2.0 #np.sqrt(objfun.neff)
+
+        if self.decay_rate == 0:
+            self.decay_rate = 100.0*diversity
+            #self.alpha0 = diversity/10.0 # 1.0
+            #self.decay_rate = objfun.neff/10
+            #self.decay_rate = float(objfun.ncol)
 
 
         subtitle = "L={0} N={1} Neff={2} Diversity={3}<br>".format(objfun.ncol, objfun.nrow, np.round(objfun.neff, decimals=3), np.round(diversity,decimals=3))
@@ -124,6 +128,7 @@ class Adam():
         }
 
         fx = -1
+        alpha=self.alpha0
         for i in range(self.maxit):
 
             fx, gplot, greg = objfun.evaluate(x)
@@ -181,16 +186,14 @@ class Adam():
 
 
             if i > self.convergence_prev:
-                xnorm_prev = self.progress.optimization_log['xnorm_pair'][-self.convergence_prev-1]
+                xnorm_prev = self.progress.optimization_log['xnorm_pair'][-self.convergence_prev]
                 xnorm_diff = np.abs((xnorm_prev - np.sqrt(xnorm_pair))) / xnorm_prev
-
-
-                wij_deviation_prev = self.progress.optimization_log['sum_deviation_wij'][-self.convergence_prev-1]
-                wij_deviation_diff = np.abs(wij_deviation_prev - problems['sum_deviation_wij']) / wij_deviation_prev
+                wij_diff_prev = self.progress.optimization_log['sum_deviation_wij'][-self.convergence_prev]
+                wij_diff = np.abs((wij_diff_prev - problems['sum_deviation_wij'])) / wij_diff_prev
 
             else:
                 xnorm_diff = np.nan
-                wij_deviation_diff = np.nan
+                wij_diff = np.nan
 
 
             #start decay at iteration i
@@ -224,7 +227,7 @@ class Adam():
             self.progress.log_progress(i + 1,
                                        xnorm_pair=np.sqrt(xnorm_pair),
                                        gnorm_pair=np.sqrt(gnorm_plot_pair),
-                                       xnorm_diff=xnorm_diff,
+                                       wij_diff=wij_diff,
                                        max_g=max_g, alpha=alpha,
                                        sum_qij_uneq_1=problems['sum_qij_uneq_1'],
                                        neg_qijab=problems['neg_qijab'],
@@ -237,10 +240,24 @@ class Adam():
                                        )
 
 
+            if xnorm_diff < 1e-6 and not objfun.persistent:
+                print("Refinement with persistent contrastive divergence")
+                objfun.persistent = True
+                objfun.minibatch_size = 0
+                objfun.init_alignment_stats()
+                objfun.msa_sampled = objfun.init_sample_alignment(objfun.min_nseq_factorL, objfun.min_nseq_factorN)
+
+                subtitle = "L={0} N={1} Neff={2} Diversity={3}<br>".format(objfun.ncol, objfun.nrow,
+                                                                           np.round(objfun.neff, decimals=3),
+                                                                           np.round(diversity, decimals=3))
+                subtitle += self.__repr__().replace("\n", "<br>")
+                subtitle += objfun.__repr__().replace("\n", "<br>")
+                self.progress.set_plot_options(plotfile, subtitle)
+
             #stop condition
             if self.early_stopping:
 
-                if xnorm_diff < self.epsilon:
+                if wij_diff < self.epsilon:
 
 
                     if self.qij_condition:
