@@ -320,8 +320,8 @@ def main():
     if opt.centering_potentials:
 
         #perform checks on potentials:
-        check_x_single  = ccmpred.sanity_check.check_single_potentials(res.x_single, verbose=1, epsilon=1e-3)
-        check_x_pair  = ccmpred.sanity_check.check_pair_potentials(res.x_pair, verbose=1, epsilon=1e-3)
+        check_x_single  = ccmpred.sanity_check.check_single_potentials(res.x_single, verbose=1, epsilon=1e-2)
+        check_x_pair  = ccmpred.sanity_check.check_pair_potentials(res.x_pair, verbose=1, epsilon=1e-2)
 
         #enforce sum(wij)=0 and sum(v_i)=0
         if not check_x_single or not check_x_pair:
