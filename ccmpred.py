@@ -48,8 +48,7 @@ ALGORITHMS = {
         maxit=opt.maxit, alpha0=opt.alpha0, beta1=opt.beta1, beta2=opt.beta2, beta3=opt.beta3,
         epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping,
         decay=opt.decay, decay_rate=opt.decay_rate, decay_start=opt.decay_start, fix_v=opt.fix_v,
-        group_alpha=opt.group_alpha, qij_condition=opt.qij_condition,
-        decay_type=opt.decay_type
+        qij_condition=opt.qij_condition, decay_type=opt.decay_type
     ),
     "numerical_differentiation": lambda opt: nd.numDiff(maxit=opt.maxit, epsilon=opt.epsilon)
 }
@@ -147,7 +146,6 @@ def parse_args():
     grp_als.add_argument("--ad-beta1",          dest="beta1",           default=0.9,        type=float,     help="Set beta 1 parameter for Adam (moemntum). [default: %(default)s]")
     grp_als.add_argument("--ad-beta2",          dest="beta2",           default=0.999,      type=float,     help="Set beta 2 parameter for Adam (adaptivity) [default: %(default)s]")
     grp_als.add_argument("--ad-beta3",          dest="beta3",           default=0.9,      type=float,       help="Set beta 3 parameter for Adam (temporal averaging) [default: %(default)s]")
-    grp_als.add_argument("--ad-group_alpha",    dest="group_alpha",     action="store_true", default=False, help="Use min learning rate for each group v_i and w_ij. [default: %(default)s]")
     grp_als.add_argument("--alpha0",            dest="alpha0",          default=1e-3,       type=float,     help="Set initial learning rate. [default: %(default)s]")
     grp_als.add_argument("--decay",             dest="decay",           action="store_true", default=False, help="Use decaying learnign rate. Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
     grp_als.add_argument("--decay-start",       dest="decay_start",     default=1e-4,       type=float,     help="Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
@@ -275,6 +273,7 @@ def main():
             sys.exit(0)
 
         raw_init = ccmpred.raw.parse(opt.initrawfile)
+
         #only compute model frequencies and exit
         if opt.only_model_prob and opt.outmodelprobmsgpackfile:
             print("Writing msgpack-formatted model probabilties to {0}".format(opt.outmodelprobmsgpackfile))
