@@ -55,7 +55,10 @@ def create(opt, regularization, msa, weights, f, fx, algret, alg):
         meta['workflow'][0]['parameters']['optimization']['gibbs_steps'] = opt.cd_gibbs_steps
         meta['workflow'][0]['parameters']['optimization']['persistent']  = opt.cd_persistent
         meta['workflow'][0]['parameters']['optimization']['min_nseq_factorl'] = opt.cd_min_nseq_factorl
+        meta['workflow'][0]['parameters']['optimization']['min_nseq_factorn'] = opt.cd_min_nseq_factorn
         meta['workflow'][0]['parameters']['optimization']['cd_pll'] = opt.cd_pll
+        meta['workflow'][0]['parameters']['optimization']['minibatch_size'] = opt.minibatch_size
+
 
 
     if (opt.algorithm) == 'conjugate_gradients':
@@ -71,13 +74,15 @@ def create(opt, regularization, msa, weights, f, fx, algret, alg):
         meta['workflow'][0]['parameters']['optimization']['alpha0'] = opt.alpha0
         meta['workflow'][0]['parameters']['optimization']['beta1'] = opt.beta1
         meta['workflow'][0]['parameters']['optimization']['beta2'] = opt.beta2
-        meta['workflow'][0]['parameters']['optimization']['group_alpha'] = opt.group_alpha
+        meta['workflow'][0]['parameters']['optimization']['beta3'] = opt.beta3
 
 
     if (opt.decay):
-        meta['workflow'][0]['parameters']['optimization']['decay_rate'] = opt.decay_rate
+        meta['workflow'][0]['parameters']['optimization']['decay-rate'] = opt.decay_rate
         meta['workflow'][0]['parameters']['optimization']['decay'] = opt.decay
-        meta['workflow'][0]['parameters']['optimization']['decay_start'] = opt.decay_start
+        meta['workflow'][0]['parameters']['optimization']['decay-start'] = opt.decay_start
+        if (opt.algorithm) == 'adam':
+            meta['workflow'][0]['parameters']['optimization']['decay-type'] = opt.decay_type
 
 
     meta['workflow'][0]['parameters']['optimization']['convergence']={}
@@ -85,6 +90,8 @@ def create(opt, regularization, msa, weights, f, fx, algret, alg):
     meta['workflow'][0]['parameters']['optimization']['convergence_prev'] = opt.convergence_prev
     meta['workflow'][0]['parameters']['optimization']['epsilon'] = opt.epsilon
     meta['workflow'][0]['parameters']['optimization']['maxit'] = opt.maxit
+    if (opt.algorithm) == 'adam':
+        meta['workflow'][0]['parameters']['optimization']['qij_condition'] = opt.qij_condition
 
 
     meta['workflow'][0]['parameters']['apc']  = not opt.disable_apc
