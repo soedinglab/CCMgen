@@ -43,11 +43,6 @@ class ContrastiveDivergence():
         #whether to sample only ONE variable per iteration
         self.pll = pll
 
-        #whether to compute average counts from last X sampled MSA's
-        # self.compute_avg_samples = compute_avg_samples
-        # if self.compute_avg_samples:
-        #     self.initialize_deck_for_averaging(num_averages, average_freqency)
-
         # get constant alignment counts - including pseudo counts
         self.freqs_single, self.freqs_pair = freqs
         self.init_alignment_stats()
@@ -145,14 +140,6 @@ class ContrastiveDivergence():
             self.Ni_minibatch = self.Ni
             self.Nij_minibatch = self.Nij
 
-
-
-    def initialize_deck_for_averaging(self, num_averages, average_freqency):
-        self.compute_avg_samples = True
-        self.num_averages = num_averages
-        self.average_freqency = average_freqency
-        self.deque_sample_counts_single = deque([], maxlen=num_averages * average_freqency)
-        self.deque_sample_counts_pair = deque([], maxlen=num_averages * average_freqency)
 
     def finalize(self, x, meta):
         x_single, x_pair = self.linear_to_structured(x, self.ncol, add_gap_state=True)
@@ -257,17 +244,6 @@ class ContrastiveDivergence():
         sample_counts_pair[:, :, 20, :] = 0
 
 
-        # if self.compute_avg_samples:
-        #     self.deque_sample_counts_single.append(sample_counts_single)
-        #     self.deque_sample_counts_pair.append(sample_counts_pair)
-        #
-        #     if (len(self.deque_sample_counts_single) == self.deque_sample_counts_single.maxlen):
-        #         indices=range(0, self.deque_sample_counts_single.maxlen, self.average_freqency)
-        #         print indices
-        #         sample_counts_single = np.array(self.deque_sample_counts_single)[indices].sum(0)
-        #         sample_counts_pair = np.array(self.deque_sample_counts_pair)[indices].sum(0)
-
-
         Ni_sampled = sample_counts_single.sum(1) + 1e-10
         Nij_sampled = sample_counts_pair.sum(3).sum(2) + 1e-10
 
@@ -308,18 +284,9 @@ class ContrastiveDivergence():
             g_pair_reg      *= scale_Nij[:, :, np.newaxis, np.newaxis]
 
 
-        #normalize gradients wrt to alignment depth
-        # g_single        /= self.Ni_minibatch[:, np.newaxis]
-        # g_pair          /= self.Nij_minibatch[:, :, np.newaxis, np.newaxis]
-        #
-        # g_single_reg    /= self.Ni_minibatch[:, np.newaxis]
-        # g_pair_reg      /= self.Nij_minibatch[:, :, np.newaxis, np.newaxis]
-
-
         #gradient for x_single only L x 20
         g = self.structured_to_linear(g_single[:, :20], g_pair)
         g_reg = self.structured_to_linear(g_single_reg[:, :20], g_pair_reg)
-        #g += g_reg
 
         return -1, g, g_reg
 
