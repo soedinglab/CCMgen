@@ -26,7 +26,7 @@ class conjugateGradient():
 
     def __repr__(self):
         return "conjugate gradient optimization (ftol={0} max_linesearch={1} alpha_mul={2} wolfe={3}) \n" \
-               "convergence criteria: maxit={4} epsilon={5} convergence_prev={6} ".format(
+               "\tconvergence criteria: maxit={4} epsilon={5} convergence_prev={6} \n".format(
             self.ftol, self.max_linesearch, self.alpha_mul, self.wolfe, self.maxit, self.epsilon, self.convergence_prev)
 
     def set_epsilon(self, eps):
@@ -145,6 +145,7 @@ class conjugateGradient():
             log_metrics['#lsearch'] = n_linesearch
             log_metrics['diff_fx'] = rel_diff_fx
             log_metrics['sum_wij'] = problems['sum_deviation_wij']
+
             self.progress.log_progress(iteration+1, **log_metrics)
 
 

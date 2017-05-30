@@ -61,25 +61,25 @@ class Adam():
 
     def __repr__(self):
 
-        rep_str="Adam (beta1={0} beta2={1} beta3={2} alpha0={3} noise={4} fix_v={5}) \n ".format(
+        rep_str="Adam (beta1={0} beta2={1} beta3={2} alpha0={3} noise={4} fix-v={5}) \n".format(
             self.beta1, self.beta2, self.beta3, np.round(self.alpha0, decimals=3), self.noise, self.fix_v
         )
 
         if self.decay:
-            rep_str+="decay: decay={0} decay_rate={1} decay_start={2} decay_type={3}\n".format(
+            rep_str+="\tdecay: decay={0} decay-rate={1} decay-start={2} decay-type={3}\n".format(
                 self.decay, np.round(self.decay_rate, decimals=3), self.decay_start, self.decay_type
             )
         else:
-            rep_str+="decay: decay={0}\n".format(
+            rep_str+="\tdecay: decay={0}\n".format(
               self.decay
             )
 
         if self.early_stopping:
-            rep_str+="convergence criteria: maxit={0} early_stopping={1} epsilon={2} prev={3}\n".format(
+            rep_str+="\tconvergence criteria: maxit={0} early-stopping={1} epsilon={2} prev={3}\n".format(
                 self.maxit, self.early_stopping, self.epsilon, self.convergence_prev
             )
         else:
-            rep_str+="convergence criteria: maxit={0} early_stopping={1}\n".format(
+            rep_str+="\tconvergence criteria: maxit={0} early-stopping={1}\n".format(
                 self.maxit, self.early_stopping
             )
 
@@ -104,9 +104,12 @@ class Adam():
 
 
         #initialize the moment vectors
-        first_moment = np.zeros(objfun.nvar)
-        second_moment = np.zeros(objfun.nvar)
-        x_moment = np.zeros(objfun.nvar)
+        first_moment_pair = np.zeros((objfun.ncol,objfun.ncol, 21 , 21))
+        second_moment_pair = np.zeros((objfun.ncol, objfun.ncol, 21 , 21))
+        x_moment_pair = np.zeros((objfun.ncol, objfun.ncol, 21, 21))
+        first_moment_single = np.zeros((objfun.ncol, 20))
+        second_moment_single = np.zeros((objfun.ncol, 20))
+        x_moment_single = np.zeros((objfun.ncol, 20))
 
         ret = {
             "code": 2,
@@ -120,29 +123,39 @@ class Adam():
             fx, gx, greg = objfun.evaluate(x)
             g = gx + greg
 
-            #update moment vectors
-            first_moment    = self.beta1 * first_moment + (1-self.beta1) * (g)
-            second_moment   = self.beta2 * second_moment + (1-self.beta2) * (g*g)
-            x_moment        = self.beta3 * x_moment + (1-self.beta3) * (x)
-
-            #compute bias corrected moments
-            first_moment_corrected  = first_moment / (1 - np.power(self.beta1, i+1))
-            second_moment_corrected = second_moment / (1 - np.power(self.beta2, i+1))
-            x_moment_corrected = x_moment / (1 - np.power(self.beta3, i+1))
-
-            first_moment_corrected_single, first_moment_corrected_pair = objfun.linear_to_structured(first_moment_corrected, objfun.ncol)
-            second_moment_corrected_single, second_moment_corrected_pair = objfun.linear_to_structured(second_moment_corrected, objfun.ncol)
-            x_moment_corrected_single, x_moment_corrected_pair = objfun.linear_to_structured(x_moment_corrected, objfun.ncol)
-
-            #compute the update step
-            step_single = first_moment_corrected_single / ( np.sqrt(second_moment_corrected_single) + self.noise)
-            step_pair   = first_moment_corrected_pair / ( np.sqrt(second_moment_corrected_pair) + self.noise)
-
-
             #decompose gradients and parameters
             x_single, x_pair = objfun.linear_to_structured(x, objfun.ncol)
             gx_single, gx_pair = objfun.linear_to_structured(gx, objfun.ncol)
             g_reg_single, g_reg_pair = objfun.linear_to_structured(greg, objfun.ncol)
+            g_single, g_pair = objfun.linear_to_structured(g, objfun.ncol)
+
+            #update moment, adaptivity and parameter averages
+            first_moment_pair    = self.beta1 * first_moment_pair + (1-self.beta1) * (g_pair)
+            second_moment_pair   = self.beta2 * second_moment_pair + (1-self.beta2) * (g_pair*g_pair)
+            x_moment_pair        = self.beta3 * x_moment_pair + (1-self.beta3) * (x_pair)
+
+            #compute bias corrected moments
+            first_moment_corrected_pair     = first_moment_pair     / (1 - np.power(self.beta1, i+1))
+            second_moment_corrected_pair    = second_moment_pair    / (1 - np.power(self.beta2, i+1))
+            x_moment_corrected_pair         = x_moment_pair         / (1 - np.power(self.beta3, i+1))
+
+            #compute the update step
+            step_pair   = first_moment_corrected_pair / ( np.sqrt(second_moment_corrected_pair) + self.noise)
+
+            if not self.fix_v:
+                #update moment, adaptivity and parameter averages
+                first_moment_single    = self.beta1 * first_moment_single + (1-self.beta1) * (g_single)
+                second_moment_single   = self.beta2 * second_moment_single + (1-self.beta2) * (g_single*g_single)
+                x_moment_single        = self.beta3 * x_moment_single + (1-self.beta3) * (x_single)
+
+                #compute bias corrected moments
+                first_moment_corrected_single  = first_moment_single / (1 - np.power(self.beta1, i+1))
+                second_moment_corrected_single = second_moment_single / (1 - np.power(self.beta2, i+1))
+                x_moment_corrected_single = x_moment_single / (1 - np.power(self.beta3, i+1))
+
+                #compute the update step
+                step_single = first_moment_corrected_single / ( np.sqrt(second_moment_corrected_single) + self.noise)
+
 
             #compute norm of coupling parameters
             xnorm_pair = np.sqrt(np.sum(x_pair * x_pair))
@@ -154,7 +167,7 @@ class Adam():
 
             if i > self.convergence_prev:
                 xnorm_prev = self.progress.optimization_log['||w||'][-self.convergence_prev]
-                xnorm_diff = np.abs((xnorm_prev - np.sqrt(xnorm_pair))) / xnorm_prev
+                xnorm_diff = np.abs((xnorm_prev - xnorm_pair)) / xnorm_prev
                 wij_diff_prev = self.progress.optimization_log['sum_w'][-self.convergence_prev]
                 wij_diff = np.abs((wij_diff_prev - problems['sum_deviation_wij'])) / wij_diff_prev
 
@@ -193,7 +206,7 @@ class Adam():
             log_metrics['max_g'] = np.max(np.abs(gx))
             log_metrics['alpha'] = alpha
             log_metrics['#qij_uneq_1'] = problems['sum_qij_uneq_1']
-            log_metrics['neg_qijab'] = problems['neg_qijab']
+            log_metrics['#neg_qij'] = problems['neg_qijab']
             log_metrics['#wij_uneq_0'] = problems['sum_wij_uneq_0']
             log_metrics['sum_w'] = problems['sum_deviation_wij']
 
@@ -235,5 +248,9 @@ class Adam():
 
             x=objfun.structured_to_linear(x_single, x_pair)
 
+
+
+        #write header line
+        self.progress.print_header()
         return fx, x, ret
 

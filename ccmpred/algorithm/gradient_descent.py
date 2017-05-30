@@ -40,11 +40,11 @@ class gradientDescent():
 
 
         if self.decay:
-            rep_str+="decay: decay={0} decay_rate={1} decay_start={2} \n".format(
+            rep_str+="\tdecay: decay={0} decay_rate={1} decay_start={2} \n".format(
                 self.decay, np.round(self.decay_rate, decimals=3), self.decay_start
             )
         else:
-            rep_str+="decay: decay={0}\n".format(
+            rep_str+="\tdecay: decay={0}\n".format(
               self.decay
             )
 

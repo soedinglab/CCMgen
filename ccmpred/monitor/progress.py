@@ -18,7 +18,7 @@ class Progress():
         self.plotfile=None
         self.title=None
 
-    def begin_process(self):
+    def print_header(self):
 
         headerline ="{0:>{1}s}".format('iter', 8)
         headerline += (" ".join("{0:>{1}s}".format(ht, 14) for ht in sorted(self.optimization_log.keys())))
@@ -36,13 +36,16 @@ class Progress():
         for name in kwargs.keys():
             self.optimization_log[name] = []
 
-        self.begin_process()
+        self.print_header()
 
 
     def log_progress(self, n_iter, **kwargs):
 
         if len(self.optimization_log) == 0:
             self.init_log(**kwargs)
+
+        if (n_iter != 0) and (n_iter % 100 == 0):
+            self.print_header()
 
 
         log = "{0:>{1}}".format(n_iter, '8g')
