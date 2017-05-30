@@ -12,19 +12,16 @@ class Progress():
 
     """
 
-    def __init__(self, metrics ):
+    def __init__(self ):
 
         self.optimization_log={}
-        for m in metrics:
-            self.optimization_log[m] = []
-
         self.plotfile=None
         self.title=None
 
     def begin_process(self):
 
         headerline ="{0:>{1}s}".format('iter', 8)
-        headerline += (" ".join("{0:>{1}s}".format(ht, 20) for ht in sorted(self.optimization_log.keys())))
+        headerline += (" ".join("{0:>{1}s}".format(ht, 14) for ht in sorted(self.optimization_log.keys())))
 
         if ccmpred.logo.is_tty:
             print("\x1b[2;37m{0}\x1b[0m".format(headerline))
@@ -35,13 +32,23 @@ class Progress():
         self.plotfile=plotfile
         self.title=title
 
+    def init_log(self, **kwargs):
+        for name in kwargs.keys():
+            self.optimization_log[name] = []
+
+        self.begin_process()
+
+
     def log_progress(self, n_iter, **kwargs):
+
+        if len(self.optimization_log) == 0:
+            self.init_log(**kwargs)
 
 
         log = "{0:>{1}}".format(n_iter, '8g')
         for name, metric in sorted(kwargs.iteritems()):
             self.optimization_log[name].append(metric)
-            log += "{0:>{1}}".format(metric, '20g')
+            log += "{0:>{1}}".format(metric, '15g')
         print(log)
 
         # log = "{0:>{1}}".format(n_iter, '8g')

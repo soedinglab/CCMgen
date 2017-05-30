@@ -17,11 +17,8 @@ class conjugateGradient():
         self.epsilon = epsilon
         self.convergence_prev = convergence_prev
 
-        metrics=['xnorm', 'xnorm_single','xnorm_pair', 'gnorm', 'gnorm_single', 'gnorm_pair',
-                 'fx', 'step','n_linesearch', 'xnorm_pair', 'rel_diff_fx', 'max_g',
-                 'sum_deviation_wij']
 
-        self.progress = pr.Progress(metrics=metrics)
+        self.progress = pr.Progress()
 
 
 
@@ -47,41 +44,31 @@ class conjugateGradient():
         subtitle += self.__repr__().replace("\n", "<br>")
         subtitle += objfun.__repr__().replace("\n", "<br>")
         self.progress.set_plot_options(plotfile, subtitle)
-        self.progress.begin_process()
-
-
 
         #for initialization of linesearch
         fx, g = objfun.evaluate(x)
+        gnorm = np.sum(g*g)
 
 
+        # print and plot progress
         x_single, x_pair = objfun.linear_to_structured(x)
         g_single, g_pair = objfun.linear_to_structured(g)
 
-        xnorm_single = np.sum(x_single * x_single)
-        xnorm_pair = np.sum(x_pair * x_pair)
+        log_metrics={}
+        log_metrics['||v+w||'] = np.sqrt(np.sum(x * x))
+        log_metrics['||v||'] = np.sqrt(np.sum(x_single * x_single))
+        log_metrics['||w||'] = np.sqrt(np.sum(x_pair * x_pair))
+        log_metrics['||g||'] = np.sqrt(gnorm)
+        log_metrics['||g_w||'] = np.sqrt(np.sum(g_pair * g_pair))
+        log_metrics['||g_v||'] = np.sqrt(np.sum(g_single * g_single))
+        log_metrics['max_g'] = np.max(g)
+        log_metrics['fx'] = fx
+        log_metrics['step'] = 0
+        log_metrics['#lsearch'] = 0
+        log_metrics['diff_fx'] = np.nan
+        log_metrics['sum_wij'] = 0
+        self.progress.log_progress(0, **log_metrics)
 
-        gnorm_single = np.sum(g_single * g_single)
-        gnorm_pair = np.sum(g_pair * g_pair)
-        gnorm = gnorm_single + gnorm_pair
-        max_g = np.max(g)
-
-        # print out progress
-        self.progress.log_progress(
-            0,
-            xnorm= np.sqrt(xnorm_single+xnorm_pair),
-            xnorm_single= np.sqrt(xnorm_single),
-            xnorm_pair= np.sqrt(xnorm_pair),
-            gnorm=np.sqrt(gnorm_single+gnorm_pair),
-            gnorm_single=np.sqrt(gnorm_single),
-            gnorm_pair=np.sqrt(gnorm_pair),
-            fx=fx,
-            step=0,
-            n_linesearch=0,
-            max_g=max_g,
-            rel_diff_fx=np.nan,
-            sum_deviation_wij=0
-        )
 
 
         gprevnorm = None
@@ -89,21 +76,15 @@ class conjugateGradient():
         dg_prev = None
         s = None
 
+
         ret = {
-            "message": "Unknown",
-            "code": -9999
+            "code": 2,
+            "message": "Reached maximum number of iterations"
         }
 
-
-
         alpha = 1 / np.sqrt(gnorm)
-        iteration = 0
         rel_diff_fx=np.nan
-        while True:
-            if iteration >= self.maxit:
-                ret['message'] = "Reached maximum number of iterations"
-                ret['code'] = 2
-                break
+        for iteration in range(self.maxit):
 
             if iteration > 0:
                 beta = gnorm / gprevnorm
@@ -132,25 +113,14 @@ class conjugateGradient():
                     ret['code'] = 0
                     break
 
-            #for plotting
-            x_single, x_pair = objfun.linear_to_structured(x)
-            xnorm_single = np.sum(x_single * x_single)
-            xnorm_pair   = np.sum(x_pair * x_pair)
 
-            g_single, g_pair = objfun.linear_to_structured(g)
-            gnorm_single = np.sum(g_single * g_single)
-            gnorm_pair = np.sum(g_pair * g_pair)
-
-            max_g = np.max(g)
 
             #update optimization specific values
             gprevnorm = gnorm
-            gnorm = gnorm_single + gnorm_pair
+            gnorm = np.sum(g * g)
 
             alpha_prev = alpha
             dg_prev = dg
-
-            iteration += 1
 
 
             #compute number of problems with qij
@@ -158,22 +128,24 @@ class conjugateGradient():
                 objfun.freqs_pair, x_pair, objfun.regularization.lambda_pair, objfun.Nij, epsilon=1e-2, verbose=False)
 
 
-            # print out progress
-            self.progress.log_progress(
-                iteration,
-                xnorm=np.sqrt(xnorm_single + xnorm_pair),
-                xnorm_single=np.sqrt(xnorm_single),
-                xnorm_pair=np.sqrt(xnorm_pair),
-                gnorm=np.sqrt(gnorm_single + gnorm_pair),
-                gnorm_single=np.sqrt(gnorm_single),
-                gnorm_pair=np.sqrt(gnorm_pair),
-                fx=fx,
-                step=alpha,
-                n_linesearch=n_linesearch,
-                max_g=max_g,
-                rel_diff_fx=rel_diff_fx,
-                sum_deviation_wij=problems['sum_deviation_wij']
-            )
+            # print and plot progress
+            x_single, x_pair = objfun.linear_to_structured(x)
+            g_single, g_pair = objfun.linear_to_structured(g)
+
+            log_metrics={}
+            log_metrics['||v+w||'] = np.sqrt(np.sum(x * x))
+            log_metrics['||v||'] = np.sqrt(np.sum(x_single * x_single))
+            log_metrics['||w||'] = np.sqrt(np.sum(x_pair * x_pair))
+            log_metrics['||g||'] = np.sqrt(gnorm)
+            log_metrics['||g_w||'] = np.sqrt(np.sum(g_pair * g_pair))
+            log_metrics['||g_v||'] = np.sqrt(np.sum(g_single * g_single))
+            log_metrics['max_g'] = np.max(g)
+            log_metrics['fx'] = fx
+            log_metrics['step'] = alpha
+            log_metrics['#lsearch'] = n_linesearch
+            log_metrics['diff_fx'] = rel_diff_fx
+            log_metrics['sum_wij'] = problems['sum_deviation_wij']
+            self.progress.log_progress(iteration+1, **log_metrics)
 
 
 

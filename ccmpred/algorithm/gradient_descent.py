@@ -27,11 +27,7 @@ class gradientDescent():
         self.convergence_prev=convergence_prev
 
 
-        metrics=['xnorm_pair', 'gnorm_pair', 'gnorm_reg_pair', 'xnorm_diff', 'max_g', 'alpha', 'sum_deviation_wij']
-        if not self.fix_v:
-            metrics += ['xnorm', 'xnorm_single', 'gnorm', 'gnrom_single||']
-
-        self.progress = pr.Progress(metrics=metrics)
+        self.progress = pr.Progress()
 
 
 
@@ -65,7 +61,6 @@ class gradientDescent():
         subtitle += self.__repr__().replace("\n", "<br>")
         subtitle += objfun.__repr__().replace("\n", "<br>")
         self.progress.set_plot_options(plotfile, subtitle)
-        self.progress.begin_process()
 
 
 
@@ -78,36 +73,22 @@ class gradientDescent():
         alpha = self.alpha0
         for i in range(self.maxit):
 
-            fx, gplot, greg = objfun.evaluate(x)
-            g = gplot + greg
+            fx, gx, greg = objfun.evaluate(x)
+            g = gx + greg
 
 
-            # ========================================================================================
+            #decompose gradients and parameters
             x_single, x_pair = objfun.linear_to_structured(x, objfun.ncol)
             g_single, g_pair = objfun.linear_to_structured(g, objfun.ncol)
-            max_g = np.max(np.abs(g))
+            gx_single, gx_pair = objfun.linear_to_structured(gx, objfun.ncol)
+            g_reg_single, g_reg_pair = objfun.linear_to_structured(greg, objfun.ncol)
 
-            xnorm_single = np.sum(x_single * x_single)
-            xnorm_pair = np.sum(x_pair * x_pair)
-            xnorm = np.sqrt(xnorm_single + xnorm_pair)
-
-            g_single, g_pair = objfun.linear_to_structured(g, objfun.ncol)
-            gnorm_single = np.sum(g_single * g_single)
-            gnorm_pair = np.sum(g_pair * g_pair)
-            gnorm = np.sqrt(gnorm_single + gnorm_pair)
-
-
-            g_plot_single, g_plot_pair = objfun.linear_to_structured(gplot, objfun.ncol)
-            gnorm_plot_single = np.sum(g_plot_single * g_plot_single)
-            gnorm_plot_pair = np.sum(g_plot_pair * g_plot_pair)
-            gnorm_plot = np.sqrt(gnorm_plot_single + gnorm_plot_pair)
-
-            g_reg_plot_single, g_reg_plot_pair = objfun.linear_to_structured(greg, objfun.ncol)
-            gnorm_reg_plot_pair = np.sum(g_reg_plot_pair * g_reg_plot_pair)
+            #compute norm of coupling parameters
+            xnorm_pair      = np.sqrt(np.sum(x_pair * x_pair))
 
             if i > self.convergence_prev:
-                xnorm_prev = self.progress.optimization_log['xnorm_pair'][-self.convergence_prev]
-                xnorm_diff = np.abs((xnorm_prev - np.sqrt(xnorm_pair))) / xnorm_prev
+                xnorm_prev = self.progress.optimization_log['||w||'][-self.convergence_prev]
+                xnorm_diff = np.abs((xnorm_prev - xnorm_pair)) / xnorm_prev
             else:
                 xnorm_diff = 1
 
@@ -125,14 +106,24 @@ class gradientDescent():
 
 
             #print out progress
-            self.progress.log_progress(i + 1,
-                                       xnorm_pair= np.sqrt(xnorm_pair),
-                                       gnorm_pair=np.sqrt(gnorm_pair),
-                                       gnorm_reg_pair=np.sqrt(gnorm_reg_plot_pair),
-                                       xnorm_diff=xnorm_diff, max_g=max_g, alpha=alpha,
-                                       sum_deviation_wij=problems['sum_deviation_wij']
-                                       )
-            # ========================================================================================
+            log_metrics={}
+            log_metrics['||w||'] = xnorm_pair
+            log_metrics['||g_w||'] = np.sqrt(np.sum(gx_pair * gx_pair))
+            log_metrics['||greg_w||'] = np.sqrt(np.sum(g_reg_pair * g_reg_pair))
+            log_metrics['xnorm_diff'] = xnorm_diff
+            log_metrics['max_g'] = np.max(np.abs(gx))
+            log_metrics['alpha'] = alpha
+            log_metrics['sum_w'] = problems['sum_deviation_wij']
+
+            if not self.fix_v:
+                log_metrics['||v||'] = np.sqrt(np.sum(x_single * x_single))
+                log_metrics['||v+w||'] = np.sqrt(np.sum(x * x))
+                log_metrics['||g_v||'] = np.sqrt(np.sum(gx_single * gx_single))
+                log_metrics['||g||'] = np.sqrt(np.sum(gx * gx))
+                log_metrics['||g_reg_v||'] = np.sqrt(np.sum(g_reg_single * g_reg_single))
+
+            self.progress.log_progress(i + 1, **log_metrics)
+
 
             #stop condition
             if self.early_stopping:
@@ -145,13 +136,10 @@ class gradientDescent():
 
             # update parameters
             if not self.fix_v:
-                x_single -= alpha * g_single  # x_single - alpha * step_single#
-            x_pair -=  alpha * g_pair  # x_pair - alpha * step_pair#
+                x_single -= alpha * g_single
+            x_pair -=  alpha * g_pair
 
             x = objfun.structured_to_linear(x_single, x_pair)
-
-
-
 
 
 
