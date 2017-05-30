@@ -31,7 +31,8 @@ class ContrastiveDivergence():
 
         self.nrow, self.ncol = msa.shape
         self.nsingle = self.ncol * 20
-        self.nvar = self.nsingle + self.ncol * self.ncol * 21 * 21
+        self.npair = self.ncol * self.ncol * 21 * 21
+        self.nvar = self.nsingle + self.npair
         self.minibatch_size = 0
 
         #perform x steps of sampling (all variables)
