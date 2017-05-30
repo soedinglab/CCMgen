@@ -76,9 +76,6 @@ class ContrastiveDivergence():
             (self.msa_sampled.shape[0]), np.round(self.n_samples_msa, decimals=3),  np.round(self.msa_sampled.shape[0] / float(self.ncol), decimals=3), self.minibatch_size, self.gibbs_steps
         )
 
-        if(self.compute_avg_samples):
-            str +="#averages={0} #avg_freq={1}".format(self.num_averages, self.average_freqency)
-
         return str
 
     def init_sample_alignment(self, min_nseq_factorL, min_nseq_factorN):
