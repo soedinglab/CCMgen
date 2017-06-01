@@ -32,7 +32,7 @@ class gradientDescent():
 
 
     def __repr__(self):
-        rep_str="Gradient descent optimization (alpha0={0})\n".format(self.alpha0)
+        rep_str="Gradient descent optimization (alpha0={0})\n".format( np.round(self.alpha0, decimals=5))
 
 
         rep_str+="convergence criteria: maxit={0} early_stopping={1} epsilon={2} prev={3}\n".format(
@@ -41,7 +41,7 @@ class gradientDescent():
 
         if self.decay:
             rep_str+="\tdecay: decay={0} decay_rate={1} decay_start={2} \n".format(
-                self.decay, np.round(self.decay_rate, decimals=3), self.decay_start
+               self.decay, np.round(self.decay_rate, decimals=3), self.decay_start
             )
         else:
             rep_str+="\tdecay: decay={0}\n".format(
@@ -55,7 +55,12 @@ class gradientDescent():
         diversity = np.sqrt(objfun.nrow)/objfun.ncol
 
         if self.decay_rate == 0:
-            self.decay_rate = 100.0*diversity
+            self.decay_rate = 10.0*diversity
+
+        if self.alpha0 == 0:
+            self.alpha0 = 1e-2 *diversity
+
+
 
         subtitle = "L={0} N={1} Neff={2} Diversity={3}<br>".format(objfun.ncol, objfun.nrow, np.round(objfun.neff, decimals=3), np.round(diversity,decimals=3))
         subtitle += self.__repr__().replace("\n", "<br>")
@@ -124,6 +129,13 @@ class gradientDescent():
 
             self.progress.log_progress(i + 1, **log_metrics)
 
+
+            # if xnorm_diff < 1e-5:
+            #     objfun.minibatch_size=0
+            #     objfun.persitent=True
+            #     objfun.init_alignment_stats()
+            #     objfun.msa_sampled = objfun.init_sample_alignment(objfun.min_nseq_factorL, objfun.min_nseq_factorN)
+            #     print("Turn on PCD")
 
             #stop condition
             if self.early_stopping:
