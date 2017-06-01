@@ -202,6 +202,8 @@ def parse_args():
     if args.only_model_prob and not args.initrawfile:
         parser.error("--only_model_prob is only supported when -i (--init-from-raw) is specified!")
 
+    if args.objfun == "pll" and args.algorithm != "conjugate_gradients":
+        parser.error("pseudo-log-likelihood (--ofn-pll) needs to be optimized with conjugate gradients (--alg-cg)!")
 
     if (args.outmodelprobmsgpackfile and args.objfun != "cd") or args.only_model_prob:
         print("Note: when computing q_ij data: couplings should be computed from full likelihood (e.g. CD)")
