@@ -55,7 +55,6 @@ def create(opt, regularization, msa, weights, f, fx, algret, alg):
         meta['workflow'][0]['parameters']['optimization']['gibbs_steps'] = opt.cd_gibbs_steps
         meta['workflow'][0]['parameters']['optimization']['persistent']  = opt.cd_persistent
         meta['workflow'][0]['parameters']['optimization']['min_nseq_factorl'] = opt.cd_min_nseq_factorl
-        meta['workflow'][0]['parameters']['optimization']['min_nseq_factorn'] = opt.cd_min_nseq_factorn
         meta['workflow'][0]['parameters']['optimization']['cd_pll'] = opt.cd_pll
         meta['workflow'][0]['parameters']['optimization']['minibatch_size'] = opt.minibatch_size
 
