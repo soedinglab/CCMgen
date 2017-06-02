@@ -52,10 +52,10 @@ class gradientDescent():
 
     def minimize(self, objfun, x, plotfile):
 
-        diversity = np.sqrt(objfun.nrow)/objfun.ncol
+        diversity = np.sqrt(objfun.neff)/objfun.ncol
 
         if self.decay_rate == 0:
-            self.decay_rate = 10.0*diversity
+            self.decay_rate = 100.0*diversity
 
         if self.alpha0 == 0:
             self.alpha0 = 1e-2 *diversity
