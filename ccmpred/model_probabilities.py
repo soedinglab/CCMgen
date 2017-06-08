@@ -31,6 +31,20 @@ def stream_or_file(mode='r'):
 
     return inner
 
+def compute_qij_from_cd_sample(obj, x, min_nseq_factorL, gibbs_steps):
+
+    model_freq = obj.get_pairwise_freq_from_sample(x, min_nseq_factorL, gibbs_steps)
+
+    L = model_freq.shape[0]
+    model_freq_nogaps = model_freq[:,:,:20,:20].reshape(L,L, 400)
+
+    #indices for i<j row-wise
+    indices_triu = np.triu_indices(L, 1)
+
+    model_prob_flat = model_freq_nogaps[indices_triu].flatten()  # row-wise upper triangular indices
+
+    return model_prob_flat
+
 
 def compute_qij(freqs_pair, x_pair, lambda_pair, Nij, epsilon, verbose=1):
 
@@ -160,6 +174,28 @@ def get_nr_problematic_qij(freqs_pair, x_pair, lambda_pair, Nij, epsilon=1e-3, v
     problems = check_qij(model_prob, indices_triu, pair_freq, x_pair_nogaps, Nij, epsilon=epsilon, verbose=verbose)
 
     return problems
+
+
+def model_prob_flat(freqs_pair, x_pair, lambda_pair, Nij):
+    L = Nij.shape[0]
+
+    #renormalize pair frequencies without gaps + reshape row-wise
+    pair_freq = ccmpred.pseudocounts.degap(freqs_pair).reshape(L,L,400)
+
+    #couplings without gaps + reshape row-wise
+    x_pair_nogaps = x_pair[:,:,:20,:20].reshape(L,L, 400)
+
+    #indices for i<j row-wise
+    indices_triu = np.triu_indices(L, 1)
+
+    #compute model probabilties for i<j
+    model_prob = np.zeros((L, L, 400))
+    model_prob[indices_triu] = pair_freq[indices_triu] - (x_pair_nogaps[indices_triu] * lambda_pair / Nij[:,:, np.newaxis][indices_triu])
+
+    model_prob_flat = model_prob[indices_triu].flatten()
+
+    return model_prob_flat
+
 
 
 @stream_or_file('wb')
