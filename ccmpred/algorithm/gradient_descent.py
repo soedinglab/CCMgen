@@ -53,12 +53,22 @@ class gradientDescent():
     def minimize(self, objfun, x, plotfile):
 
         diversity = np.sqrt(objfun.neff)/objfun.ncol
+        L = objfun.ncol
 
-        if self.decay_rate == 0:
-            self.decay_rate = 100.0*diversity
 
         if self.alpha0 == 0:
-            self.alpha0 = 1e-2 *diversity
+            #self.alpha0 = diversity/100 #when using minibatches
+            #self.alpha0 = 1e-1 / objfun.neff #when not using minibatches
+            self.alpha0 = 3e-2/np.log(objfun.minibatch_neff)
+
+
+        if self.decay_rate == 0:
+            self.decay_rate = int(100.0*diversity)
+            #self.decay_rate = 100 * diversity
+            #self.decay_rate = 100.0/np.log(L)
+            #self.decay_rate = np.sqrt(objfun.neff)
+            #self.decay_rate =1000/(self.alpha0/1e-5 -1)
+
 
 
 
@@ -95,7 +105,7 @@ class gradientDescent():
                 xnorm_prev = self.progress.optimization_log['||w||'][-self.convergence_prev]
                 xnorm_diff = np.abs((xnorm_prev - xnorm_pair)) / xnorm_prev
             else:
-                xnorm_diff = 1
+                xnorm_diff = 1.0
 
             #start decay at iteration i
             if self.decay and xnorm_diff < self.decay_start and self.it_succesfull_stop_condition < 0:
@@ -153,6 +163,9 @@ class gradientDescent():
 
             x = objfun.structured_to_linear(x_single, x_pair)
 
+
+            if xnorm_diff < 1e-6:
+                objfun.averaging=True
 
 
         return fx, x, ret

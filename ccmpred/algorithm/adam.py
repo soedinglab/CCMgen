@@ -62,7 +62,7 @@ class Adam():
     def __repr__(self):
 
         rep_str="Adam (beta1={0} beta2={1} beta3={2} alpha0={3} noise={4} fix-v={5}) \n".format(
-            self.beta1, self.beta2, self.beta3, np.round(self.alpha0, decimals=3), self.noise, self.fix_v
+            self.beta1, self.beta2, self.beta3, np.round(self.alpha0, decimals=5), self.noise, self.fix_v
         )
 
         if self.decay:
@@ -92,8 +92,18 @@ class Adam():
 
         diversity = np.sqrt(objfun.neff)/objfun.ncol
 
+        if self.alpha0 == 0:
+            #self.alpha0 = diversity/100 #when using minibatches
+            #self.alpha0 = 1e-1 / objfun.neff #when not using minibatches
+            self.alpha0 = 1e-3/np.log(objfun.minibatch_neff)
+
+
         if self.decay_rate == 0:
             self.decay_rate = 100.0*diversity
+            #self.decay_rate = 100 * diversity
+            #self.decay_rate = 100.0/np.log(L)
+            #self.decay_rate = np.sqrt(objfun.neff)
+            #self.decay_rate =1000/(self.alpha0/1e-5 -1)
 
 
 
@@ -248,7 +258,8 @@ class Adam():
 
             x=objfun.structured_to_linear(x_single, x_pair)
 
-
+            if xnorm_diff < 1e-6:
+                objfun.averaging=True
 
         #write header line
         self.progress.print_header()
