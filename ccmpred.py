@@ -358,6 +358,14 @@ def main():
 
         ccmpred.model_probabilities.write_msgpack(opt.outmodelprobmsgpackfile, res, weights, freqs, regularization.lambda_pair)
 
+
+    #compare model probs from calculation with sampling
+    # model_prob = ccmpred.model_probabilities.model_prob_flat(f.freqs_pair,res.x_pair, f.regularization.lambda_pair, f.Nij)
+    # model_prob_from_sampling = ccmpred.model_probabilities.compute_qij_from_cd_sample(f, x, 100, 100)
+    # difference = model_prob - model_prob_from_sampling
+    # print difference[:100]
+    # print np.sqrt(np.sum(difference * difference))
+
     #write contact map and meta data info matfile
     ccmpred.io.contactmatrix.write_matrix(opt.matfile, res, meta, disable_apc=opt.disable_apc)
 
