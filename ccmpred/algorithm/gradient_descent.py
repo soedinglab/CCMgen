@@ -8,7 +8,7 @@ import ccmpred.model_probabilities
 class gradientDescent():
     """Optimize objective function using gradient descent"""
 
-    def __init__(self, maxit=100, alpha0=5e-3, decay=True,  decay_start=1e-3, decay_rate=10, fix_v=False,
+    def __init__(self, maxit=100, alpha0=5e-3, decay=True,  decay_start=1e-3, decay_rate=10, decay_type="lin", fix_v=False,
                  epsilon=1e-5, convergence_prev=5, early_stopping=False):
 
         self.maxit = maxit
@@ -18,6 +18,7 @@ class gradientDescent():
         self.decay=decay
         self.decay_start = decay_start
         self.decay_rate = np.float(decay_rate)
+        self.decay_type = decay_type
         self.it_succesfull_stop_condition=-1
 
         self.fix_v=fix_v
@@ -41,7 +42,7 @@ class gradientDescent():
 
         if self.decay:
             rep_str+="\tdecay: decay={0} decay_rate={1} decay_start={2} \n".format(
-               self.decay, np.round(self.decay_rate, decimals=3), self.decay_start
+               self.decay, np.round(self.decay_rate, decimals=5), self.decay_start
             )
         else:
             rep_str+="\tdecay: decay={0}\n".format(
@@ -59,14 +60,15 @@ class gradientDescent():
         if self.alpha0 == 0:
             #self.alpha0 = diversity/100 #when using minibatches
             #self.alpha0 = 1e-1 / objfun.neff #when not using minibatches
-            self.alpha0 = 3e-2/np.log(objfun.minibatch_neff)
+            self.alpha0 = 5e-2/np.sqrt(objfun.nr_seq_minibatch)
 
+            #self.alpha0 = np.sqrt(objfun.nr_sample_sequences)/np.sqrt(objfun.minibatch_neff) * 1e-3
 
         if self.decay_rate == 0:
-            self.decay_rate = int(100.0*diversity)
+            self.decay_rate = 5e-6 / diversity
             #self.decay_rate = 100 * diversity
             #self.decay_rate = 100.0/np.log(L)
-            #self.decay_rate = np.sqrt(objfun.neff)
+            #self.decay_rate = 1e-4 / np.sqrt(objfun.neff)
             #self.decay_rate =1000/(self.alpha0/1e-5 -1)
 
 
@@ -98,6 +100,7 @@ class gradientDescent():
             gx_single, gx_pair = objfun.linear_to_structured(gx, objfun.ncol)
             g_reg_single, g_reg_pair = objfun.linear_to_structured(greg, objfun.ncol)
 
+
             #compute norm of coupling parameters
             xnorm_pair      = np.sqrt(np.sum(x_pair * x_pair))
 
@@ -113,7 +116,10 @@ class gradientDescent():
 
             #new step size
             if self.it_succesfull_stop_condition > 0:
-                alpha = self.alpha0 / (1 + (i - self.it_succesfull_stop_condition) /self.decay_rate)
+                if self.decay_type == "lin":
+                    alpha = self.alpha0 / (1 + (i - self.it_succesfull_stop_condition) /self.decay_rate)
+                if self.decay_type == "sig":
+                    alpha *= 1.0 / (1 + self.decay_rate * (i - self.it_succesfull_stop_condition))
 
             #compute number of problems with qij
             problems = ccmpred.model_probabilities.get_nr_problematic_qij(
@@ -123,6 +129,7 @@ class gradientDescent():
             #print out progress
             log_metrics={}
             log_metrics['||w||'] = xnorm_pair
+            log_metrics['||g||'] = np.sqrt(np.sum(g_pair * g_pair))
             log_metrics['||g_w||'] = np.sqrt(np.sum(gx_pair * gx_pair))
             log_metrics['||greg_w||'] = np.sqrt(np.sum(g_reg_pair * g_reg_pair))
             log_metrics['xnorm_diff'] = xnorm_diff
@@ -164,8 +171,10 @@ class gradientDescent():
             x = objfun.structured_to_linear(x_single, x_pair)
 
 
-            if xnorm_diff < 1e-6:
-                objfun.averaging=True
+            # if alpha < 1e-4:
+            #     objfun.averaging=False
+            #     objfun.persistent=True
+
 
 
         return fx, x, ret
