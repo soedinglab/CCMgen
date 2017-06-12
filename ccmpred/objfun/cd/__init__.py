@@ -63,16 +63,12 @@ class ContrastiveDivergence():
         self.sample_counts_single_prev = deque([], maxlen=averaging_size)
         self.sample_counts_pair_prev = deque([], maxlen=averaging_size)
 
+
         #set up initial minibatch (either subsampled or full alignment)
-        minibatch_size = min_nseq_factorL
-        self.min_nseq_factorL = min_nseq_factorL
-        self.nr_seq_minibatch = minibatch_size * self.ncol
-        # if (minibatch_size > 0) and (minibatch_size * self.ncol) < self.nrow:
-        #     self.nr_seq_minibatch = minibatch_size * self.ncol
-        #     self.min_nseq_factorL = minibatch_size
-        # else:
-        #     self.nr_seq_minibatch = self.nrow
-        #     self.min_nseq_factorL =1
+        self.nr_seq_minibatch = self.nrow
+        if (minibatch_size > 0) and (minibatch_size * self.ncol) < self.nrow:
+            self.nr_seq_minibatch = minibatch_size * self.ncol
+
 
         self.msa_minibatch, self.minibatch_weights, self.minibatch_neff = self.init_minibatch()
         self.minibatch_stats(self.msa_minibatch, self.minibatch_weights)
@@ -80,7 +76,9 @@ class ContrastiveDivergence():
 
         # init sample alignment for gradient approx
         #number of sequences used for sampling: multiples of MSA and at least 1xMSA
-        self.msa_sampled, self.msa_sampled_weights = self.init_sample_alignment(self.min_nseq_factorL)
+        self.min_nseq_factorL = np.max([min_nseq_factorL, 1])
+        self.nr_sample_sequences = self.min_nseq_factorL * self.ncol
+        self.msa_sampled, self.msa_sampled_weights = self.init_sample_alignment()
 
     def __repr__(self):
 
@@ -100,25 +98,25 @@ class ContrastiveDivergence():
 
         return str
 
-    def init_sample_alignment(self, min_nseq_factorL):
+    def init_sample_alignment(self):
 
-        # nr of sequences = min_nseq_factorL * L
-        self.min_nseq_factorL = np.max([min_nseq_factorL, 1])
-        n_sequence = self.min_nseq_factorL * self.ncol
+        #sample alignment larger than minibatch
+        if self.nr_sample_sequences > self.nr_seq_minibatch:
+            #oversampling
+            nr_samples_msa = int(np.ceil(self.nr_sample_sequences / float(self.nr_seq_minibatch)))
+            seq_id = range(self.nr_seq_minibatch) * nr_samples_msa
+        else:
+            #subsampling
+            seq_id = np.random.choice(self.nr_seq_minibatch, self.nr_sample_sequences, replace=False)
 
 
-        self.n_samples_msa = int(np.ceil(n_sequence / float(self.nr_seq_minibatch)))
-        seq_id = range(self.nr_seq_minibatch) * self.n_samples_msa
         msa_sampled = self.msa_minibatch[seq_id]
-
-
         msa_sampled_weights = ccmpred.weighting.weights_simple(msa_sampled)
 
         return msa_sampled.copy(), msa_sampled_weights
 
     def init_minibatch(self):
-        seq_id = np.random.choice(self.nrow, self.nr_seq_minibatch, replace=True)
-        #seq_id = np.random.choice(self.nrow, self.nr_seq_minibatch, replace=False)
+        seq_id = np.random.choice(self.nrow, self.nr_seq_minibatch, replace=False)
         msa_minibatch = self.msa[seq_id]
         minibatch_weights = ccmpred.weighting.weights_simple(msa_minibatch)
         minibatch_neff = np.sum(minibatch_weights)
@@ -238,13 +236,13 @@ class ContrastiveDivergence():
     def evaluate(self, x):
 
         #when using minibatches: create new reference alignment
-        #if self.nr_seq_minibatch < self.nrow:
-        self.msa_minibatch, self.minibatch_weights, self.minibatch_neff  = self.init_minibatch()
-        self.minibatch_stats(self.msa_minibatch, self.minibatch_weights)
+        if self.nr_seq_minibatch < self.nrow:
+            self.msa_minibatch, self.minibatch_weights, self.minibatch_neff  = self.init_minibatch()
+            self.minibatch_stats(self.msa_minibatch, self.minibatch_weights)
 
         #create new initial alignment for sampling
         if not self.persistent:
-            self.msa_sampled, self.msa_sampled_weights = self.init_sample_alignment(self.min_nseq_factorL)
+            self.msa_sampled, self.msa_sampled_weights = self.init_sample_alignment()
 
 
         if self.pll:
