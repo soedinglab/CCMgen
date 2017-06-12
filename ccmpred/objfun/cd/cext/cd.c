@@ -116,12 +116,12 @@ void gibbs_sample_sequences(
 		unsigned int sequence_position_vector[ncol];
 		for (unsigned int p=0; p < ncol; p++) sequence_position_vector[p] = p;
 
-		int num_threads = omp_get_num_threads();
+		//int num_threads = omp_get_num_threads();
 		//printf("max thread num %d ", num_threads);
 
 		#pragma omp for private(k)
 		for (k = 0; k < n_samples; k++) {
-			int this_thread = omp_get_thread_num();
+			//int this_thread = omp_get_thread_num();
 			//printf("Compute seq %zu with thread %d \n", k,  this_thread);
 
 			for (int s=0; s < steps; s++){
