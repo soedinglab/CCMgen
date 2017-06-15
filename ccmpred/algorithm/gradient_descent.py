@@ -61,11 +61,11 @@ class gradientDescent():
             #self.alpha0 = diversity/100 #when using minibatches
             #self.alpha0 = 1e-1 / objfun.neff #when not using minibatches
             #self.alpha0 = 1e-2/np.sqrt(objfun.nr_seq_minibatch)
-            self.alpha0 = 4e-3 * diversity
+            self.alpha0 = 1e-3 * diversity
 
 
         if self.decay_rate == 0:
-            self.decay_rate = 1e-6 / diversity
+            self.decay_rate = 5e-7 / diversity
             #self.decay_rate = 100 * diversity
             #self.decay_rate = 100.0/np.log(L)
             #self.decay_rate = 1e-4 / np.sqrt(objfun.neff)
