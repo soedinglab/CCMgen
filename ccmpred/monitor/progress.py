@@ -12,11 +12,11 @@ class Progress():
 
     """
 
-    def __init__(self ):
+    def __init__(self , plotfile, title):
 
         self.optimization_log={}
-        self.plotfile=None
-        self.title=None
+        self.plotfile=plotfile
+        self.title=title
 
     def print_header(self):
 
@@ -28,8 +28,7 @@ class Progress():
         else:
             print(headerline)
 
-    def set_plot_options(self, plotfile, title):
-        self.plotfile=plotfile
+    def set_plot_title(self, title):
         self.title=title
 
     def init_log(self, **kwargs):
