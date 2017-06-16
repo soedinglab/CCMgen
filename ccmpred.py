@@ -39,19 +39,21 @@ REG_L2_SCALING= {
 }
 
 ALGORITHMS = {
-    "conjugate_gradients": lambda opt: cg.conjugateGradient(maxit=opt.maxit, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev),
-    "gradient_descent": lambda opt: gd.gradientDescent(
+    "conjugate_gradients": lambda opt, protein: cg.conjugateGradient(maxit=opt.maxit, epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, plotfile=opt.plotfile, protein=protein),
+    "gradient_descent": lambda opt, protein: gd.gradientDescent(
         maxit=opt.maxit, alpha0=opt.alpha0,
         decay=opt.decay, decay_start=opt.decay_start, decay_rate=opt.decay_rate, decay_type=opt.decay_type,
-        epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping, fix_v=opt.fix_v
+        epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping, fix_v=opt.fix_v,
+        plotfile=opt.plotfile, protein=protein
+
     ),
-    "adam": lambda opt: ad.Adam(
+    "adam": lambda opt, protein: ad.Adam(
         maxit=opt.maxit, alpha0=opt.alpha0, beta1=opt.beta1, beta2=opt.beta2, beta3=opt.beta3,
         epsilon=opt.epsilon, convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping,
         decay=opt.decay, decay_rate=opt.decay_rate, decay_start=opt.decay_start, fix_v=opt.fix_v,
-        qij_condition=opt.qij_condition, decay_type=opt.decay_type
+        qij_condition=opt.qij_condition, decay_type=opt.decay_type, plotfile=opt.plotfile, protein=protein
     ),
-    "numerical_differentiation": lambda opt: nd.numDiff(maxit=opt.maxit, epsilon=opt.epsilon)
+    "numerical_differentiation": lambda opt, protein: nd.numDiff(maxit=opt.maxit, epsilon=opt.epsilon)
 }
 
 
@@ -208,6 +210,10 @@ def parse_args():
         print("Note: when computing q_ij data: couplings should be computed from full likelihood (e.g. CD)")
 
 
+    args.plotfile=None
+    if args.plot_opt_progress:
+        args.plotfile="".join(args.matfile.split(".")[:-1])+".opt_progress.html"
+
     return args
 
 
@@ -227,9 +233,16 @@ def main():
 
     weights = opt.weight(msa, opt.ignore_gaps)
 
-    protein=os.path.basename(opt.alnfile).split(".")[0]
-    print("{0} is of length L={1} and has {2} sequences.".format(protein, msa.shape[1], msa.shape[0]))
-    print("Number of effective sequences after {0} reweighting (id-threshold={1}, ignore_gaps={2}): {3:g}. Neff(HHsuite-like)={4}".format(opt.weight.__name__,0.8,opt.ignore_gaps, np.sum(weights),ccmpred.pseudocounts.get_neff(msa)))
+    protein = {
+        'id': os.path.basename(opt.alnfile).split(".")[0],
+        'N': msa.shape[0],
+        'L': msa.shape[1],
+        'Neff': np.sum(weights),
+        'diversity': np.sqrt(np.sum(weights))/msa.shape[1]
+    }
+
+    print("{0} is of length L={1} and has {2} sequences and diversity={3}.".format(protein['id'], protein['L'], protein['N'], protein['diversity']))
+    print("Number of effective sequences after {0} reweighting (id-threshold={1}, ignore_gaps={2}): {3:g}. Neff(HHsuite-like)={4}".format(opt.weight.__name__,0.8,opt.ignore_gaps, protein['Neff'],ccmpred.pseudocounts.get_neff(msa)))
 
 
 
@@ -289,26 +302,33 @@ def main():
     x0 = f.x0
 
 
-
     if opt.comparerawfile:
         craw = ccmpred.raw.parse(opt.comparerawfile)
         f.compare_raw = craw
 
     f.trajectory_file = opt.trajectoryfile
 
-    alg = ALGORITHMS[opt.algorithm](opt)
-
-
-    #whether to plot progress of optimization
-    plotfile=None
-    if(opt.plot_opt_progress):
-        plotfile=os.path.dirname(opt.matfile) + "/" + protein + ".opt_progress.html"
-        print("The optimization log file will be written to {0}".format(plotfile))
+    #initialise optimizer
+    alg = ALGORITHMS[opt.algorithm](opt, protein)
 
 
     print("\n Will optimize {0} {1} variables wrt {2} and {3}".format(x0.size, x0.dtype, f, f.regularization))
     print("Optimizer: {0}".format(alg))
-    fx, x, algret = alg.minimize(f, x0, plotfile)
+    if opt.plotfile:
+        print("The optimization log file will be written to {0}".format(opt.plotfile))
+    fx, x, algret = alg.minimize(f, x0)
+
+    #Refine with persistent CD
+    refine=True
+    if refine:
+        if opt.alpha0 == 0:
+            alg.alpha0 = 1e-3 * (np.log(protein['Neff']) / protein['L'])
+        if opt.decay_rate == 0:
+            alg.decay_rate = 1e-6 / (np.log(protein['Neff']) / protein['L'])
+        opt.cd_persistent=True
+        opt.minibatch_size=0
+        f = OBJ_FUNC[opt.objfun](opt, msa, freqs, weights, raw_init, regularization)
+        fx, x, algret = alg.minimize(f, x)
 
 
     condition = "Finished" if algret['code'] >= 0 else "Exited"
