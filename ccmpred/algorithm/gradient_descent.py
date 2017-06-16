@@ -9,7 +9,7 @@ class gradientDescent():
     """Optimize objective function using gradient descent"""
 
     def __init__(self, maxit=100, alpha0=5e-3, decay=True,  decay_start=1e-3, decay_rate=10, decay_type="lin", fix_v=False,
-                 epsilon=1e-5, convergence_prev=5, early_stopping=False):
+                 epsilon=1e-5, convergence_prev=5, early_stopping=False, plotfile=None, protein=None):
 
         self.maxit = maxit
         self.alpha0 = alpha0
@@ -27,9 +27,18 @@ class gradientDescent():
         self.epsilon = epsilon
         self.convergence_prev=convergence_prev
 
+        self.protein = protein
+        plot_title = "L={0} N={1} Neff={2} Diversity={3}<br>".format(
+            self.protein['L'], self.protein['N'], np.round(self.protein['Neff'], decimals=3),
+            np.round(self.protein['diversity'], decimals=3)
+        )
+        self.progress = pr.Progress(plotfile, plot_title)
 
-        self.progress = pr.Progress()
 
+        if self.alpha0 == 0:
+            self.alpha0 = 3e-2 * (np.log(protein['Neff']) / protein['L'])
+        if self.decay_rate == 0:
+            self.decay_rate = 5e-6 / (np.log(protein['Neff']) / protein['L'])
 
 
     def __repr__(self):
@@ -51,35 +60,11 @@ class gradientDescent():
 
         return rep_str
 
-    def minimize(self, objfun, x, plotfile):
+    def minimize(self, objfun, x):
 
-        diversity = np.sqrt(objfun.neff)/objfun.ncol
-        L = objfun.ncol
-
-
-        if self.alpha0 == 0:
-            #self.alpha0 = diversity/100 #when using minibatches
-            #self.alpha0 = 1e-1 / objfun.neff #when not using minibatches
-            #self.alpha0 = 1e-2/np.sqrt(objfun.nr_seq_minibatch)
-            self.alpha0 = 1e-3 * diversity
-
-
-        if self.decay_rate == 0:
-            self.decay_rate = 5e-7 / diversity
-            #self.decay_rate = 100 * diversity
-            #self.decay_rate = 100.0/np.log(L)
-            #self.decay_rate = 1e-4 / np.sqrt(objfun.neff)
-            #self.decay_rate =1000/(self.alpha0/1e-5 -1)
-
-
-
-
-        subtitle = "L={0} N={1} Neff={2} Diversity={3}<br>".format(objfun.ncol, objfun.nrow, np.round(objfun.neff, decimals=3), np.round(diversity,decimals=3))
-        subtitle += self.__repr__().replace("\n", "<br>")
+        subtitle = self.progress.title + self.__repr__().replace("\n", "<br>")
         subtitle += objfun.__repr__().replace("\n", "<br>")
-        self.progress.set_plot_options(plotfile, subtitle)
-
-
+        self.progress.set_plot_title(subtitle)
 
         ret = {
             "code": 2,

@@ -34,7 +34,7 @@ class Adam():
     def __init__(self, alpha0=1e-3, beta1=0.9, beta2=0.999, beta3=0.9, noise=1e-8,
                  maxit=100, epsilon=1e-5, convergence_prev=5, early_stopping=False, qij_condition=False,
                  decay_type="step", decay_rate=1e1, decay=False, decay_start=1e-4,
-                 fix_v=False):
+                 fix_v=False, plotfile=None, protein=None):
 
         self.alpha0 = alpha0
         self.beta1 = beta1
@@ -57,7 +57,18 @@ class Adam():
         self.convergence_prev=convergence_prev
         self.qij_condition = qij_condition
 
-        self.progress = pr.Progress()
+        self.protein = protein
+        plot_title = "L={0} N={1} Neff={2} Diversity={3}<br>".format(
+            self.protein['L'], self.protein['N'], np.round(self.protein['Neff'], decimals=3),
+            np.round(self.protein['diversity'], decimals=3)
+        )
+        self.progress = pr.Progress(plotfile, plot_title)
+
+
+        if self.alpha0 == 0:
+            self.alpha0 = 5e-3 * protein['diversity']
+        if self.decay_rate == 0:
+            self.decay_rate = 1e-6 / protein['diversity']
 
     def __repr__(self):
 
@@ -88,29 +99,12 @@ class Adam():
 
 
 
-    def minimize(self, objfun, x, plotfile):
-
-        diversity = np.sqrt(objfun.neff)/objfun.ncol
-
-        if self.alpha0 == 0:
-            #self.alpha0 = diversity/100 #when using minibatches
-            #self.alpha0 = 1e-1 / objfun.neff #when not using minibatches
-            self.alpha0 = 1e-3/np.log(objfun.minibatch_neff)
+    def minimize(self, objfun, x):
 
 
-        if self.decay_rate == 0:
-            self.decay_rate = 100.0*diversity
-            #self.decay_rate = 100 * diversity
-            #self.decay_rate = 100.0/np.log(L)
-            #self.decay_rate = np.sqrt(objfun.neff)
-            #self.decay_rate =1000/(self.alpha0/1e-5 -1)
-
-
-
-        subtitle = "L={0} N={1} Neff={2} Diversity={3}<br>".format(objfun.ncol, objfun.nrow, np.round(objfun.neff, decimals=3), np.round(diversity,decimals=3))
-        subtitle += self.__repr__().replace("\n", "<br>")
+        subtitle = self.progress.title + self.__repr__().replace("\n", "<br>")
         subtitle += objfun.__repr__().replace("\n", "<br>")
-        self.progress.set_plot_options(plotfile, subtitle)
+        self.progress.set_plot_title(subtitle)
 
 
         #initialize the moment vectors
@@ -203,6 +197,8 @@ class Adam():
                         self.it_succesfull_stop_condition = -1
                     elif self.decay_type == "sqrt":
                         alpha = self.alpha0  / (1 + (np.sqrt(1 + i - self.it_succesfull_stop_condition)) / self.decay_rate)
+                    elif self.decay_type == "sig":
+                        alpha *= 1.0 / (1 + self.decay_rate * (i - self.it_succesfull_stop_condition))
 
 
 

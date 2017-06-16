@@ -8,7 +8,8 @@ import ccmpred.model_probabilities
 class conjugateGradient():
     """Optimize objective function usign conjugate gradients"""
 
-    def __init__(self, maxit=100, ftol=1e-4, max_linesearch=5, alpha_mul=0.5, wolfe=0.2, epsilon=1e-3, convergence_prev=5):
+    def __init__(self, maxit=100, ftol=1e-4, max_linesearch=5, alpha_mul=0.5, wolfe=0.2,
+                 epsilon=1e-3, convergence_prev=5, plotfile=None, protein=None):
         self.maxit = maxit
         self.ftol = ftol
         self.max_linesearch = max_linesearch
@@ -17,11 +18,12 @@ class conjugateGradient():
         self.epsilon = epsilon
         self.convergence_prev = convergence_prev
 
-
-        self.progress = pr.Progress()
-
-
-
+        self.protein = protein
+        plot_title = "L={0} N={1} Neff={2} Diversity={3}<br>".format(
+            self.protein['L'], self.protein['N'], np.round(self.protein['Neff'], decimals=3),
+            np.round(self.protein['diversity'], decimals=3)
+        )
+        self.progress = pr.Progress(plotfile, plot_title)
 
 
     def __repr__(self):
@@ -36,14 +38,12 @@ class conjugateGradient():
         self.maxit = maxit
 
 
-    def minimize(self, objfun, x, plotfile):
+    def minimize(self, objfun, x):
 
 
-        diversity = np.sqrt(objfun.nrow)/objfun.ncol
-        subtitle = "L={0} N={1} Neff={2} Diversity={3}<br>".format(objfun.ncol, objfun.nrow, np.round(objfun.neff, decimals=3), np.round(diversity,decimals=3))
-        subtitle += self.__repr__().replace("\n", "<br>")
+        subtitle = self.progress.title + self.__repr__().replace("\n", "<br>")
         subtitle += objfun.__repr__().replace("\n", "<br>")
-        self.progress.set_plot_options(plotfile, subtitle)
+        self.progress.set_plot_title(subtitle)
 
         #for initialization of linesearch
         fx, g = objfun.evaluate(x)
