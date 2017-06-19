@@ -106,14 +106,15 @@ class ContrastiveDivergence():
             nr_samples_msa = int(np.ceil(self.nr_sample_sequences / float(self.nr_seq_minibatch)))
             seq_id = range(self.nr_seq_minibatch) * nr_samples_msa
         else:
-            #subsampling
-            seq_id = np.random.choice(self.nr_seq_minibatch, self.nr_sample_sequences, replace=False)
+            #take minibatch
+            seq_id = np.random.choice(self.nr_seq_minibatch, self.nr_seq_minibatch, replace=False)
 
 
         msa_sampled = self.msa_minibatch[seq_id]
         msa_sampled_weights = ccmpred.weighting.weights_simple(msa_sampled)
 
         return msa_sampled.copy(), msa_sampled_weights
+
 
     def init_minibatch(self):
         seq_id = np.random.choice(self.nrow, self.nr_seq_minibatch, replace=False)
