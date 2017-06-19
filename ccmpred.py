@@ -319,7 +319,7 @@ def main():
     fx, x, algret = alg.minimize(f, x0)
 
     #Refine with persistent CD
-    refine=True
+    refine=False
     if refine:
         if opt.alpha0 == 0:
             alg.alpha0 = 1e-3 * (np.log(protein['Neff']) / protein['L'])
