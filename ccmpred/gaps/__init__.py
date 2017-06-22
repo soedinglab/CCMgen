@@ -13,16 +13,14 @@ def remove_gaps_col_freqs(msa):
     return remove_gaps_probs(msa, counts)
 
 
-def backinsert_gapped_positions(res, gapped_positions):
-
-    res.ncol = res.ncol + len(gapped_positions)
+def backinsert_gapped_positions(x_single, x_pair, gapped_positions):
 
     for position in gapped_positions:
-        res.x_single = np.insert(res.x_single,position, 0, axis=0)
-        res.x_pair = np.insert(res.x_pair,position, 0, axis=0)
-        res.x_pair = np.insert(res.x_pair,position, 0, axis=1)
+        x_single = np.insert(x_single,position, [0], axis=0)
+        x_pair = np.insert(x_pair,position, [0], axis=0)
+        x_pair = np.insert(x_pair,position, [0], axis=1)
 
-    return res
+    return x_single, x_pair
 
 
 def remove_gapped_positions(msa, max_gap_percentage):
