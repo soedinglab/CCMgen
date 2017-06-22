@@ -6,30 +6,42 @@ import ccmpred.gaps
 import ccmpred.counts
 import ccmpred.objfun
 import ccmpred.objfun.cd.cext
+from ccmpred.weighting import SequenceWeights
 
 import ccmpred.pseudocounts
-import ccmpred.weighting
-
+import ccmpred.parameter_handling
 
 class ContrastiveDivergence():
 
-    def __init__(self, msa, freqs, weights, raw, regularization, gibbs_steps=1, persistent=False,
-                 min_nseq_factorL=1,
-                 pll=False,
-                 minibatch_size=0):
+    def __init__(self, ccm, gibbs_steps=1, persistent=False, min_nseq_factorL=1, pll=False, minibatch_size=0):
 
 
-        if msa.shape[1] != raw.ncol:
-            raise Exception('Mismatching number of columns: MSA {0}, raw {1}'.format(msa.shape[1], raw.ncol))
+        self.msa = ccm.msa
+        self.nrow, self.ncol = self.msa.shape
+        self.weights = ccm.weights
+        self.neff = ccm.neff
+        self.regularization = ccm.regularization
 
-        self.x0 = self.structured_to_linear(raw.x_single[:, :20], raw.x_pair)
+        self.weighting = ccm.weighting
 
-        self.msa = msa
-        self.weights = weights
-        self.neff = np.sum(weights)
-        self.regularization = regularization
+        self.structured_to_linear = lambda x_single, x_pair: \
+            ccmpred.parameter_handling.structured_to_linear(x_single,
+                                                            x_pair,
+                                                            nogapstate=True,
+                                                            padding=False)
+        self.linear_to_structured = lambda x: \
+            ccmpred.parameter_handling.linear_to_structured(x,
+                                                            self.ncol,
+                                                            nogapstate=True,
+                                                            add_gap_state=False,
+                                                            padding=False)
 
-        self.nrow, self.ncol = msa.shape
+
+        self.x_single = ccm.x_single
+        self.x_pair = ccm.x_pair
+        self.x = self.structured_to_linear(self.x_single, self.x_pair)
+
+
         self.nsingle = self.ncol * 20
         self.npair = self.ncol * self.ncol * 21 * 21
         self.nvar = self.nsingle + self.npair
@@ -45,7 +57,7 @@ class ContrastiveDivergence():
 
         # get constant alignment counts - INCLUDING PSEUDO COUNTS
         # important for small alignments
-        self.freqs_single, self.freqs_pair = freqs
+        self.freqs_single, self.freqs_pair = ccm.freqs
         self.msa_counts_single = self.freqs_single * self.neff
         self.msa_counts_pair = self.freqs_pair * self.neff
 
@@ -101,17 +113,17 @@ class ContrastiveDivergence():
     def init_sample_alignment(self):
 
         #sample alignment larger than minibatch
-        if self.nr_sample_sequences > self.nr_seq_minibatch:
-            #oversampling
-            nr_samples_msa = int(np.ceil(self.nr_sample_sequences / float(self.nr_seq_minibatch)))
-            seq_id = range(self.nr_seq_minibatch) * nr_samples_msa
-        else:
-            #take minibatch
-            seq_id = np.random.choice(self.nr_seq_minibatch, self.nr_seq_minibatch, replace=False)
+        # if self.nr_sample_sequences > self.nr_seq_minibatch:
+        #     #oversampling
+        #     nr_samples_msa = int(np.ceil(self.nr_sample_sequences / float(self.nr_seq_minibatch)))
+        #     seq_id = range(self.nr_seq_minibatch) * nr_samples_msa
+        # else:
+        #take minibatch
+        seq_id = np.random.choice(self.nr_seq_minibatch, self.nr_seq_minibatch, replace=False)
 
 
         msa_sampled = self.msa_minibatch[seq_id]
-        msa_sampled_weights = ccmpred.weighting.weights_simple(msa_sampled)
+        msa_sampled_weights = self.weighting.weights_simple(msa_sampled)
 
         return msa_sampled.copy(), msa_sampled_weights
 
@@ -119,7 +131,7 @@ class ContrastiveDivergence():
     def init_minibatch(self):
         seq_id = np.random.choice(self.nrow, self.nr_seq_minibatch, replace=False)
         msa_minibatch = self.msa[seq_id]
-        minibatch_weights = ccmpred.weighting.weights_simple(msa_minibatch)
+        minibatch_weights = self.weighting.weights_simple(msa_minibatch)
         minibatch_neff = np.sum(minibatch_weights)
 
 
@@ -138,11 +150,6 @@ class ContrastiveDivergence():
         #non_gapped counts
         self.Ni_minibatch = self.minibatch_counts_single.sum(1) + 1e-10
         self.Nij_minibatch = self.minibatch_counts_pair.sum(3).sum(2) + 1e-10
-
-    def finalize(self, x, meta):
-        x_single, x_pair = self.linear_to_structured(x, self.ncol, add_gap_state=True)
-
-        return ccmpred.raw.CCMRaw(self.ncol, x_single, x_pair, meta)
 
     def gibbs_sample_sequences(self, x, gibbs_steps):
         return ccmpred.objfun.cd.cext.gibbs_sample_sequences(self.msa_sampled,  x, gibbs_steps)
@@ -234,6 +241,14 @@ class ContrastiveDivergence():
 
         return sampled_freq_pair
 
+    def finalize(self, x):
+        return ccmpred.parameter_handling.linear_to_structured(x,
+                                                            self.ncol,
+                                                            clip=False,
+                                                            nogapstate=True,
+                                                            add_gap_state=True,
+                                                            padding=False)
+
     def evaluate(self, x):
 
         #when using minibatches: create new reference alignment
@@ -297,8 +312,8 @@ class ContrastiveDivergence():
 
 
         #compute regularization
-        x_single, x_pair = self.linear_to_structured(x, self.ncol)
-        _, g_single_reg, g_pair_reg = self.regularization(x_single, x_pair)
+        x_single, x_pair = self.linear_to_structured(x)                     #x_single has dim L x 20
+        _, g_single_reg, g_pair_reg = self.regularization(x_single, x_pair) #g_single_reg has dim L x 20
 
 
         #if using minibatches: scale gradient of regularizer accordingly
@@ -315,46 +330,14 @@ class ContrastiveDivergence():
 
         return -1, g, g_reg
 
+    def get_parameters(self):
+        parameters = {}
+        parameters['gibbs_steps'] = self.gibbs_steps
+        parameters['persistent'] = self.persistent
+        parameters['pll']       = self.pll
+        parameters['averaging'] = self.averaging
+        parameters['nr_seq_minibatch'] = self.nr_seq_minibatch
+        parameters['min_nseq_factorL'] = self.min_nseq_factorL
+        parameters['nr_sample_sequences'] = self.nr_sample_sequences
 
-
-    @staticmethod
-    def linear_to_structured(x, ncol, add_gap_state=False):
-        """Convert linear vector of variables into multidimensional arrays.
-
-        in linear memory, memory order is v[j, a] and w[i, a, j, b] (dimensions Lx20 and Lx21xLx21)
-        output will have  memory order of v[j, a] and w[i, j, a, b] (dimensions Lx20 and LxLx21x21)
-        """
-        nsingle = ncol * 20
-
-        x_single = x[:nsingle].reshape((ncol, 20))
-        x_pair = np.transpose(x[nsingle:].reshape((ncol, 21, ncol, 21)), (0, 2, 1, 3))
-
-        if add_gap_state:
-            temp = np.zeros((ncol, 21))
-            temp[:,:20] = x_single
-            x_single = temp
-
-        return x_single, x_pair
-
-    @staticmethod
-    def structured_to_linear(x_single, x_pair):
-        """Convert structured variables into linear array
-
-        with input arrays of memory order v[j, a] and w[i, j, a, b] (dimensions Lx20 and LxLx21x21)
-        output will have  memory order of v[j, a] and w[i, a, j, b] (dimensions Lx20 and Lx21xLx21)
-        """
-
-        ncol = x_single.shape[0]
-        nsingle = ncol * 20
-        nvar = nsingle + ncol * ncol * 21 * 21
-
-
-        out_x_pair = np.zeros((ncol, 21, ncol, 21), dtype='float64')
-        out_x_pair[:, :21, :, :21] = np.transpose(x_pair[:, :, :21, :21], (0, 2, 1, 3))
-
-        x = np.zeros((nvar, ), dtype='float64')
-
-        x[:nsingle] = x_single.reshape(-1)
-        x[nsingle:] = out_x_pair.reshape(-1)
-
-        return x
+        return parameters
