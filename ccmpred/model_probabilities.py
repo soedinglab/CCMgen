@@ -158,7 +158,7 @@ def get_nr_problematic_qij(freqs_pair, x_pair, lambda_pair, Nij, epsilon=1e-3, v
     L = Nij.shape[0]
 
     #renormalize pair frequencies without gaps + reshape row-wise
-    pair_freq = ccmpred.pseudocounts.degap(freqs_pair).reshape(L,L,400)
+    pair_freq = ccmpred.pseudocounts.PseudoCounts.degap(freqs_pair).reshape(L,L,400)
 
     #couplings without gaps + reshape row-wise
     x_pair_nogaps = x_pair[:,:,:20,:20].reshape(L,L, 400)
@@ -180,7 +180,7 @@ def model_prob_flat(freqs_pair, x_pair, lambda_pair, Nij):
     L = Nij.shape[0]
 
     #renormalize pair frequencies without gaps + reshape row-wise
-    pair_freq = ccmpred.pseudocounts.degap(freqs_pair).reshape(L,L,400)
+    pair_freq = ccmpred.pseudocounts.PseudoCounts.degap(freqs_pair).reshape(L,L,400)
 
     #couplings without gaps + reshape row-wise
     x_pair_nogaps = x_pair[:,:,:20,:20].reshape(L,L, 400)
@@ -199,12 +199,9 @@ def model_prob_flat(freqs_pair, x_pair, lambda_pair, Nij):
 
 
 @stream_or_file('wb')
-def write_msgpack(outmsgpackfile, res, weights, freqs, lambda_pair):
+def write_msgpack(outmsgpackfile, x_pair, neff, freqs, lambda_pair):
 
-    out={}
-
-    neff = np.sum(weights)
-
+    L = x_pair.shape[0]
     freqs_single, freqs_pair = freqs
 
     # ENFORCE NO PSEUDO COUNTS
@@ -220,12 +217,14 @@ def write_msgpack(outmsgpackfile, res, weights, freqs, lambda_pair):
     #non_gapped counts
     Nij = msa_counts_pair.sum(3).sum(2)
 
+
+    out={}
     # write lower triangular matrix row-wise
     # read in as upper triangular matrix column-wise in c++
-    out['N_ij'] = Nij[np.tril_indices(res.ncol, k=-1)].tolist() #rowwise
+    out['N_ij'] = Nij[np.tril_indices(L, k=-1)].tolist() #rowwise
 
     #compute q_ij
-    model_prob_flat = compute_qij(freqs_pair, res.x_pair, lambda_pair, Nij, epsilon=1e-2, verbose=1)
+    model_prob_flat = compute_qij(freqs_pair, x_pair, lambda_pair, Nij, epsilon=1e-2, verbose=1)
 
     out['q_ij'] = model_prob_flat.tolist()
     outmsgpackfile.write(msgpack.packb(out))
