@@ -2,81 +2,104 @@ import numpy as np
 from ccmpred.weighting.cext import count_ids, calculate_weights_simple
 import ccmpred.counts
 
-def weights_uniform(msa, ignore_gaps=False):
-    """Uniform weights"""
-    return np.ones((msa.shape[0],), dtype="float64")
+
+class SequenceWeights( ):
+    """Compute weights for each sequence to reduce sampling bias"""
+
+    def __init__(self, msa, ignore_gaps=False, cutoff=0.8):
+        self.msa = msa
+        self.N = msa.shape[0]
+        self.ignore_gaps = ignore_gaps
+        self.cutoff = cutoff
 
 
-def weights_simple(msa, ignore_gaps=False, cutoff=0.8):
-    """Simple sequence reweighting from the Morcos et al. 2011 DCA paper"""
+    def get_HHsuite_neff(self):
+        single_counts = ccmpred.counts.single_counts(self.msa)
+        single_freqs = (single_counts + 1e-3) / np.sum(single_counts, axis=1)[:, np.newaxis]
 
-    if cutoff >= 1:
-        return weights_uniform(msa)
+        single_freqs = single_freqs[:20]
 
-    return calculate_weights_simple(msa, cutoff, ignore_gaps)
+        entropies = - np.sum(single_freqs * np.log2(single_freqs), axis=1)
 
+        neff = 2 ** np.mean(entropies)
 
-def weights_henikoff(msa, ignore_gaps=False):
-    """
-    Henikoff weighting according to Henikoff, S and Henikoff, JG. Position-based sequence weights. 1994
-    Henikoff weights always sum up to ncol
-    """
+        return neff
 
-    single_counts   = ccmpred.counts.single_counts(msa, None)
-    if ignore_gaps:
-        single_counts[:,0] = 0
-
-    unique_aa       = (single_counts != 0).sum(1)
-    nrow, ncol = msa.shape
-
-    cNi = np.array([single_counts[range(ncol), msa[n]] * unique_aa for n in range(nrow)])
-    henikoff =  np.array([sum(1/np.delete(cNi[n], np.where(cNi[n] == 0))) for n in range(nrow)])
+    def weights_uniform(self):
+        """Uniform weights"""
+        return np.ones((self.N,), dtype="float64")
 
 
-    #example from henikoff paper
-    # msa=np.array([[0,1,3,0,6],[0,2,4,0,2],[0,1,4,0,2],[0,1,5,0,0]])
-    # single_counts = np.zeros((5, 7))
-    # single_counts[0,0]=4
-    # single_counts[1,1]=3
-    # single_counts[1,2]=1
-    # single_counts[2,3]=1
-    # single_counts[2,4]=2
-    # single_counts[2,5]=1
-    # single_counts[3,0]=4
-    # single_counts[4,0]=1
-    # single_counts[4,2]=2
-    # single_counts[4,6]=1
-    # unique_aa       = (single_counts != 0).sum(1)
-    # henikoff = np.array([sum(1.0/(single_counts[range(ncol), msa[n]] * unique_aa)) for n in range(nrow)])
-    # array([ 1.33333333,  1.33333333,  1.        ,  1.33333333])
+    def weights_simple(self):
+        """Simple sequence reweighting from the Morcos et al. 2011 DCA paper"""
 
-    return henikoff
+        if self.cutoff >= 1:
+            return self.weights_uniform()
+
+        return calculate_weights_simple(self.msa, self.cutoff, self.ignore_gaps)
 
 
-def weights_henikoff_pair(msa, ignore_gaps=False):
-    """
-    Henikoff pair weighting
+    def weights_henikoff(self):
+        """
+        Henikoff weighting according to Henikoff, S and Henikoff, JG. Position-based sequence weights. 1994
+        Henikoff weights always sum up to ncol
+        """
 
-    Henikoff pair weights will always sum up to ncol*(ncol-1)/2
-    """
+        single_counts   = ccmpred.counts.single_counts(self.msa, None)
+        if self.ignore_gaps:
+            single_counts[:,0] = 0
 
-    pair_counts   = ccmpred.counts.pair_counts(msa, None)
-    if ignore_gaps:
-        pair_counts[:, :, 0, :] = 0
-        pair_counts[:, :, :, 0] = 0
+        unique_aa       = (single_counts != 0).sum(1)
+        nrow, ncol = self.msa.shape
 
-    unique_aa     = (pair_counts != 0).sum(3).sum(2)
-    nrow, ncol = msa.shape
-
-    henikoff = np.zeros(nrow)
-    for n in range(nrow):
-        for k in range(ncol-1):
-            for l in range(k+1,ncol):
-                if pair_counts[k,l, msa[n][k],msa[n][l]] != 0:
-                    henikoff[n] += 1/(pair_counts[k,l, msa[n][k],msa[n][l]]  * unique_aa[k,l])
+        cNi = np.array([single_counts[range(ncol), self.msa[n]] * unique_aa for n in range(nrow)])
+        henikoff =  np.array([sum(1/np.delete(cNi[n], np.where(cNi[n] == 0))) for n in range(nrow)])
 
 
-    return henikoff
+        #example from henikoff paper
+        # msa=np.array([[0,1,3,0,6],[0,2,4,0,2],[0,1,4,0,2],[0,1,5,0,0]])
+        # single_counts = np.zeros((5, 7))
+        # single_counts[0,0]=4
+        # single_counts[1,1]=3
+        # single_counts[1,2]=1
+        # single_counts[2,3]=1
+        # single_counts[2,4]=2
+        # single_counts[2,5]=1
+        # single_counts[3,0]=4
+        # single_counts[4,0]=1
+        # single_counts[4,2]=2
+        # single_counts[4,6]=1
+        # unique_aa       = (single_counts != 0).sum(1)
+        # henikoff = np.array([sum(1.0/(single_counts[range(ncol), msa[n]] * unique_aa)) for n in range(nrow)])
+        # array([ 1.33333333,  1.33333333,  1.        ,  1.33333333])
+
+        return henikoff
+
+
+    def weights_henikoff_pair(self):
+        """
+        Henikoff pair weighting
+
+        Henikoff pair weights will always sum up to ncol*(ncol-1)/2
+        """
+
+        pair_counts   = ccmpred.counts.pair_counts(self.msa, None)
+        if self.ignore_gaps:
+            pair_counts[:, :, 0, :] = 0
+            pair_counts[:, :, :, 0] = 0
+
+        unique_aa     = (pair_counts != 0).sum(3).sum(2)
+        nrow, ncol = self.msa.shape
+
+        henikoff = np.zeros(nrow)
+        for n in range(nrow):
+            for k in range(ncol-1):
+                for l in range(k+1,ncol):
+                    if pair_counts[k,l, self.msa[n][k],self.msa[n][l]] != 0:
+                        henikoff[n] += 1/(pair_counts[k,l, self.msa[n][k],self.msa[n][l]]  * unique_aa[k,l])
+
+
+        return henikoff
 
 
 
