@@ -5,10 +5,12 @@ import numpy as np
 class L2(object):
     """L2 regularization on single and pair emission potentials"""
 
-    def __init__(self, lambda_single, lambda_pair, center_x_single):
+    def __init__(self, lambda_single, lambda_pair_factor, scaling, center_x_single):
         self.lambda_single = lambda_single
-        self.lambda_pair = lambda_pair
+        self.lambda_pair = lambda_pair_factor * scaling
+        self.lambda_pair_factor = lambda_pair_factor
         self.center_x_single = center_x_single
+
 
     def __call__(self, x_single, x_pair):
         x_ofs = x_single - self.center_x_single[:, :x_single.shape[1]]
@@ -21,4 +23,4 @@ class L2(object):
         return fx_reg, g_single, g_pair
 
     def __repr__(self):
-        return "L₂ regularization (λsingle={0} λpair={1})".format(self.lambda_single, self.lambda_pair)
+        return "L₂ regularization (λsingle={0} λpairfactor={1} λpair={2})".format(self.lambda_single, self.lambda_pair_factor, self.lambda_pair)
