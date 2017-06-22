@@ -10,5 +10,5 @@ def init(ncol, centering=None):
     if(centering is not None):
         x_single = centering
 
-    return ccmpred.raw.CCMRaw(ncol, x_single, x_pair, {})
+    return x_single, x_pair
 
