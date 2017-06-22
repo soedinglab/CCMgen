@@ -8,9 +8,9 @@ random.seed(42)
 class numDiff():
     """Debug Gradients with numerical differentiation"""
 
-    def __init__(self, maxiter=100, epsilon=1e-5):
+    def __init__(self, maxit=100, epsilon=1e-5):
         self.epsilon = epsilon
-        self.maxiter = maxiter
+        self.maxit = maxit
 
 
     def minimize(self, objfun, x):
@@ -34,7 +34,7 @@ class numDiff():
         iteration = 0
         while True:
             iteration += 1
-            if iteration >= self.maxiter:
+            if iteration >= self.maxit:
                 break
 
             if random.random() <= 0.2:

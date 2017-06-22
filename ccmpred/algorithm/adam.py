@@ -31,10 +31,10 @@ class Adam():
 
     """
 
-    def __init__(self, alpha0=1e-3, beta1=0.9, beta2=0.999, beta3=0.9, noise=1e-8,
+    def __init__(self, ccm, alpha0=1e-3, beta1=0.9, beta2=0.999, beta3=0.9, noise=1e-8,
                  maxit=100, epsilon=1e-5, convergence_prev=5, early_stopping=False, qij_condition=False,
                  decay_type="step", decay_rate=1e1, decay=False, decay_start=1e-4,
-                 fix_v=False, plotfile=None, protein=None):
+                 fix_v=False, plotfile=None):
 
         self.alpha0 = alpha0
         self.beta1 = beta1
@@ -57,18 +57,17 @@ class Adam():
         self.convergence_prev=convergence_prev
         self.qij_condition = qij_condition
 
-        self.protein = protein
         plot_title = "L={0} N={1} Neff={2} Diversity={3}<br>".format(
-            self.protein['L'], self.protein['N'], np.round(self.protein['Neff'], decimals=3),
-            np.round(self.protein['diversity'], decimals=3)
+            ccm.L, ccm.N, np.round(ccm.neff, decimals=3),
+            np.round(ccm.diversity, decimals=3)
         )
         self.progress = pr.Progress(plotfile, plot_title)
 
 
         if self.alpha0 == 0:
-            self.alpha0 = 5e-3 * protein['diversity']
+            self.alpha0 = 5e-3 * ccm.diversity
         if self.decay_rate == 0:
-            self.decay_rate = 1e-6 / protein['diversity']
+            self.decay_rate = 1e-6 /ccm.diversity
 
     def __repr__(self):
 
@@ -95,9 +94,6 @@ class Adam():
             )
 
         return rep_str
-
-
-
 
     def minimize(self, objfun, x):
 
@@ -128,10 +124,10 @@ class Adam():
             g = gx + greg
 
             #decompose gradients and parameters
-            x_single, x_pair = objfun.linear_to_structured(x, objfun.ncol)
-            gx_single, gx_pair = objfun.linear_to_structured(gx, objfun.ncol)
-            g_reg_single, g_reg_pair = objfun.linear_to_structured(greg, objfun.ncol)
-            g_single, g_pair = objfun.linear_to_structured(g, objfun.ncol)
+            x_single, x_pair = objfun.linear_to_structured(x)
+            gx_single, gx_pair = objfun.linear_to_structured(gx)
+            g_reg_single, g_reg_pair = objfun.linear_to_structured(greg)
+            g_single, g_pair = objfun.linear_to_structured(g)
 
             #update moment, adaptivity and parameter averages
             first_moment_pair    = self.beta1 * first_moment_pair + (1-self.beta1) * (g_pair)
@@ -261,3 +257,27 @@ class Adam():
         self.progress.print_header()
         return fx, x, ret
 
+    def get_parameters(self):
+        parameters={}
+
+        parameters['convergence']={}
+        parameters['convergence']['maxit'] = self.maxit
+        parameters['convergence']['early_stopping'] = self.early_stopping
+        parameters['convergence']['epsilon'] = self.epsilon
+        parameters['convergence']['convergence_prev'] = self.convergence_prev
+        parameters['convergence']['qij_condition'] = self.qij_condition
+
+        parameters['decay']={}
+        parameters['decay']['alpha0'] = self.alpha0
+        parameters['decay']['decay'] = self.decay
+        parameters['decay']['decay_rate'] = self.decay_rate
+        parameters['decay']['decay_start'] = self.decay_start
+        parameters['decay']['decay_type'] = self.decay_type
+
+        parameters['beta1'] = self.beta1
+        parameters['beta2'] = self.beta2
+        parameters['beta3'] = self.beta3
+        parameters['noise'] = self.noise
+        parameters['fix_v'] = self.fix_v
+
+        return parameters

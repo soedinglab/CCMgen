@@ -5,11 +5,11 @@ import ccmpred.monitor.progress as pr
 import ccmpred.model_probabilities
 
 
-class conjugateGradient():
+class conjugateGradient(object):
     """Optimize objective function usign conjugate gradients"""
 
-    def __init__(self, maxit=100, ftol=1e-4, max_linesearch=5, alpha_mul=0.5, wolfe=0.2,
-                 epsilon=1e-3, convergence_prev=5, plotfile=None, protein=None):
+    def __init__(self, ccm, maxit=100, ftol=1e-4, max_linesearch=5, alpha_mul=0.5, wolfe=0.2,
+                 epsilon=1e-3, convergence_prev=5, plotfile=None):
         self.maxit = maxit
         self.ftol = ftol
         self.max_linesearch = max_linesearch
@@ -18,10 +18,9 @@ class conjugateGradient():
         self.epsilon = epsilon
         self.convergence_prev = convergence_prev
 
-        self.protein = protein
         plot_title = "L={0} N={1} Neff={2} Diversity={3}<br>".format(
-            self.protein['L'], self.protein['N'], np.round(self.protein['Neff'], decimals=3),
-            np.round(self.protein['diversity'], decimals=3)
+            ccm.L, ccm.N, np.round(ccm.neff, decimals=3),
+            np.round(ccm.diversity, decimals=3)
         )
         self.progress = pr.Progress(plotfile, plot_title)
 
@@ -30,6 +29,7 @@ class conjugateGradient():
         return "conjugate gradient optimization (ftol={0} max_linesearch={1} alpha_mul={2} wolfe={3}) \n" \
                "\tconvergence criteria: maxit={4} epsilon={5} convergence_prev={6} \n".format(
             self.ftol, self.max_linesearch, self.alpha_mul, self.wolfe, self.maxit, self.epsilon, self.convergence_prev)
+
 
     def set_epsilon(self, eps):
         self.epsilon = eps
@@ -184,3 +184,17 @@ class conjugateGradient():
 
             alpha *= self.alpha_mul
 
+    def get_parameters(self):
+        parameters={}
+
+        parameters['convergence']={}
+        parameters['convergence']['maxit'] = self.maxit
+        parameters['convergence']['epsilon'] = self.epsilon
+        parameters['convergence']['convergence_prev'] = self.convergence_prev
+
+        parameters['ftol'] = self.ftol
+        parameters['max_linesearch'] = self.max_linesearch
+        parameters['alpha_mul'] = self.alpha_mul
+        parameters['wolfe'] = self.wolfe
+
+        return parameters

@@ -8,8 +8,9 @@ import ccmpred.model_probabilities
 class gradientDescent():
     """Optimize objective function using gradient descent"""
 
-    def __init__(self, maxit=100, alpha0=5e-3, decay=True,  decay_start=1e-3, decay_rate=10, decay_type="lin", fix_v=False,
-                 epsilon=1e-5, convergence_prev=5, early_stopping=False, plotfile=None, protein=None):
+    def __init__(self, ccm, maxit=100, alpha0=5e-3, decay=True,  decay_start=1e-3, decay_rate=10, decay_type="lin", fix_v=False,
+                 epsilon=1e-5, convergence_prev=5, early_stopping=False, plotfile=None):
+
 
         self.maxit = maxit
         self.alpha0 = alpha0
@@ -27,18 +28,18 @@ class gradientDescent():
         self.epsilon = epsilon
         self.convergence_prev=convergence_prev
 
-        self.protein = protein
+
         plot_title = "L={0} N={1} Neff={2} Diversity={3}<br>".format(
-            self.protein['L'], self.protein['N'], np.round(self.protein['Neff'], decimals=3),
-            np.round(self.protein['diversity'], decimals=3)
+            ccm.L, ccm.N, np.round(ccm.neff, decimals=3),
+            np.round(ccm.diversity, decimals=3)
         )
         self.progress = pr.Progress(plotfile, plot_title)
 
 
         if self.alpha0 == 0:
-            self.alpha0 = 3e-2 * (np.log(protein['Neff']) / protein['L'])
+            self.alpha0 = 1e-3 * ccm.diversity
         if self.decay_rate == 0:
-            self.decay_rate = 5e-6 / (np.log(protein['Neff']) / protein['L'])
+            self.decay_rate = 5e-7 / ccm.diversity
 
 
     def __repr__(self):
@@ -80,10 +81,10 @@ class gradientDescent():
 
 
             #decompose gradients and parameters
-            x_single, x_pair = objfun.linear_to_structured(x, objfun.ncol)
-            g_single, g_pair = objfun.linear_to_structured(g, objfun.ncol)
-            gx_single, gx_pair = objfun.linear_to_structured(gx, objfun.ncol)
-            g_reg_single, g_reg_pair = objfun.linear_to_structured(greg, objfun.ncol)
+            x_single, x_pair = objfun.linear_to_structured(x)
+            g_single, g_pair = objfun.linear_to_structured(g)
+            gx_single, gx_pair = objfun.linear_to_structured(gx)
+            g_reg_single, g_reg_pair = objfun.linear_to_structured(greg)
 
 
             #compute norm of coupling parameters
@@ -163,3 +164,23 @@ class gradientDescent():
 
 
         return fx, x, ret
+
+    def get_parameters(self):
+        parameters={}
+
+        parameters['convergence'] = {}
+        parameters['convergence']['maxit'] = self.maxit
+        parameters['convergence']['early_stopping'] = self.early_stopping
+        parameters['convergence']['epsilon'] = self.epsilon
+        parameters['convergence']['convergence_prev'] = self.convergence_prev
+
+        parameters['decay'] = {}
+        parameters['decay']['alpha0'] =  self.alpha0
+        parameters['decay']['decay'] = self.decay
+        parameters['decay']['decay_start'] = self.decay_start
+        parameters['decay']['decay_rate'] = self.decay_rate
+        parameters['decay']['decay_type'] = self.decay_type
+
+        parameters['fix_v'] = self.fix_v
+
+        return parameters
