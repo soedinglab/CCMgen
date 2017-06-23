@@ -1,15 +1,17 @@
-import numpy.distutils.intelccompiler
-from setuptools import setup, Extension, find_packages
-
+#import numpy.distutils.intelccompiler
+#from setuptools import setup, Extension, find_packages
+from distutils.core import setup, Extension, find_packages
 
 def ext(name, sources=[], include_dirs=[], library_dirs=[], libraries=[], extra_compile_args=['-g -fopenmp -std=c99'], extra_link_args=['-g -fopenmp']):
     return Extension(name, include_dirs=include_dirs, library_dirs=library_dirs, libraries=libraries, sources=sources, extra_compile_args=extra_compile_args, extra_link_args=extra_link_args)
 
 setup(
-    name="CCMpred",
+    name="CCMpredPy",
     version="1.0.0",
     description="Residue-residue Contacts from correlated mutations predicted quickly and precisely",
     license="AGPLv3",
+    author="Susann Vorberg",
+    author_email="Susann.Vorberg@gmail.com",
     packages=find_packages(),
     ext_modules=[
         ext(
@@ -46,6 +48,6 @@ setup(
             'ccmpred.weighting.cext.libweighting',
             sources=['ccmpred/weighting/cext/weighting.c']
         )
-    ]#,
-    #scripts=['ccmpred.py']
+    ],
+    scripts=['ccmpred.py']
 )
