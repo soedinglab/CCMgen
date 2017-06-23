@@ -3,7 +3,7 @@ import argparse
 import sys
 import os
 
-
+from ccmpred import CCMpred
 import ccmpred.logo
 import ccmpred.objfun.pll as pll
 import ccmpred.objfun.cd as cd
@@ -11,7 +11,6 @@ import ccmpred.algorithm.gradient_descent as gd
 import ccmpred.algorithm.conjugate_gradients as cg
 import ccmpred.algorithm.numdiff as nd
 import ccmpred.algorithm.adam as ad
-from ccmpred import CCMpred
 
 
 EPILOG = """
@@ -221,8 +220,8 @@ def main():
     ccm.intialise_potentials(opt.initrawfile, opt.vanilla)
 
     #only compute model frequencies and exit
-    if opt.only_model_prob:
-        ccm.write_binary_modelprobs()
+    if opt.only_model_prob and opt.outmodelprobmsgpackfile:
+        ccm.write_binary_modelprobs(opt.outmodelprobmsgpackfile)
         sys.exit(0)
 
     #specify objective function
