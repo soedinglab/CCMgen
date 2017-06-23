@@ -208,15 +208,15 @@ class CCMpred():
 
     def compute_sequence_weights(self, weighting_type, ignore_gaps=False, cutoff=0.8):
 
-        self.weighting = SequenceWeights(self.msa, ignore_gaps, cutoff)
-        self.weights = getattr(self.weighting, weighting_type)()
+        self.weighting = SequenceWeights(ignore_gaps, cutoff)
+        self.weights = getattr(self.weighting, weighting_type)(self.msa)
         self.weighting_type = weighting_type
 
         self.neff   = np.sum(self.weights)
         self.diversity = np.sqrt(self.neff)/self.L
 
         print("Number of effective sequences after {0} reweighting (id-threshold={1}, ignore_gaps={2}): {3:g}. Neff(HHsuite-like)={4}".format(
-            self.weighting_type, self.weighting.cutoff, self.weighting.ignore_gaps, self.neff, self.weighting.get_HHsuite_neff()))
+            self.weighting_type, self.weighting.cutoff, self.weighting.ignore_gaps, self.neff, self.weighting.get_HHsuite_neff(self.msa)))
         print("Alignment has diversity={0}.".format(np.round(self.diversity, decimals=3)))
 
     def compute_frequencies(self, pseudocount_type, pseudocount_n_single=1,  pseudocount_n_pair=1, dev_center_v=False):
@@ -390,7 +390,7 @@ class CCMpred():
         print("\nWriting msgpack-formatted potentials to {0}".format(outmsgpackfile))
         raw.write_msgpack(outmsgpackfile, raw_out)
 
-    def write_binary_modelprobs(self, outmodelprobmsgpackfile ):
+    def write_binary_modelprobs(self, outmodelprobmsgpackfile):
 
         self.outmodelprobmsgpackfile = outmodelprobmsgpackfile
         print("\nWriting msgpack-formatted model probabilties to {0}".format(outmodelprobmsgpackfile))
