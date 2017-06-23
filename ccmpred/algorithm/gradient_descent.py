@@ -37,9 +37,9 @@ class gradientDescent():
 
 
         if self.alpha0 == 0:
-            self.alpha0 = 1e-3 * ccm.diversity
+            self.alpha0 = 5e-3 / np.sqrt(ccm.L)
         if self.decay_rate == 0:
-            self.decay_rate = 5e-7 / ccm.diversity
+            self.decay_rate = 3e-5 / np.log(ccm.neff)
 
 
     def __repr__(self):
@@ -52,7 +52,7 @@ class gradientDescent():
 
         if self.decay:
             rep_str+="\tdecay: decay={0} decay_rate={1} decay_start={2} \n".format(
-               self.decay, np.round(self.decay_rate, decimals=5), self.decay_start
+               self.decay, np.round(self.decay_rate, decimals=8), self.decay_start
             )
         else:
             rep_str+="\tdecay: decay={0}\n".format(
