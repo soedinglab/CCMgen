@@ -20,6 +20,7 @@ class ContrastiveDivergence():
         self.weights = ccm.weights
         self.neff = ccm.neff
         self.regularization = ccm.regularization
+        self.weighting = ccm.weighting
 
 
         self.structured_to_linear = lambda x_single, x_pair: \
