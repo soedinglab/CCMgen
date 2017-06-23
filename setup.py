@@ -1,6 +1,5 @@
-#import numpy.distutils.intelccompiler
-#from setuptools import setup, Extension, find_packages
-from distutils.core import setup, Extension, find_packages
+import numpy.distutils.intelccompiler
+from setuptools import setup, Extension, find_packages
 
 def ext(name, sources=[], include_dirs=[], library_dirs=[], libraries=[], extra_compile_args=['-g -fopenmp -std=c99'], extra_link_args=['-g -fopenmp']):
     return Extension(name, include_dirs=include_dirs, library_dirs=library_dirs, libraries=libraries, sources=sources, extra_compile_args=extra_compile_args, extra_link_args=extra_link_args)
