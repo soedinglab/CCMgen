@@ -46,6 +46,6 @@ setup(
             'ccmpred.weighting.cext.libweighting',
             sources=['ccmpred/weighting/cext/weighting.c']
         )
-    ],
-    scripts=['ccmpred.py']
+    ]#,
+    #scripts=['ccmpred.py']
 )
