@@ -1,5 +1,4 @@
 import numpy as np
-import ccmpred.raw
 
 
 def init(ncol, centering=None):
