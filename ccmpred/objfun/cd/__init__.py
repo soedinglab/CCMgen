@@ -6,10 +6,9 @@ import ccmpred.gaps
 import ccmpred.counts
 import ccmpred.objfun
 import ccmpred.objfun.cd.cext
-from ccmpred.weighting import SequenceWeights
-
 import ccmpred.pseudocounts
 import ccmpred.parameter_handling
+from ccmpred.weighting import SequenceWeights
 
 class ContrastiveDivergence():
 
@@ -22,7 +21,6 @@ class ContrastiveDivergence():
         self.neff = ccm.neff
         self.regularization = ccm.regularization
 
-        self.weighting = ccm.weighting
 
         self.structured_to_linear = lambda x_single, x_pair: \
             ccmpred.parameter_handling.structured_to_linear(x_single,
