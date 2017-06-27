@@ -154,7 +154,7 @@ def parse_args():
 
 
     scores = parser.add_argument_group("Alternative Scores")
-    scores.add_argument("--compute_omes",           dest="omes",                action="store_true", default=False, help="Compute OMES scores as in Kass and Horovitz . [default: %(default)s]")
+    scores.add_argument("--compute-omes",           dest="omes",                action="store_true", default=False, help="Compute OMES scores as in Kass and Horovitz . [default: %(default)s]")
     scores.add_argument("--omes-fodoraldrich",      dest="omes_fodoraldrich",   action="store_true", default=False, help="Comoute OMES as in Fodor & Aldrich 2004 . [default: %(default)s]")
     scores.add_argument("--compute-mi",             dest="mi",                  action="store_true", default=False, help="Compute MI scores . [default: %(default)s]")
     scores.add_argument("--mi-normalized",          dest="mi_normalized",       action="store_true", default=False, help="Compute normalized MI according to Martin et al 2005 . [default: %(default)s]")
