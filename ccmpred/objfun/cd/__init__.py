@@ -81,9 +81,12 @@ class ContrastiveDivergence():
             self.nr_seq_minibatch = minibatch_size * self.ncol
 
 
-        self.msa_minibatch, self.minibatch_weights, self.minibatch_neff = self.init_minibatch()
-        self.minibatch_stats(self.msa_minibatch, self.minibatch_weights)
+        self.msa_minibatch, self.minibatch_seq_ids = self.init_minibatch()
+        self.minibatch_stats(self.msa_minibatch)
 
+
+        if self.persistent:
+            self.persistent_msa = self.msa.copy()
 
         # init sample alignment for gradient approx
         #number of sequences used for sampling: multiples of MSA and at least 1xMSA
@@ -98,18 +101,23 @@ class ContrastiveDivergence():
             "PLL " if (self.pll) else ""
         )
 
-        str += "#samples={0} ({1} x N and {2} x L) Minibatch size={3} Neff_mb={4} Gibbs steps={5} ".format(
+        str += "#samples={0} ({1} x N and {2} x L) Minibatch size={3} Gibbs steps={4} ".format(
             (self.msa_sampled.shape[0]),
             np.round(self.msa_sampled.shape[0]/float(self.nrow), decimals=3),
             np.round(self.msa_sampled.shape[0] / float(self.ncol), decimals=3),
             self.nr_seq_minibatch,
-            np.round(self.minibatch_neff, decimals=3),
             self.gibbs_steps
         )
 
         return str
 
     def init_sample_alignment(self):
+
+
+        if self.persistent:
+            return self.persistent_msa[self.minibatch_seq_ids], self.minibatch_weights
+        else:
+            return self.msa_minibatch.copy(), self.minibatch_weights
 
         #sample alignment larger than minibatch
         # if self.nr_sample_sequences > self.nr_seq_minibatch:
@@ -118,28 +126,28 @@ class ContrastiveDivergence():
         #     seq_id = range(self.nr_seq_minibatch) * nr_samples_msa
         # else:
         #take minibatch
-        seq_id = np.random.choice(self.nr_seq_minibatch, self.nr_seq_minibatch, replace=False)
+        #seq_id = np.random.choice(self.nr_seq_minibatch, self.nr_seq_minibatch, replace=False)
 
-
-        msa_sampled = self.msa_minibatch[seq_id]
-        msa_sampled_weights = self.weighting.weights_simple(msa_sampled)
-
-        return msa_sampled.copy(), msa_sampled_weights
+        # msa_sampled = self.msa_minibatch[seq_id]
+        # msa_sampled_weights = self.weighting.weights_simple(msa_sampled)
+        #
+        # return msa_sampled.copy(), msa_sampled_weights
 
 
     def init_minibatch(self):
         seq_id = np.random.choice(self.nrow, self.nr_seq_minibatch, replace=False)
         msa_minibatch = self.msa[seq_id]
-        minibatch_weights = self.weighting.weights_simple(msa_minibatch)
-        minibatch_neff = np.sum(minibatch_weights)
 
+        return msa_minibatch.copy(), seq_id
 
-        return msa_minibatch.copy(), minibatch_weights, minibatch_neff
+    def minibatch_stats(self, msa):
 
-    def minibatch_stats(self, msa, weights):
+        #compute weights
+        #self.minibatch_weights = self.weighting.weights_simple(msa)
+        self.minibatch_weights = self.weights[self.minibatch_seq_ids]
 
         #counts from sample
-        self.minibatch_counts_single, self.minibatch_counts_pair = ccmpred.counts.both_counts(msa, weights)
+        self.minibatch_counts_single, self.minibatch_counts_pair = ccmpred.counts.both_counts(msa, self.minibatch_weights)
 
         # reset gap counts
         self.minibatch_counts_single[:, 20] = 0
@@ -250,22 +258,23 @@ class ContrastiveDivergence():
 
     def evaluate(self, x):
 
-        #when using minibatches: create new reference alignment
+        #setup reference alignment
         if self.nr_seq_minibatch < self.nrow:
-            self.msa_minibatch, self.minibatch_weights, self.minibatch_neff  = self.init_minibatch()
-            self.minibatch_stats(self.msa_minibatch, self.minibatch_weights)
+            self.msa_minibatch, self.minibatch_seq_ids  = self.init_minibatch()
+            self.minibatch_stats(self.msa_minibatch)
 
-        #create new initial alignment for sampling
-        if not self.persistent:
-            self.msa_sampled, self.msa_sampled_weights = self.init_sample_alignment()
+        #setup sequences for sampling
+        self.msa_sampled, self.msa_sampled_weights = self.init_sample_alignment()
 
-
+        #Gibbs Sampling of sequences (each position of each sequence will be sampled this often: self.gibbs_steps)
         if self.pll:
             self.msa_sampled = self.sample_position_in_sequences(x)
         else:
-            #Gibbs Sampling of sequences (each position of each sequence will be sampled this often: self.gibbs_steps)
             self.msa_sampled = self.gibbs_sample_sequences(x, self.gibbs_steps)
-            #self.msa_sampled = self.gibbs_sampling_slow(self.msa_sampled, x, self.gibbs_steps)
+
+        #save the markov chain
+        if  self.persistent:
+            self.persistent_msa[self.minibatch_seq_ids] = self.msa_sampled
 
 
         #counts from sample
