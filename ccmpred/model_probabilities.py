@@ -52,7 +52,7 @@ def compute_qij(freqs_pair, x_pair, lambda_pair, Nij, epsilon, verbose=1):
     L = Nij.shape[0]
 
     #renormalize pair frequencies without gaps + reshape row-wise
-    pair_freq = ccmpred.pseudocounts.degap(freqs_pair).reshape(L,L,400)
+    pair_freq = ccmpred.pseudocounts.PseudoCounts.degap(freqs_pair).reshape(L,L,400)
 
     #couplings without gaps + reshape row-wise
     x_pair_nogaps = x_pair[:,:,:20,:20].reshape(L,L, 400)
@@ -209,7 +209,9 @@ def write_msgpack(outmsgpackfile, x_pair, neff, freqs, lambda_pair):
     # freqs_single, freqs_pair = freqs
 
 
+    # Counts WITH pseudocounts
     msa_counts_pair = freqs_pair * neff
+
     # reset gap counts
     msa_counts_pair[:, :, :, 20] = 0
     msa_counts_pair[:, :, 20, :] = 0
