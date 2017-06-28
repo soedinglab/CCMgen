@@ -253,7 +253,6 @@ def main():
     #print("\nCCMpred was running with following settings:")
     #print(ccm)
 
-
     exitcode = 0 if ccm.algret['code'] > 0 else -ccm.algret['code']
     sys.exit(exitcode)
 
