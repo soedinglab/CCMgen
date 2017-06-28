@@ -12,7 +12,7 @@ from ccmpred.weighting import SequenceWeights
 
 class ContrastiveDivergence():
 
-    def __init__(self, ccm, gibbs_steps=1, persistent=False, min_nseq_factorL=1, pll=False, minibatch_size=0):
+    def __init__(self, ccm, gibbs_steps=1, persistent=False, pll=False, minibatch_size=0):
 
 
         self.msa = ccm.msa
@@ -90,8 +90,6 @@ class ContrastiveDivergence():
 
         # init sample alignment for gradient approx
         #number of sequences used for sampling: multiples of MSA and at least 1xMSA
-        self.min_nseq_factorL = np.max([min_nseq_factorL, 1])
-        self.nr_sample_sequences = self.min_nseq_factorL * self.ncol
         self.msa_sampled, self.msa_sampled_weights = self.init_sample_alignment()
 
     def __repr__(self):

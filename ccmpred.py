@@ -22,7 +22,6 @@ OBJ_FUNC = {
     "cd": lambda opt, ccm : cd.ContrastiveDivergence(ccm,
         gibbs_steps=opt.cd_gibbs_steps,
         persistent=opt.cd_persistent,
-        min_nseq_factorL=opt.cd_min_nseq_factorl,
         minibatch_size=opt.minibatch_size,
         pll=opt.cd_pll)
 }
@@ -87,7 +86,6 @@ def parse_args():
     grp_of.add_argument("--ofn-cd",              dest="objfun", action="store_const", const="cd", help="Use Contrastive Divergence. Sample at least MIN_NSEQ_FACTORL * L  sequences (taken from input MSA) with Gibbs sampling (each sequences is sampled with GIBBS_STEPS.")
     grp_of.add_argument("--cd-pll",              dest="cd_pll", action="store_true", default=False, help="Setting for CD: Sample only ONE variable per sampling step per sequence. [default: %(default)s]")
     grp_of.add_argument("--cd-persistent",       dest="cd_persistent", action="store_true",  default=False, help="Setting for CD: Use Persistent Contrastive Divergence: do not restart Markov Chain in each iteration.[default: %(default)s] ")
-    grp_of.add_argument("--cd-min_nseq_factorl", dest="cd_min_nseq_factorl", default=0,      type=int, help="Setting for CD: Sample at least MIN_NSEQ_FACTORL * L  sequences (taken from input MSA).[default: %(default)s] ")
     grp_of.add_argument("--cd-minibatch_size",   dest="minibatch_size", default=5,      type=int, help="Minibatch size as multiples of protein length L [X*L].[default: %(default)s] ")
     grp_of.add_argument("--cd-gibbs_steps",      dest="cd_gibbs_steps", default=1,      type=int, help="Setting for CD: Perform GIBBS_STEPS of Gibbs sampling per sequence. [default: %(default)s]")
 
