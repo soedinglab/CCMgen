@@ -37,7 +37,9 @@ class gradientDescent():
 
 
         if self.alpha0 == 0:
-            self.alpha0 = 5e-3 / np.sqrt(ccm.L)
+            #self.alpha0 = 5e-3 / np.sqrt(ccm.L)
+            self.alpha0 = 1e-3 / np.log(ccm.neff)
+            #self.alpha0 = 5e-3 / np.sqrt(ccm.neff)
         if self.decay_rate == 0:
             self.decay_rate = 3e-5 / np.log(ccm.neff)
 
