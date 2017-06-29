@@ -386,7 +386,7 @@ class CCMpred():
     def write_binary_raw(self, outmsgpackfile ):
 
         self.outmsgpackfile = outmsgpackfile
-        raw_out = raw.CCMRaw(self.L, self.x_single[:, :21], self.x_pair[:, :, :21, :21], self.meta)
+        raw_out = raw.CCMRaw(self.L, self.x_single[:, :20], self.x_pair[:, :, :21, :21], self.meta)
         print("\nWriting msgpack-formatted potentials to {0}".format(outmsgpackfile))
         raw.write_msgpack(outmsgpackfile, raw_out)
 
