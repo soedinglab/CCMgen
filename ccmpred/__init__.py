@@ -293,7 +293,7 @@ class CCMpred():
                 print("Init file {0} does not exist! Exit".format(initrawfile))
                 sys.exit(0)
 
-            raw_potentials = raw.parse(initrawfile)
+            raw_potentials = raw.parse_msgpack(initrawfile)
             self.x_single, self.x_pair = raw_potentials.x_single, raw_potentials.x_pair
 
             self.single_potential_init  = initrawfile
@@ -358,7 +358,7 @@ class CCMpred():
 
     def recenter_potentials(self):
 
-        #perform checks on potentials:
+        #perform checks on potentials: do v_i and w_ij sum to 0?
         check_x_single  = sanity_check.check_single_potentials(self.x_single, verbose=1, epsilon=1e-2)
         check_x_pair  = sanity_check.check_pair_potentials(self.x_pair, verbose=1, epsilon=1e-2)
 
