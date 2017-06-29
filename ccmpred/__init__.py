@@ -379,7 +379,7 @@ class CCMpred():
     def write_raw(self, outrawfile):
 
         self.outrawfile = outrawfile
-        raw_out = raw.CCMRaw(self.L, self.x_single[:, :21], self.x_pair[:, :, :21, :21], self.meta)
+        raw_out = raw.CCMRaw(self.L, self.x_single[:, :20], self.x_pair[:, :, :21, :21], self.meta)
         print("\nWriting raw-formatted potentials to {0}".format(outrawfile))
         raw.write_oldraw(outrawfile, raw_out)
 
