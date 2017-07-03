@@ -305,7 +305,7 @@ class CCMpred():
             self.pair_potential_init    = "zero"
 
             if vanilla_ccmpred:
-                freqs_for_init = pseudocounts.calculate_frequencies_vanilla(self.msa)
+                freqs_for_init = self.pseudocounts.calculate_frequencies_vanilla(self.msa)
                 v = centering.center_vanilla(freqs_for_init)
                 self.single_potential_init = "ccmpred-vanilla"
                 # besides initialisation and regularization, there seems to be another difference in gradient calculation between CCMpred vanilla and CCMpred-dev-center-v
@@ -376,6 +376,16 @@ class CCMpred():
         with open(cd_alnfile, "w") as f:
             io.alignment.write_msa_psicov(f, msa_sampled)
 
+    def write_mat(self, apc=False):
+
+        if apc:
+            self.apc=True
+            self.mat = io.contactmatrix.apc(self.mat)
+
+        self.meta = self.create_meta_data()
+
+        io.contactmatrix.write_matrix(self.mat_file, self.mat, self.meta)
+
     def write_raw(self, outrawfile):
 
         self.outrawfile = outrawfile
@@ -403,12 +413,3 @@ class CCMpred():
 
         model_probabilities.write_msgpack(outmodelprobmsgpackfile, self.x_pair, self.neff, self.freqs, self.regularization.lambda_pair)
 
-    def write_mat(self, apc=False):
-
-        if apc:
-            self.apc=True
-            self.mat = io.contactmatrix.apc(self.mat)
-
-        self.meta = self.create_meta_data()
-
-        io.contactmatrix.write_matrix(self.mat_file, self.mat, self.meta)
