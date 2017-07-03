@@ -35,14 +35,18 @@ class gradientDescent():
         )
         self.progress = pr.Progress(plotfile, plot_title)
 
-
-        if self.alpha0 == 0:
-            #self.alpha0 = 5e-3 / np.sqrt(ccm.L)
-            self.alpha0 = 1e-3 / np.log(ccm.neff)
-            #self.alpha0 = 5e-3 / np.sqrt(ccm.neff)
-        if self.decay_rate == 0:
-            self.decay_rate = 3e-5 / np.log(ccm.neff)
-
+        if self.decay_type == "sig":
+            if self.alpha0 == 0:
+                #self.alpha0 = 1e-3 / np.log(ccm.neff)
+                self.alpha0 = 5e-3 / np.sqrt(ccm.neff)
+            if self.decay_rate == 0:
+                #self.decay_rate = 3e-5 / np.log(ccm.neff)
+                self.decay_rate = 1e-4 / np.sqrt(ccm.neff)
+        elif self.decay_type == "lin":
+            if self.alpha0 == 0:
+                self.alpha0 = 1e-2 / np.log(ccm.neff)
+            if self.decay_rate == 0:
+                self.decay_rate = 1e-1 / np.log(ccm.neff)
 
     def __repr__(self):
         rep_str="Gradient descent optimization (alpha0={0})\n".format( np.round(self.alpha0, decimals=5))
@@ -105,7 +109,7 @@ class gradientDescent():
             #new step size
             if self.it_succesfull_stop_condition > 0:
                 if self.decay_type == "lin":
-                    alpha = self.alpha0 / (1 + (i - self.it_succesfull_stop_condition) /self.decay_rate)
+                    alpha = self.alpha0 / (1 + self.decay_rate * (i - self.it_succesfull_stop_condition))
                 if self.decay_type == "sig":
                     alpha *= 1.0 / (1 + self.decay_rate * (i - self.it_succesfull_stop_condition))
 
