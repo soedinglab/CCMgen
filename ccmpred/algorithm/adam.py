@@ -65,9 +65,9 @@ class Adam():
 
 
         if self.alpha0 == 0:
-            self.alpha0 = 5e-3 * ccm.diversity
+            self.alpha0 = 1e-3 / np.log(ccm.neff)
         if self.decay_rate == 0:
-            self.decay_rate = 1e-6 /ccm.diversity
+            self.decay_rate = 3e-5 / np.log(ccm.neff)
 
     def __repr__(self):
 
@@ -183,18 +183,22 @@ class Adam():
 
             #update learning rate
             if self.decay and self.it_succesfull_stop_condition > -1:
+                    t = i - self.it_succesfull_stop_condition
                     if self.decay_type == "power":
                         alpha *= self.decay_rate
                     elif self.decay_type == "lin":
-                        alpha = self.alpha0 / (1 + (i - self.it_succesfull_stop_condition) / self.decay_rate)
+                        alpha = self.alpha0 / (1 + t / self.decay_rate)
                     elif self.decay_type == "step":
                         alpha *= self.decay_rate
                         self.decay_start *= 5e-1
                         self.it_succesfull_stop_condition = -1
                     elif self.decay_type == "sqrt":
-                        alpha = self.alpha0  / (1 + (np.sqrt(1 + i - self.it_succesfull_stop_condition)) / self.decay_rate)
-                    elif self.decay_type == "sig":
-                        alpha *= 1.0 / (1 + self.decay_rate * (i - self.it_succesfull_stop_condition))
+                        alpha = self.alpha0  / (1 + (np.sqrt(1 + t)) / self.decay_rate)
+                    elif self.decay_type == "sqrt":
+                        alpha *= 1.0  / (1 + (np.sqrt(1 + t)) / self.decay_rate)
+                    elif self.decay_type == "keras":
+                        alpha = self.alpha0 / (1 + self.decay_rate * (t+1))
+                        alpha *=  np.sqrt(1. - np.power(self.beta2, t+1)) / (1. - np.power(self.beta1,t+1))
 
 
 
