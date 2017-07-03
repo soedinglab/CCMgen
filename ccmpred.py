@@ -104,7 +104,7 @@ def parse_args():
     grp_als.add_argument("--decay",             dest="decay",           action="store_true", default=False, help="Use decaying learnign rate. Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
     grp_als.add_argument("--decay-start",       dest="decay_start",     default=1e-4,       type=float,     help="Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
     grp_als.add_argument("--decay-rate",        dest="decay_rate",     default=1e1,        type=float,     help="Set rate of decay for learning rate when --decay is on. [default: %(default)s]")
-    grp_als.add_argument("--decay-type",        dest="decay_type",      default="step",     type=str,       choices=['sig', 'step', 'sqrt', 'power', 'exp', 'lin'], help="Decay type. One of: step, sqrt, exp, power, lin. [default: %(default)s]")
+    grp_als.add_argument("--decay-type",        dest="decay_type",      default="step",     type=str,       choices=['sig', 'step', 'sqrt', 'power', 'exp', 'lin', 'keras'], help="Decay type. One of: step, sqrt, exp, power, lin. [default: %(default)s]")
 
 
     grp_con = parser.add_argument_group("Convergence Settings")
