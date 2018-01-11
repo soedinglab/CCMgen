@@ -74,31 +74,3 @@ class SequenceWeights( ):
         return henikoff
 
 
-    def weights_henikoff_pair(self, msa):
-        """
-        Henikoff pair weighting
-
-        Henikoff pair weights will always sum up to ncol*(ncol-1)/2
-        """
-
-        pair_counts   = ccmpred.counts.pair_counts(msa, None)
-        if self.ignore_gaps:
-            pair_counts[:, :, 0, :] = 0
-            pair_counts[:, :, :, 0] = 0
-
-        unique_aa     = (pair_counts != 0).sum(3).sum(2)
-        nrow, ncol = msa.shape
-
-        henikoff = np.zeros(nrow)
-        for n in range(nrow):
-            for k in range(ncol-1):
-                for l in range(k+1,ncol):
-                    if pair_counts[k,l, msa[n][k],msa[n][l]] != 0:
-                        henikoff[n] += 1/(pair_counts[k,l, msa[n][k],msa[n][l]]  * unique_aa[k,l])
-
-
-        return henikoff
-
-
-
-
