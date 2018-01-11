@@ -1,7 +1,4 @@
 import numpy as np
-import ccmpred.pseudocounts
-
-
 
 def center_v(freqs):
     single_freqs, _ = freqs
@@ -25,19 +22,3 @@ def center_zero(freqs):
     single_freqs, _ = freqs
 
     return np.zeros_like(single_freqs)
-
-
-def center_vanilla(freqs):
-    single_freqs, _ = freqs
-
-    #single_freqs will never be zero as there is at least 1 pseudo count
-    lsingle_freqs = np.log(single_freqs)
-
-
-    v_center = lsingle_freqs - lsingle_freqs[:, 20][:, np.newaxis]
-    v_center[:, 20] = 0
-
-
-
-    return v_center
-
