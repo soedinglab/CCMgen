@@ -13,7 +13,9 @@ setup(
     license="AGPLv3",
     author="Susann Vorberg",
     author_email="Susann.Vorberg@gmail.com",
+    url="https://bitbucket.org/svorberg/ccmpred-new",
     packages=find_packages(),
+    install_requires=['msgpack-python', 'numpy', 'plotly'],
     ext_modules=[
         ext(
             'ccmpred.objfun.pll.cext.libpll',
@@ -35,5 +37,5 @@ setup(
             sources=['ccmpred/weighting/cext/weighting.c']
         )
     ],
-    scripts=['ccmpred.py']
+    scripts=['ccmpred.py', 'replace_gaps.py']
 )
