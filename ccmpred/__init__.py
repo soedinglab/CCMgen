@@ -449,13 +449,14 @@ class CCMpred():
         mat_path, mat_name = os.path.split(self.mat_file)
 
         #iterate over all raw contact matrices
-        for mat_name, mat_dict in self.mats.iteritems():
+        for score_mat in self.mats.keys():
 
+            mat_dict = self.mats[score_mat]
             score = mat_dict['score']
             score_matrix = mat_dict['mat']
 
             if apc:
-                self.mats[mat_name + "-apc"]={
+                self.mats[score_mat + "-apc"]={
                     'mat': io.contactmatrix.apc(score_matrix),
                     'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score + ".apc." + mat_name.split(".")[-1],
                     'score': score,
@@ -472,7 +473,7 @@ class CCMpred():
                     score_matrix, squared=False, entropy=True
                 )
 
-                self.mats[mat_name+"-ec"] = {
+                self.mats[score_mat+"-ec"] = {
                     'mat': mat_corrected,
                     'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score + ".ec." +
                                 mat_name.split(".")[-1],
