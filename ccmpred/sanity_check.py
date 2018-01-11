@@ -36,7 +36,7 @@ def check_pair_potentials(x_pair, verbose=0, epsilon=1e-5):
 def centering_potentials( x_single, x_pair):
     """
 
-    Enforce gauge choice that
+    Enforce gauge choice
 
     :param x_single:
     :param x_pair:
