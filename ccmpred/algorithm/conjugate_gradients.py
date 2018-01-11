@@ -66,7 +66,6 @@ class conjugateGradient(object):
         log_metrics['step'] = 0
         log_metrics['#lsearch'] = 0
         log_metrics['diff_fx'] = np.nan
-        log_metrics['sum_wij'] = 0
         self.progress.log_progress(0, **log_metrics)
 
 
