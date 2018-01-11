@@ -24,10 +24,9 @@ OBJ_FUNC = {
     "cd": lambda opt, ccm : cd.ContrastiveDivergence(
         ccm,
         gibbs_steps=opt.cd_gibbs_steps,
-        persistent=opt.cd_persistent,
         sample_size=opt.sample_size,
-        sample_ref=opt.sample_ref,
-        pll=opt.cd_pll)
+        sample_ref=opt.sample_ref
+    )
 }
 
 ALGORITHMS = {
@@ -75,35 +74,35 @@ def parse_args():
     parser.add_argument("-i", "--init-from-raw",        dest="initrawfile", default=None, help="Init single and pair potentials from a binary raw file")
     parser.add_argument("-t", "--num_threads",          dest="num_threads", type=int, default=1, help="Specify the number of threads")
     parser.add_argument("--aln-format",                 dest="aln_format", default="psicov", help="File format for MSAs [default: \"%(default)s\"]")
-    parser.add_argument("--no-logo",                    dest="logo", default=True, action="store_false", help="Disable showing the CCMpred logo")
+    parser.add_argument("--no-logo",                    dest="logo", default=True, action="store_false", help="Disable showing the CCMpred logo [default: %(default)s]")
 
     grp_contact_score = parser.add_argument_group("Contact Score and Corrections")
-    grp_contact_score.add_argument("--frobenius",         dest="frob",     action="store_true", default=True,  help="Map 20x20 dimensional coupling matrices to Frobenius norm [default: %(default)s]")
-    grp_contact_score.add_argument("--no_centering_potentials", dest="centering_potentials", action="store_false", default=True, help="Ensure that sum(wij)=0 by subtracting mean.")
+    grp_contact_score.add_argument("--frobenius",         dest="frob",     action="store_true", default=True,  help="Map 20x20 dimensional coupling matrices to Frobenius norm. [default: %(default)s]")
+    grp_contact_score.add_argument("--no_centering_potentials", dest="centering_potentials", action="store_false", default=True, help="Ensure sum(v_i)=0 and sum(wij)=0 by subtracting mean. [default: %(default)s]")
 
     grp_corr = parser.add_argument_group("Corrections")
-    grp_corr.add_argument("--apc",                  dest="apc",  action="store_true", default=False,  help="Apply average product correction (APC)")
-    grp_corr.add_argument("--entropy-correction",   dest="entropy_correction", action="store_true", default=False, help="Apply entropy correction")
+    grp_corr.add_argument("--apc",                  dest="apc",  action="store_true", default=False,  help="Apply average product correction (APC). [default: %(default)s] ")
+    grp_corr.add_argument("--entropy-correction",   dest="entropy_correction", action="store_true", default=False, help="Apply entropy correction. [default: %(default)s]")
 
 
     grp_out = parser.add_argument_group("Output Options")
-    grp_out.add_argument("-p", "--plot_opt_progress",       dest="plot_opt_progress", default=False, action="store_true", help="Plot optimization progress as interactive html.")
-    grp_out.add_argument("-b", "--write-binary-raw",        dest="out_binary_raw_file",  default=None, help="Write potentials to MessagePack file")
+    grp_out.add_argument("-p", "--plot_opt_progress",       dest="plot_opt_progress", default=False, action="store_true", help="Plot optimization progress as interactive html. [default: %(default)s]")
+    grp_out.add_argument("-b", "--write-binary-raw",        dest="out_binary_raw_file",  default=None, help="Write potentials as binary MessagePack file. [default: %(default)s]")
 
 
     grp_of = parser.add_argument_group("Objective Functions")
-    grp_of.add_argument("--ofn-pll",             dest="objfun", action="store_const", const="pll", default="pll", help="Use pseudo-log-likelihood(pLL) (default)")
+    grp_of.add_argument("--ofn-pll",             dest="objfun", action="store_const", const="pll", default="pll", help="Use pseudo-log-likelihood(pLL) [default: %(default)s]")
     grp_of.add_argument("--ofn-cd",              dest="objfun", action="store_const", const="cd", help="Use contrastive divergence (CD)")
     grp_of.add_argument("--cd-sample_size",      dest="sample_size",    default=10.0,   type=float, help="Setting for CD: multiplier X for sampling at max X * SAMPLE_REF sequences per iteration. [default: %(default)s] ")
     grp_of.add_argument("--cd-sample_ref",       dest="sample_ref",     default="L",    type=str, choices=['L', 'Neff'], help="Setting for CD: Sample at max SAMPLE_SIZE * [L|Neff] sequences per iteration. Reduces runtime. [default: %(default)s] ")
     grp_of.add_argument("--cd-gibbs_steps",      dest="cd_gibbs_steps", default=1,      type=int,  help="Setting for CD: Perform this many steps of Gibbs sampling per sequence. [default: %(default)s]")
-    grp_of.add_argument("--cd-fix-v",            dest="fix_v",  action="store_true",  default=False,  help="Set single potentials v=v* and do not optimize single potentials v.")
+    grp_of.add_argument("--cd-fix-v",            dest="fix_v",  action="store_true",  default=False,  help="Set single potentials v=v* and do not optimize single potentials v. [default: %(default)s]")
 
     grp_al = parser.add_argument_group("Optimization Algorithms")
     grp_al.add_argument("--alg-cg", dest="algorithm", action="store_const", const='conjugate_gradients', default='conjugate_gradients', help='Use conjugate gradients (CG) (standard for pLL (default) [default: %(default)s] ')
-    grp_al.add_argument("--alg-gd", dest="algorithm", action="store_const", const='gradient_descent', help='Use gradient descent (GD) (standard for CD) [default: %(default)s]')
-    grp_al.add_argument("--alg-nd", dest="algorithm", action="store_const", const='numerical_differentiation', help='Debug gradients with numerical differentiation [default: %(default)s]')
-    grp_al.add_argument("--alg-ad", dest="algorithm", action="store_const", const='adam', help='Use ADAM (alternative for CD) according to Kingma & Ba, 2017 [default: %(default)s]')
+    grp_al.add_argument("--alg-gd", dest="algorithm", action="store_const", const='gradient_descent', help='Use gradient descent (GD) (standard for CD) ')
+    grp_al.add_argument("--alg-nd", dest="algorithm", action="store_const", const='numerical_differentiation', help='Debug gradients with numerical differentiation ')
+    grp_al.add_argument("--alg-ad", dest="algorithm", action="store_const", const='adam', help='Use ADAM (alternative for CD) according to Kingma & Ba, 2017 ')
 
     grp_als = parser.add_argument_group("Algorithm specific settings")
     grp_als.add_argument("--ad-beta1",          dest="beta1",           default=0.9,        type=float,     help="ADAM: Set beta 1 parameter (moemntum). [default: %(default)s]")
@@ -111,9 +110,9 @@ def parse_args():
     grp_als.add_argument("--ad-beta3",          dest="beta3",           default=0.9,        type=float,       help="ADAM:Set beta 3 parameter (temporal averaging) [default: %(default)s]")
     grp_als.add_argument("--alpha0",            dest="alpha0",          default=1e-3,       type=float,     help="ADAM and GD: Set initial learning rate. [default: %(default)s]")
     grp_als.add_argument("--decay",             dest="decay",           action="store_true", default=False, help="ADAM and GD: Use decaying learnign rate. Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
-    grp_als.add_argument("--decay-start",       dest="decay_start",     default=1e-4,       type=float,     help="ADAM and GD: Start decay when convergence criteria < START_DECAY. Only when DECAY=True. [default: %(default)s]")
-    grp_als.add_argument("--decay-rate",        dest="decay_rate",      default=1e1,        type=float,     help="ADAM and GD: Set rate of decay for learning rate. Only when DECAY=True. [default: %(default)s]")
-    grp_als.add_argument("--decay-type",        dest="decay_type",      default="step",     type=str,       choices=['sig', 'step', 'sqrt', 'power', 'exp', 'lin', 'keras'], help="ADAM and GD: Decay type. One of: step, sqrt, exp, power, lin. Only when DECAY=True. [default: %(default)s]")
+    grp_als.add_argument("--decay-start",       dest="decay_start",     default=1e-4,       type=float,     help="ADAM and GD: Start decay when convergence criteria < START_DECAY. Only when --decay. [default: %(default)s]")
+    grp_als.add_argument("--decay-rate",        dest="decay_rate",      default=1e1,        type=float,     help="ADAM and GD: Set rate of decay for learning rate. Only when --decay. [default: %(default)s]")
+    grp_als.add_argument("--decay-type",        dest="decay_type",      default="step",     type=str,       choices=['sig', 'step', 'sqrt', 'power', 'exp', 'lin', 'keras'], help="ADAM and GD: Decay type. One of: step, sqrt, exp, power, lin. Only when --decay. [default: %(default)s]")
 
 
     grp_con = parser.add_argument_group("Convergence Settings")
@@ -124,7 +123,7 @@ def parse_args():
 
 
     grp_wt = parser.add_argument_group("Weighting")
-    grp_wt.add_argument("--wt-simple",          dest="weight", action="store_const", const="weights_simple", default="weights_simple", help='Use simple weighting (default)')
+    grp_wt.add_argument("--wt-simple",          dest="weight", action="store_const", const="weights_simple", default="weights_simple", help='Use simple weighting  [default: %(default)s]')
     grp_wt.add_argument("--wt-henikoff",        dest="weight", action="store_const", const="weights_henikoff", help='Use simple Henikoff weighting')
     grp_wt.add_argument("--wt-uniform",         dest="weight", action="store_const", const="weights_uniform", help='Use uniform weighting')
     grp_wt.add_argument("--wt-ignore-gaps",     dest="wt_ignore_gaps",  action="store_true", default=False, help="Do not count gaps as identical amino acids during reweighting of sequences. [default: %(default)s]")
@@ -133,9 +132,9 @@ def parse_args():
     grp_rg = parser.add_argument_group("Regularization")
     grp_rg.add_argument("--reg-l2-lambda-single",           dest="lambda_single",           type=float, default=10,     help='Regularization coefficient for single potentials (L2 regularization) [default: %(default)s]')
     grp_rg.add_argument("--reg-l2-lambda-pair-factor",      dest="lambda_pair_factor",      type=float, default=0.2,    help='Regularization parameter for pair potentials (L2 regularization with lambda_pair  = lambda_pair-factor * scaling) [default: %(default)s]')
-    grp_rg.add_argument("--reg-l2-scale_by_L",              dest="scaling",     action="store_const", const="L", default="L",   help="lambda_pair = lambda_pair-factor * (L-1) (default)")
+    grp_rg.add_argument("--reg-l2-scale_by_L",              dest="scaling",     action="store_const", const="L", default="L",   help="lambda_pair = lambda_pair-factor * (L-1) [default: %(default)s]")
     grp_rg.add_argument("--reg-l2-noscaling",               dest="scaling",     action="store_const", const="1",                help="lambda_pair = lambda_pair-factor")
-    grp_rg.add_argument("--v-center",                       dest="reg_type",    action="store_const", const="v-center", default="v-center", help="Use mu=v* in Gaussian prior for single emissions and initialization.")
+    grp_rg.add_argument("--v-center",                       dest="reg_type",    action="store_const", const="v-center", default="v-center", help="Use mu=v* in Gaussian prior for single emissions and initialization. [default: %(default)s]")
     grp_rg.add_argument("--v-zero",                         dest="reg_type",    action="store_const", const="v-zero",           help="Use mu=0 in Gaussian prior for single emissions and initialisation.")
 
 
@@ -144,7 +143,7 @@ def parse_args():
 
 
     grp_pc = parser.add_argument_group("Pseudocounts")
-    grp_pc.add_argument("--pc-uniform",     dest="pseudocounts", action="store_const", const="uniform_pseudocounts", default="uniform_pseudocounts",     help="Use uniform pseudocounts, e.g 1/21 (default)")
+    grp_pc.add_argument("--pc-uniform",     dest="pseudocounts", action="store_const", const="uniform_pseudocounts", default="uniform_pseudocounts",     help="Use uniform pseudocounts, e.g 1/21 [default: %(default)s]")
     grp_pc.add_argument("--pc-submat",      dest="pseudocounts", action="store_const", const="substitution_matrix_pseudocounts", help="Use substitution matrix pseudocounts")
     grp_pc.add_argument("--pc-constant",    dest="pseudocounts", action="store_const", const="constant_pseudocounts",   help="Use constant pseudocounts ")
     grp_pc.add_argument("--pc-none",        dest="pseudocounts", action="store_const", const="no_pseudocounts", help="Use no pseudocounts")
@@ -183,23 +182,12 @@ def parse_args():
 
     args.plotfile=None
     if args.plot_opt_progress:
-        args.plotfile="".join(args.matfile.split(".")[:-1])+".opt_progress.html"
+        args.plotfile=".".join(args.matfile.split(".")[:-1])+".opt_progress.html"
 
     return args
 
 
 def main():
-
-
-    #debugging
-    # ccm = CCMpred("/home/vorberg/work/data/benchmarkset_cathV4.1/psicov/1mkcA00.filt.psc", "/home/vorberg/1mkcA00.mat")
-    # ccm.read_alignment("psicov", "100")
-    # ccm.compute_sequence_weights("weights_simple", False, 0.8)
-    # ccm.compute_frequencies("constant_pseudocounts", 1,  1)
-    # ccm.specify_regularization(10, 0.2, reg_type="center-v", scaling="L", dev_center_v=False)
-    # ccm.intialise_potentials("/home/vorberg/work/data/benchmarkset_cathV4.1/contact_prediction/ccmpred-pll-centerv/braw/1mkcA00.filt.braw.gz", False)
-
-
 
     #Read command line options
     opt = parse_args()
