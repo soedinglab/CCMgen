@@ -2,14 +2,12 @@ import ccmpred.logo
 import plotly.graph_objs as go
 import os
 import sys
-import numpy as np
 from plotly.offline import plot as plotly_plot
-
 
 
 class Progress():
     """
-
+    Plot the progress as plotly graph
     """
 
     def __init__(self , plotfile, title):
