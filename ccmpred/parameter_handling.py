@@ -1,13 +1,12 @@
 import numpy as np
 
-
 def linear_to_structured(x, ncol, clip=False, nogapstate=False, add_gap_state=False, padding=True):
-    """Convert linear vector of variables into multidimensional arrays.
+    """
+    Convert linear vector of variables into multidimensional arrays.
 
     in linear memory, memory order is v[a, j] and w[b, j, a, i] (dimensions 21xL + padding + 21xLx32xL)
     output will have  memory order of v[j, a] and w[i, j, a, b] (dimensions Lx21     and     LxLx32x21)
     """
-
 
     single_states = 21
     if nogapstate:
@@ -16,7 +15,6 @@ def linear_to_structured(x, ncol, clip=False, nogapstate=False, add_gap_state=Fa
     nsingle = ncol * single_states
 
     if padding:
-
         nsingle_padded = nsingle + 32 - (nsingle % 32)
 
         x_single = x[:nsingle].reshape((single_states, ncol)).T
@@ -38,7 +36,8 @@ def linear_to_structured(x, ncol, clip=False, nogapstate=False, add_gap_state=Fa
 
 
 def structured_to_linear(x_single, x_pair, nogapstate=False, padding=True):
-    """Convert structured variables into linear array
+    """
+    Convert structured variables into linear array
 
     with input arrays of memory order v[j, a] and w[i, j, a, b] (dimensions Lx21     and     LxLx32x21)
     output will have  memory order of v[a, j] and w[b, j, a, i] (dimensions 21xL + padding + 21xLx32xL)
