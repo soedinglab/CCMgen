@@ -1,18 +1,15 @@
 import numpy as np
 import ccmpred.logo
-import sys
-from collections import deque
 import ccmpred.monitor.progress as pr
-import ccmpred.model_probabilities
-import pandas as pd
-from collections import deque
-import time
+
 
 class gradientDescent():
     """Optimize objective function using gradient descent"""
 
-    def __init__(self, ccm, maxit=100, alpha0=5e-3, decay=True,  decay_start=1e-3, decay_rate=10, decay_type="lin", fix_v=False,
-                 epsilon=1e-5, convergence_prev=5, early_stopping=False, plotfile=None):
+    def __init__(
+            self, ccm, maxit=100, alpha0=5e-3,
+            decay=True,  decay_start=1e-3, decay_rate=10, decay_type="lin",
+            fix_v=False, epsilon=1e-5, convergence_prev=5, early_stopping=False, plotfile=None):
 
 
         self.maxit = maxit
@@ -38,19 +35,14 @@ class gradientDescent():
         )
         self.progress = pr.Progress(plotfile, plot_title)
 
-        self.gpair_sign = deque([], maxlen=convergence_prev)
-
         if self.alpha0 == 0:
                 self.alpha0 = 5e-2 / np.sqrt(ccm.neff)
-                #self.alpha0 = 2e-2 / np.sqrt(ccm.neff) #just a test
 
     def __repr__(self):
         rep_str="Gradient descent optimization (alpha0={0})\n".format( np.round(self.alpha0, decimals=8))
 
-
         rep_str+="convergence criteria: maxit={0} early_stopping={1} epsilon={2} prev={3}\n".format(
             self.maxit, self.early_stopping, self.epsilon, self.convergence_prev)
-
 
         if self.decay:
             rep_str+="\tdecay: decay={0} decay_rate={1} decay_start={2} \n".format(
@@ -75,10 +67,6 @@ class gradientDescent():
             "num_iterations": self.maxit
         }
 
-        #test for persistent contrastive divergence!
-        if objfun.persistent and self.epsilon > 1e-8:
-            objfun.persistent = False
-
         upper_triangular_indices = np.triu_indices(objfun.ncol, k = 1)
         fx = -1
         alpha = self.alpha0
@@ -87,7 +75,6 @@ class gradientDescent():
             fx, gx, greg = objfun.evaluate(x)
             g = gx + greg
 
-
             #decompose gradients and parameters
             x_single, x_pair = objfun.linear_to_structured(x)
             g_single, g_pair = objfun.linear_to_structured(g)
@@ -95,26 +82,11 @@ class gradientDescent():
             g_reg_single, g_reg_pair = objfun.linear_to_structured(greg)
 
             #flattened
-            #print g_pair[0,10,3,5], "==", g_pair[10,0,5,3] #yes it is identical :)
+            #print g_pair[0,10,3,5], "==", g_pair[10,0,5,3] #yes it is identical
             g_pair_flat = g_pair[upper_triangular_indices[0], upper_triangular_indices[1],:20,:20].flatten()
             gx_pair_flat = gx_pair[upper_triangular_indices[0], upper_triangular_indices[1],:20,:20].flatten()
             g_reg_pair_flat = g_reg_pair[upper_triangular_indices[0], upper_triangular_indices[1],:20,:20].flatten()
             x_pair_flat = x_pair[upper_triangular_indices[0], upper_triangular_indices[1],:20,:20].flatten()
-
-            #compute the percentage of gradient sign changes over the last "convergence_prev" iterations
-            gpair_sign_current = np.sign(gx_pair_flat)
-            self.gpair_sign.append(gpair_sign_current)
-            nr_gradients_non_zero = len(np.where(np.sum(np.array(self.gpair_sign) == 0, axis=0) < len(self.gpair_sign))[0])
-            nr_gradients_with_changes = len(np.where(np.sum(np.abs(np.diff(np.array(self.gpair_sign), axis=0)), axis=0) > 0)[0])
-
-            ids_nonzero = set(np.where(np.sum(np.array(self.gpair_sign) == 0, axis=0) < len(self.gpair_sign))[0])
-            ids_changes = set(np.where(np.sum(np.abs(np.diff(np.array(self.gpair_sign), axis=0)), axis=0) > 0)[0])
-            ids_nonzero_nochanges = list(ids_nonzero - ids_changes)
-            #print ids_nonzero_nochanges[:5], gpair_sign_current[ids_nonzero_nochanges[:5]], g_pair.flatten()[ids_nonzero_nochanges[:5]], x_pair.flatten()[ids_nonzero_nochanges[:5]]
-
-            mean_nr_changes = np.sum(np.diff(np.array(self.gpair_sign), axis=0) != 0) / np.float(nr_gradients_non_zero)
-            percent_gradient_changes = nr_gradients_with_changes / float(nr_gradients_non_zero)
-
 
 
             #compute norm of coupling parameters
@@ -143,17 +115,9 @@ class gradientDescent():
                 if self.decay_type == "exp":
                     alpha = self.alpha0  * np.exp(- self.decay_rate * t)
 
-            #compute number of problems with qij
-            problems = ccmpred.model_probabilities.get_nr_problematic_qij(
-                objfun.freqs_pair, x_pair, objfun.regularization.lambda_pair, objfun.Nij, epsilon=1e-2, verbose=False)
-
-
             #print out progress
             log_metrics={}
             log_metrics['||w||'] = xnorm_pair
-            log_metrics['mean_gw_std'] = np.mean(gx_pair_flat) / np.std(gx_pair_flat)
-            log_metrics['meanchange'] = mean_nr_changes
-            log_metrics['%grad'] = percent_gradient_changes
             log_metrics['||g||'] = np.sqrt(np.sum(g_pair_flat * g_pair_flat))
             log_metrics['||g_w||'] = np.sqrt(np.sum(gx_pair_flat * gx_pair_flat))
             log_metrics['||g_w||norm'] = log_metrics['||g_w||'] / len(gx_pair_flat)
@@ -161,7 +125,6 @@ class gradientDescent():
             log_metrics['xnorm_diff'] = xnorm_diff
             log_metrics['max_g'] = np.max(np.abs(gx))
             log_metrics['alpha'] = alpha
-            log_metrics['sum_w'] = problems['sum_deviation_wij']
 
             if not self.fix_v:
                 log_metrics['||v||'] = np.sqrt(np.sum(x_single * x_single))
@@ -177,16 +140,12 @@ class gradientDescent():
             if self.early_stopping:
                 if xnorm_diff < self.epsilon:
 
-                    if self.epsilon > 1e-8:
-                        objfun.persistent = True
-                        self.epsilon = 1e-8
-                    else:
-                        ret = {
-                            "code": 0,
-                            "message": "Stopping condition (xnorm diff < {0}) successfull.".format(self.epsilon),
-                            "num_iterations": i
-                        }
-                        return fx, x, ret
+                    ret = {
+                        "code": 0,
+                        "message": "Stopping condition (xnorm diff < {0}) successfull.".format(self.epsilon),
+                        "num_iterations": i
+                    }
+                    return fx, x, ret
 
             # update parameters
             if not self.fix_v:
@@ -194,7 +153,6 @@ class gradientDescent():
             x_pair -=  alpha * g_pair
 
             x = objfun.structured_to_linear(x_single, x_pair)
-
 
         return fx, x, ret
 

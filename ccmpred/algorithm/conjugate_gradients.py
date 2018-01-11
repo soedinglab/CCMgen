@@ -1,15 +1,14 @@
 import numpy as np
 import ccmpred.logo
-import sys
 import ccmpred.monitor.progress as pr
-import ccmpred.model_probabilities
 
 
 class conjugateGradient(object):
     """Optimize objective function usign conjugate gradients"""
 
-    def __init__(self, ccm, maxit=100, ftol=1e-4, max_linesearch=5, alpha_mul=0.5, wolfe=0.2,
-                 epsilon=1e-3, convergence_prev=5, plotfile=None):
+    def __init__(
+            self, ccm, maxit=100, ftol=1e-4, max_linesearch=5, alpha_mul=0.5, wolfe=0.2,
+            epsilon=1e-3, convergence_prev=5, plotfile=None):
         self.maxit = maxit
         self.ftol = ftol
         self.max_linesearch = max_linesearch
@@ -42,7 +41,6 @@ class conjugateGradient(object):
 
     def minimize(self, objfun, x):
 
-
         subtitle = self.progress.title + self.__repr__().replace("\n", "<br>")
         subtitle += objfun.__repr__().replace("\n", "<br>")
         self.progress.set_plot_title(subtitle)
@@ -51,7 +49,6 @@ class conjugateGradient(object):
         fx, g_x, g_reg = objfun.evaluate(x)
         g = g_x + g_reg
         gnorm = np.sum(g*g)
-
 
         # print and plot progress
         x_single, x_pair = objfun.linear_to_structured(x)
@@ -73,12 +70,10 @@ class conjugateGradient(object):
         self.progress.log_progress(0, **log_metrics)
 
 
-
         gprevnorm = None
         alpha_prev = None
         dg_prev = None
         s = None
-
 
         ret = {
             "code": 2,
@@ -133,12 +128,6 @@ class conjugateGradient(object):
             alpha_prev = alpha
             dg_prev = dg
 
-
-            #compute number of problems with qij
-            problems = ccmpred.model_probabilities.get_nr_problematic_qij(
-                objfun.freqs_pair, x_pair, objfun.regularization.lambda_pair, objfun.Nij, epsilon=1e-2, verbose=False)
-
-
             # print and plot progress
             x_single, x_pair = objfun.linear_to_structured(x)
             g_single, g_pair = objfun.linear_to_structured(g)
@@ -155,7 +144,6 @@ class conjugateGradient(object):
             log_metrics['step'] = alpha
             log_metrics['#lsearch'] = n_linesearch
             log_metrics['diff_fx'] = rel_diff_fx
-            log_metrics['sum_wij'] = problems['sum_deviation_wij']
 
             self.progress.log_progress(iteration+1, **log_metrics)
 
