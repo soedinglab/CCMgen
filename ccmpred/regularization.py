@@ -16,7 +16,8 @@ class L2(object):
         x_ofs = x_single - self.center_x_single[:, :x_single.shape[1]]
 
         g_single = 2 * self.lambda_single * x_ofs
-        g_pair = 2 * self.lambda_pair * x_pair
+        g_pair = self.lambda_pair * x_pair
+
 
         fx_reg = self.lambda_single * np.sum(x_ofs * x_ofs) + 0.5 * self.lambda_pair * np.sum(x_pair * x_pair)
 

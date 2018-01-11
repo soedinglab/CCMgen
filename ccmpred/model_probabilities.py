@@ -48,11 +48,10 @@ def compute_qij_from_cd_sample(obj, x, min_nseq_factorL, gibbs_steps):
 
 def compute_qij(freqs_pair, x_pair, lambda_pair, Nij, epsilon, verbose=1):
 
-
-    L = Nij.shape[0]
+    L = x_pair.shape[0]
 
     #renormalize pair frequencies without gaps + reshape row-wise
-    pair_freq = ccmpred.pseudocounts.PseudoCounts.degap(freqs_pair).reshape(L,L,400)
+    pair_freq_nogaps = ccmpred.pseudocounts.PseudoCounts.degap(freqs_pair).reshape(L,L,400)
 
     #couplings without gaps + reshape row-wise
     x_pair_nogaps = x_pair[:,:,:20,:20].reshape(L,L, 400)
@@ -62,10 +61,10 @@ def compute_qij(freqs_pair, x_pair, lambda_pair, Nij, epsilon, verbose=1):
 
     #compute model probabilties for i<j
     model_prob = np.zeros((L, L, 400))
-    model_prob[indices_triu] = pair_freq[indices_triu] - (x_pair_nogaps[indices_triu] * lambda_pair / Nij[:,:, np.newaxis][indices_triu])
+    model_prob[indices_triu] = pair_freq_nogaps[indices_triu] - (x_pair_nogaps[indices_triu] * (lambda_pair) / Nij[:,:, np.newaxis][indices_triu])
 
     #check whether qij are positive and sum to 1
-    problems = check_qij(model_prob, indices_triu, pair_freq, x_pair_nogaps, Nij, epsilon=epsilon, verbose=verbose)
+    problems = check_qij(model_prob, indices_triu, pair_freq_nogaps, x_pair_nogaps, Nij, epsilon=epsilon, verbose=verbose)
 
     model_prob_flat = model_prob[indices_triu].flatten()  # row-wise upper triangular indices
 
@@ -152,7 +151,6 @@ def check_qij(model_prob, indices_triu, pair_freq, x_pair_nogaps, Nij, epsilon=1
     return problems
 
 
-
 def get_nr_problematic_qij(freqs_pair, x_pair, lambda_pair, Nij, epsilon=1e-3, verbose=0):
 
     L = Nij.shape[0]
@@ -190,7 +188,7 @@ def model_prob_flat(freqs_pair, x_pair, lambda_pair, Nij):
 
     #compute model probabilties for i<j
     model_prob = np.zeros((L, L, 400))
-    model_prob[indices_triu] = pair_freq[indices_triu] - (x_pair_nogaps[indices_triu] * lambda_pair / Nij[:,:, np.newaxis][indices_triu])
+    model_prob[indices_triu] = pair_freq[indices_triu] - (x_pair_nogaps[indices_triu] * (2*lambda_pair) / Nij[:,:, np.newaxis][indices_triu])
 
     model_prob_flat = model_prob[indices_triu].flatten()
 
@@ -199,26 +197,12 @@ def model_prob_flat(freqs_pair, x_pair, lambda_pair, Nij):
 
 
 @stream_or_file('wb')
-def write_msgpack(outmsgpackfile, x_pair, neff, freqs, lambda_pair):
+def write_msgpack(outmsgpackfile, x_pair, freqs_pair, Nij, lambda_pair):
+
+    #freq-pair includes pseudo-counts
+    #Nij includes pseudo-counts
 
     L = x_pair.shape[0]
-    freqs_single, freqs_pair = freqs
-
-    # ENFORCE NO PSEUDO COUNTS
-    # freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, ccmpred.pseudocounts.no_pseudocounts, pseudocount_n_single=0, pseudocount_n_pair=0, remove_gaps=False)
-    # freqs_single, freqs_pair = freqs
-
-
-    # Counts WITH pseudocounts
-    msa_counts_pair = freqs_pair * neff
-
-    # reset gap counts
-    msa_counts_pair[:, :, :, 20] = 0
-    msa_counts_pair[:, :, 20, :] = 0
-
-    #non_gapped counts
-    Nij = msa_counts_pair.sum(3).sum(2)
-
 
     out={}
     # write lower triangular matrix row-wise

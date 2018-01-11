@@ -23,6 +23,7 @@ OBJ_FUNC = {
         gibbs_steps=opt.cd_gibbs_steps,
         persistent=opt.cd_persistent,
         sample_size=opt.sample_size,
+        sample_ref=opt.sample_ref,
         pll=opt.cd_pll)
 }
 
@@ -67,9 +68,18 @@ def parse_args():
 
     parser.add_argument("-i", "--init-from-raw",        dest="initrawfile", default=None, help="Init potentials from raw file")
     parser.add_argument("-t", "--num_threads",          dest="num_threads", type=int, default=1, help="Specify the number of threads")
-    parser.add_argument("-A", "--disable_apc",          dest="disable_apc", action="store_true", default=False, help="Disable average product correction (APC)")
     parser.add_argument("--aln-format",                 dest="aln_format", default="psicov", help="File format for MSAs [default: \"%(default)s\"]")
     parser.add_argument("--no-logo",                    dest="logo", default=True, action="store_false", help="Disable showing the CCMpred logo")
+
+    grp_contact_score = parser.add_argument_group("Contact Score and Corrections")
+    grp_contact_score.add_argument("--frobenius",               dest="frob",     action="store_true", default=True,  help="Map 20x20 dimensional coupling matrices to Frobenius norm [default: %(default)s]")
+    grp_contact_score.add_argument("--squared-frobenius",       dest="sq_frob",  action="store_true", default=False, help="Map 20x20 dimensional coupling matrices to squared Frobenius norm")
+    grp_contact_score.add_argument("--no_centering_potentials", dest="centering_potentials", action="store_false", default=True, help="Ensure that sum(wij)=0 by subtracting mean.")
+
+    grp_corr = parser.add_argument_group("Corrections")
+    grp_corr.add_argument("--apc",                           dest="apc",  action="store_true", default=False,  help="Use average product correction (APC)")
+    grp_corr.add_argument("--entropy-correction", dest="entropy_correction", action="store_true", default=False, help="Use entropy correction")
+    grp_corr.add_argument("--count-statistic-correction",    dest="count_stat_correction",  action="store_true", default=False,   help="Use local count statistic correction")
 
 
     grp_out = parser.add_argument_group("Output Options")
@@ -77,17 +87,15 @@ def parse_args():
     grp_out.add_argument("-r", "--write-raw",               dest="outrawfile", default=None, help="Write potentials to raw file")
     grp_out.add_argument("-b", "--write-msgpack",           dest="outmsgpackfile", default=None, help="Write potentials to MessagePack file")
     grp_out.add_argument("-m", "--write-modelprob-msgpack", dest="outmodelprobmsgpackfile", default=None, help="Write model probabilities as MessagePack file")
-    grp_out.add_argument("--only_model_prob",               dest="only_model_prob", action="store_true", default=False, help="Only compute model probabilties and do not optimize (-i must be specified!).")
-    grp_out.add_argument("--no_centering_potentials",       dest="centering_potentials", action="store_false", default=True, help="Ensure that sum(wij)=0 by subtracting mean.")
-
 
     grp_of = parser.add_argument_group("Objective Functions")
     grp_of.add_argument("--ofn-pll",             dest="objfun", action="store_const", const="pll", default="pll", help="Use pseudo-log-likelihood (default)")
     grp_of.add_argument("--ofn-cd",              dest="objfun", action="store_const", const="cd", help="Use Contrastive Divergence")
     grp_of.add_argument("--cd-pll",              dest="cd_pll", action="store_true", default=False, help="Setting for CD: Sample only ONE variable per sampling step per sequence. [default: %(default)s]")
     grp_of.add_argument("--cd-persistent",       dest="cd_persistent", action="store_true",  default=False, help="Setting for CD: Use Persistent Contrastive Divergence: do not restart Markov Chain in each iteration.[default: %(default)s] ")
-    grp_of.add_argument("--cd-sample_size",      dest="sample_size", default=10,      type=int, help="Sample at max X*L sequences per iteration. [default: %(default)s] ")
-    grp_of.add_argument("--cd-gibbs_steps",      dest="cd_gibbs_steps", default=1,      type=int, help="Setting for CD: Perform X steps of Gibbs sampling per sequence. [default: %(default)s]")
+    grp_of.add_argument("--cd-sample_size",      dest="sample_size", default=10.0,      type=float, help="Sample at max X*L sequences per iteration. [default: %(default)s] ")
+    grp_of.add_argument("--cd-sample_ref",       dest="sample_ref", default="L",      type=str, choices=['L', 'Neff'], help="Sample at max X*[L|Neff] sequences per iteration. [default: %(default)s] ")
+    grp_of.add_argument("--cd-gibbs_steps",      dest="cd_gibbs_steps", default=1,      type=int,  help="Setting for CD: Perform X steps of Gibbs sampling per sequence. [default: %(default)s]")
 
 
     grp_al = parser.add_argument_group("Algorithms")
@@ -149,6 +157,7 @@ def parse_args():
     grp_db.add_argument("--compare-to-raw",     dest="comparerawfile",  default=None, help="Compare potentials to raw file")
     grp_db.add_argument("--dev-center-v",       dest="dev_center_v",    action="store_true", default=False, help="Use same settings as in c++ dev-center-v version")
     grp_db.add_argument("--ccmpred-vanilla",    dest="vanilla",         action="store_true", default=False, help="Use same settings as in default c++ CCMpred")
+    grp_db.add_argument("--do-not-optimize",    dest="optimize",        action="store_false", default=True, help="Do not optimize potentials (logically sue ini-raw-file --> -i must be specified!)")
 
 
     scores = parser.add_argument_group("Alternative Scores")
@@ -165,13 +174,13 @@ def parse_args():
     if args.cd_alnfile and args.objfun != "cd":
         parser.error("--write-cd-alignment is only supported for contrastive divergence!")
 
-    if args.only_model_prob and not args.initrawfile:
-        parser.error("--only_model_prob is only supported when -i (--init-from-raw) is specified!")
+    if not args.optimize and not args.initrawfile:
+        parser.error("--do-not-optimize is only supported when -i (--init-from-raw) is specified!")
 
-    if args.objfun == "pll" and args.algorithm != "conjugate_gradients":
+    if args.objfun == "pll" and (args.algorithm != "conjugate_gradients" and args.algorithm != "numerical_differentiation"):
         parser.error("pseudo-log-likelihood (--ofn-pll) needs to be optimized with conjugate gradients (--alg-cg)!")
 
-    if (args.outmodelprobmsgpackfile and args.objfun != "cd") or args.only_model_prob:
+    if (args.outmodelprobmsgpackfile and args.objfun != "cd"):
         print("Note: when computing q_ij data: couplings should be computed from full likelihood (e.g. CD)")
 
 
@@ -183,6 +192,16 @@ def parse_args():
 
 
 def main():
+
+
+    #debugging
+    # ccm = CCMpred("/home/vorberg/work/data/benchmarkset_cathV4.1/psicov/1mkcA00.filt.psc", "/home/vorberg/1mkcA00.mat")
+    # ccm.read_alignment("psicov", "100")
+    # ccm.compute_sequence_weights("weights_simple", False, 0.8)
+    # ccm.compute_frequencies("constant_pseudocounts", 1,  1)
+    # ccm.specify_regularization(10, 0.2, reg_type="center-v", scaling="L", dev_center_v=False)
+    # ccm.intialise_potentials("/home/vorberg/work/data/benchmarkset_cathV4.1/contact_prediction/ccmpred-pll-centerv/braw/1mkcA00.filt.braw.gz", False)
+
 
     opt = parse_args()
 
@@ -199,16 +218,16 @@ def main():
     #read alignment and compute frequency and counts
     ccm.read_alignment(opt.aln_format, opt.max_gap_ratio)
     ccm.compute_sequence_weights(opt.weight, opt.wt_ignore_gaps, opt.wt_cutoff)
-    ccm.compute_frequencies(opt.pseudocounts, opt.pseudocount_single,  opt.pseudocount_pair, dev_center_v=opt.dev_center_v)
+    ccm.compute_frequencies(opt.pseudocounts, opt.pseudocount_single,  opt.pseudocount_pair, dev_center_v=opt.dev_center_v, vanilla=opt.vanilla)
 
     if opt.omes:
         ccm.compute_omes(opt.omes_fodoraldrich)
-        ccm.write_mat()
+        ccm.write_matrix()
         sys.exit(0)
 
     if opt.mi:
         ccm.compute_mutual_info(opt.mi_normalized, opt.mi_pseudocounts)
-        ccm.write_mat()
+        ccm.write_matrix()
         sys.exit(0)
 
     #setup L2 regularization
@@ -217,26 +236,38 @@ def main():
     #intialise potentials
     ccm.intialise_potentials(opt.initrawfile, opt.vanilla)
 
-    #only compute model frequencies and exit
-    if opt.only_model_prob and opt.outmodelprobmsgpackfile:
-        ccm.write_binary_modelprobs(opt.outmodelprobmsgpackfile)
-        sys.exit(0)
 
-    #specify objective function
-    objfun = OBJ_FUNC[opt.objfun](opt, ccm)
-
-    #specify optimizer
-    alg = ALGORITHMS[opt.algorithm](opt, ccm)
 
     #optimize OBJFUN with ALGORITHM
-    ccm.minimize(objfun, alg)
+    if opt.optimize:
+        # specify objective function
+        objfun = OBJ_FUNC[opt.objfun](opt, ccm)
 
-    #center the variables
-    if opt.centering_potentials:
-        ccm.recenter_potentials()
+        # specify optimizer
+        alg = ALGORITHMS[opt.algorithm](opt, ccm)
 
-    #specify meta data, apply apc and write contact matrix
-    ccm.write_mat(apc=not opt.disable_apc)
+        ccm.minimize(objfun, alg)
+    else:
+        print("\nDo not optimize but use couplings from init binary raw file {0}\n".format(opt.initrawfile))
+
+    ### Post Processing
+
+    # Compute contact score by possibly recentering potentials,
+    # computing (squared) frobenius norm
+    ccm.compute_contact_matrix(
+        recenter_potentials=opt.centering_potentials,
+        frob=opt.frob, sq_frob=opt.sq_frob
+    )
+
+    # and applying post-processing corrections
+    ccm.compute_correction(
+        apc=opt.apc,
+        entropy_correction=opt.entropy_correction,
+        count_stat_correction=opt.count_stat_correction
+    )
+
+    #specify meta data, and write contact matrix
+    ccm.write_matrix()
 
     if opt.cd_alnfile and hasattr(ccm.f, 'msa_sampled'):
         ccm.write_sampled_alignment(opt.cd_alnfile)
@@ -245,7 +276,12 @@ def main():
         ccm.write_raw(opt.outrawfile)
 
     if opt.outmsgpackfile:
-        ccm.write_binary_raw(opt.outmsgpackfile)
+
+        pair_gradient=False
+        if opt.count_stat_correction:
+            pair_gradient=True
+
+        ccm.write_binary_raw(opt.outmsgpackfile, pair_gradient=pair_gradient)
 
     if opt.outmodelprobmsgpackfile:
         ccm.write_binary_modelprobs(opt.outmodelprobmsgpackfile)
@@ -253,7 +289,10 @@ def main():
     #print("\nCCMpred was running with following settings:")
     #print(ccm)
 
-    exitcode = 0 if ccm.algret['code'] > 0 else -ccm.algret['code']
+    exitcode = 0
+    if opt.optimize:
+        if ccm.algret['code'] < 0:
+            exitcode =-ccm.algret['code']
     sys.exit(exitcode)
 
 

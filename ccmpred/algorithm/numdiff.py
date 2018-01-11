@@ -1,7 +1,7 @@
 import numpy as np
 import random
 import sys
-
+import copy
 
 random.seed(42)
 
@@ -22,11 +22,24 @@ class numDiff():
         :return:
         """
 
-        _, g0 = objfun.evaluate(x)
-
         x0_single, x0_pair = objfun.linear_to_structured(x)
-        g0_single, g0_pair = objfun.linear_to_structured(g0)
         ncol = x0_single.shape[0]
+
+        #non-zero couplings to also evaluate regularizer
+        x0_pair = np.random.random((ncol, ncol, 21, 21))
+        temp = copy.deepcopy(x0_pair)
+        temp = np.swapaxes(temp,0,1)
+        temp = np.swapaxes(temp,2,3)
+        x0_pair = x0_pair + temp
+
+        x = objfun.structured_to_linear(x0_single, x0_pair)
+
+        _, g0 = objfun.evaluate(x)
+        g0_single, g0_pair = objfun.linear_to_structured(g0)
+
+
+
+
 
         print("Comparing analytical gradient to numerical gradient with stepsize 2 * {0}".format(self.epsilon))
         print("Pos                                    x                 g            DeltaG")
@@ -38,6 +51,7 @@ class numDiff():
                 break
 
             if random.random() <= 0.2:
+                #check single potentials
                 i = random.randint(0, ncol - 1)
                 a = random.randint(0, 19)
 
@@ -56,8 +70,10 @@ class numDiff():
                 xval = x0_single[i, a]
                 symmval = None
                 posstr = "v[{i:3d}, {a:2d}]".format(i=i, a=a)
+                posstr2 = None
 
             else:
+                #check pair potentials
                 i = random.randint(0, ncol - 1)
                 j = random.randint(0, ncol - 1)
                 a = random.randint(0, 20)
@@ -83,12 +99,13 @@ class numDiff():
                 symdiff2 = g0_pair[j, i, b, a]
 
                 posstr = "w[{i:3d}, {j:3d}, {a:2d}, {b:2d}]".format(i=i, j=j, a=a, b=b)
+                posstr2 = "w[{j:3d}, {i:3d}, {b:2d}, {a:2d}]".format(i=i, j=j, a=a, b=b)
 
             print("{posstr:20s}   {xval: .10e} {symdiff: .10e}".format(posstr=posstr, xval=xval, symdiff=symdiff,))
 
             #print symmetrical value and gradient for pair emissions
-            if symdiff2 is not None and symmval is not None:
-                print("                       {0: .10e} {1: .10e}".format(symmval, symdiff2))
+            if symdiff2 is not None and symmval is not None and posstr2 is not None:
+                print("{posstr:20s}   {xval: .10e} {symdiff: .10e}".format(posstr=posstr2, xval=symmval, symdiff=symdiff2))
 
             print("gNumeric                                 {numdiff: .10e} {delta: .10e}".format(posstr=posstr, xval=xval, numdiff=numdiff, delta=symdiff - numdiff))
 

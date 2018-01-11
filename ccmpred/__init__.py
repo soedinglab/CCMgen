@@ -46,8 +46,8 @@ class CCMpred():
 
 
         #counts and frequencies
-        self.counts = None
-        self.freqs  = None
+        #self.counts = None
+        #self.freqs  = None
         self.pseudocounts =  None
 
         #regularization and initialisation
@@ -63,6 +63,9 @@ class CCMpred():
         #variables
         self.x_single = None
         self.x_pair = None
+        self.g_x_single = None
+        self.g_x_pair = None
+        self.couplings_corrected = {}
 
         #obj function
         self.f = None
@@ -74,11 +77,9 @@ class CCMpred():
         self.fx = None
         self.x = None
         self.algret = None
-        self.mat = None
+        self.mats = {}
         self.meta = {}
 
-        #compute apc
-        self.apc=False
 
         #write files
         self.cd_alnfile = None
@@ -107,7 +108,7 @@ class CCMpred():
         repr_str = walk_dict(self.create_meta_data())
         return repr_str
 
-    def create_meta_data(self):
+    def create_meta_data(self, mat_name=None):
 
         meta={}
 
@@ -140,13 +141,17 @@ class CCMpred():
         meta['workflow'][0]['weighting']['ignore_gaps'] = self.weighting.ignore_gaps
         meta['workflow'][0]['weighting']['cutoff'] = self.weighting.cutoff
 
-
-        meta['workflow'][0]['parameters'] = {}
-        meta['workflow'][0]['parameters']['apc'] = self.apc
+        if mat_name is not None:
+            meta['workflow'][0]['contact_map'] = {}
+            meta['workflow'][0]['contact_map']['correction'] = self.mats[mat_name]['correction']
+            if 'scaling_factor_eta' in self.mats[mat_name].keys():
+                meta['workflow'][0]['contact_map']['scaling_factor_eta'] = self.mats[mat_name]['scaling_factor_eta']
+            meta['workflow'][0]['contact_map']['score'] = self.mats[mat_name]['score']
+            meta['workflow'][0]['contact_map']['matfile'] = self.mats[mat_name]['mat_file']
 
 
         meta['workflow'][0]['results'] = {}
-        meta['workflow'][0]['results']['matfile'] = self.mat_file
+        meta['workflow'][0]['results']['opt_code'] = 0 #default
 
 
         if self.alternative_score is not None:
@@ -160,10 +165,12 @@ class CCMpred():
         meta['workflow'][0]['regularization'] = {}
         meta['workflow'][0]['regularization']['regularization_type'] =     self.reg_type
         meta['workflow'][0]['regularization']['regularization_scaling'] =  self.reg_scaling
+
         if self.regularization is not None:
             meta['workflow'][0]['regularization']['lambda_single'] = self.regularization.lambda_single
             meta['workflow'][0]['regularization']['lambda_pair'] = self.regularization.lambda_pair
             meta['workflow'][0]['regularization']['lambda_pair_factor'] = self.regularization.lambda_pair_factor
+
 
         if self.alg is not None:
             meta['workflow'][0]['optimization'] = {}
@@ -173,9 +180,9 @@ class CCMpred():
             meta['workflow'][0]['progress'] = {}
             meta['workflow'][0]['progress']['plotfile'] = self.alg.progress.plotfile
 
-            meta['workflow'][0]['results']['num_iterations'] = len(self.alg.progress.optimization_log)
             meta['workflow'][0]['results']['opt_message'] = self.algret['message']
             meta['workflow'][0]['results']['opt_code'] = self.algret['code']
+            meta['workflow'][0]['results']['num_iterations'] = self.algret['num_iterations']
             meta['workflow'][0]['results']['fx_final'] = self.fx
 
         if self.f is not None:
@@ -219,15 +226,17 @@ class CCMpred():
             self.weighting_type, self.weighting.cutoff, self.weighting.ignore_gaps, self.neff, self.weighting.get_HHsuite_neff(self.msa)))
         print("Alignment has diversity={0}.".format(np.round(self.diversity, decimals=3)))
 
-    def compute_frequencies(self, pseudocount_type, pseudocount_n_single=1,  pseudocount_n_pair=1, dev_center_v=False):
+    def compute_frequencies(self, pseudocount_type, pseudocount_n_single=1,  pseudocount_n_pair=1, dev_center_v=False, vanilla=False):
 
         self.pseudocounts = PseudoCounts(self.msa, self.weights)
-        self.counts = self.pseudocounts.counts
+        #self.counts = self.pseudocounts.counts
 
         if dev_center_v:
-            self.freqs = self.pseudocounts.calculate_frequencies_dev_center_v()
+            self.pseudocounts.calculate_frequencies_dev_center_v()
+        elif vanilla:
+            self.pseudocounts.calculate_frequencies_vanilla()
         else:
-            self.freqs = self.pseudocounts.calculate_frequencies(
+            self.pseudocounts.calculate_frequencies(
                 pseudocount_type,
                 pseudocount_n_single,
                 pseudocount_n_pair,
@@ -246,26 +255,26 @@ class CCMpred():
         if omes_fodoraldrich:
             self.alternative_score = "omes_fodoraldrich"
             print("Will compute Observed Minus Expected Squared (OMES) Covariance score (acc to Fodor & Aldrich).")
-            self.mat = local_methods.compute_omes_freq(self.counts, self.freqs, True)
+            self.mat = local_methods.compute_omes_freq(self.pseudocounts.counts, self.pseudocounts.freqs, True)
         else:
             self.alternative_score = "omes"
             print("Will compute Observed Minus Expected Squared (OMES) Covariance score (acc to Kass & Horovitz).")
-            self.mat = local_methods.compute_omes_freq(self.counts, self.freqs, False)
+            self.mat = local_methods.compute_omes_freq(self.pseudocounts.counts, self.pseudocounts.freqs, False)
 
     def compute_mutual_info(self, mi_normalized=False, mi_pseudocounts=False):
 
         if mi_pseudocounts:
             self.alternative_score = "mi_pseudocounts"
             print("Will compute mutual information score with pseudocounts")
-            self.mat = local_methods.compute_mi_pseudocounts(self.freqs)
+            self.mat = local_methods.compute_mi_pseudocounts(self.pseudocounts.freqs)
         elif mi_normalized:
             self.alternative_score = "mi_normalized"
             print("Will compute normalized mutual information score")
-            self.mat = local_methods.compute_mi(self.counts, normalized=True)
+            self.mat = local_methods.compute_mi(self.pseudocounts.counts, normalized=True)
         else:
             self.alternative_score = "mi"
             print("Will compute mutual information score")
-            self.mat = local_methods.compute_mi(self.counts)
+            self.mat = local_methods.compute_mi(self.pseudocounts.counts)
 
     def specify_regularization(self, lambda_single, lambda_pair_factor, reg_type="center-v", scaling="L", dev_center_v=False ):
 
@@ -273,9 +282,9 @@ class CCMpred():
         self.reg_scaling = scaling
 
         if dev_center_v or reg_type == "center-v":
-            prior_v_mu   = centering.center_v(self.freqs)
+            prior_v_mu   = centering.center_v(self.pseudocounts.freqs)
         else:
-            prior_v_mu   = centering.center_zero(self.freqs)
+            prior_v_mu   = centering.center_zero(self.pseudocounts.freqs)
 
         REG_L2_SCALING = {
             "L" : self.L-1,
@@ -284,6 +293,7 @@ class CCMpred():
         }
         scaling = REG_L2_SCALING[scaling]
         self.regularization = regularization.L2(lambda_single, lambda_pair_factor, scaling, prior_v_mu)
+        print(self.regularization)
 
     def intialise_potentials(self, initrawfile=None, vanilla_ccmpred=False):
 
@@ -295,6 +305,7 @@ class CCMpred():
 
             raw_potentials = raw.parse_msgpack(initrawfile)
             self.x_single, self.x_pair = raw_potentials.x_single, raw_potentials.x_pair
+
 
             self.single_potential_init  = initrawfile
             self.pair_potential_init    = initrawfile
@@ -334,6 +345,11 @@ class CCMpred():
         self.fx, self.x, self.algret    = self.alg.minimize(self.f, self.f.x)
         self.x_single, self.x_pair      = self.f.finalize(self.x)
 
+        ###experimental - only for pll with cg
+        #g_x = self.alg.get_gradient_x()
+        #self.g_x_single, self.g_x_pair = self.f.finalize(g_x)
+
+
         condition = "Finished" if self.algret['code'] >= 0 else "Exited"
         print("\n{0} with code {code} -- {message}\n".format(condition, **self.algret))
 
@@ -342,7 +358,7 @@ class CCMpred():
             self.x_single, self.x_pair = gaps.backinsert_gapped_positions(self.x_single, self.x_pair, self.gapped_positions)
             self.L = self.x_single.shape[0]
 
-        self.mat = io.contactmatrix.frobenius_score(self.x_pair)
+
 
         # #Refine with persistent CD
         # refine=False
@@ -367,6 +383,133 @@ class CCMpred():
             print("Enforce sum(v_i)=0 and sum(w_ij)=0 by centering potentials at zero.")
             self.x_single, self.x_pair = sanity_check.centering_potentials(self.x_single, self.x_pair)
 
+
+    def compute_contact_matrix(self, recenter_potentials=False, frob=True, sq_frob=False):
+
+        if recenter_potentials:
+            self.recenter_potentials()
+
+        mat_path, mat_name = os.path.split(self.mat_file)
+
+        if frob:
+            self.mats["frobenius"] = {
+                'mat':    io.contactmatrix.frobenius_score(self.x_pair, squared=False),
+                'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + ".frobenius." + mat_name.split(".")[-1],
+                'score': "frobenius",
+                'correction': None
+            }
+
+
+        if sq_frob:
+            self.mats["squared-frobenius"] = {
+                'mat': io.contactmatrix.frobenius_score(self.x_pair, squared=True),
+                'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + ".squared_frobenius." +
+                            mat_name.split(".")[-1],
+                'score': "squared-frobenius",
+                'correction': None
+            }
+
+    def compute_correction(self, apc=False, entropy_correction=False, count_stat_correction=False):
+
+        mat_path, mat_name = os.path.split(self.mat_file)
+
+        if entropy_correction or count_stat_correction:
+            # no degap according to new model
+            # single_freq = self.pseudocounts.degap(self.pseudocounts.freqs[0])
+
+            # no pseudocounts --> does not work woith entropy correction because of possible zero counts and log()
+            # self.compute_frequencies("no_pseudocounts")
+            # single_freq = self.pseudocounts.freqs[0]
+
+            # with pseudo-counts
+            single_freq = self.pseudocounts.freqs[0]
+            neff = self.neff
+
+
+            #compute correction on coupling level
+            if entropy_correction:
+                couplings_corrected = io.contactmatrix.compute_local_correction_couplings(
+                    single_freq, self.x_pair, neff, self.regularization.lambda_pair, entropy=True
+                )
+
+                #add 21st states
+                temp = np.zeros((self.L, self.L, 21, 21))
+                temp[:, :, :20, :20] = couplings_corrected
+                couplings_corrected = temp
+
+                self.couplings_corrected["ec"] = couplings_corrected
+
+            if count_stat_correction:
+                couplings_corrected = io.contactmatrix.compute_local_correction_couplings(
+                    single_freq, self.x_pair, neff, self.regularization.lambda_pair, entropy=False
+                )
+
+                #add 21st states
+                temp = np.zeros((self.L, self.L, 21, 21))
+                temp[:, :, :20, :20] = couplings_corrected
+                couplings_corrected = temp
+
+                self.couplings_corrected["csc"] = couplings_corrected
+
+        base_mat_names = self.mats.keys()
+        for name in base_mat_names:
+            mat = self.mats[name]
+
+            score = mat['score']
+            score_matrix = mat['mat']
+
+            squared = False
+            if score == "squared-frobenius":
+                squared=True
+
+            if apc and not squared:
+                self.mats[name + "-apc"]=\
+                    {
+                    'mat': io.contactmatrix.apc(score_matrix),
+                    'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score + ".apc." + mat_name.split(".")[-1],
+                    'score': score,
+                    'correction': "apc"
+                    }
+
+            if entropy_correction:
+
+                scaling_factor_eta, mat_corrected = io.contactmatrix.compute_local_correction(
+                    single_freq, self.x_pair, neff, self.regularization.lambda_pair,
+                    score_matrix, squared=squared, entropy=True
+                )
+
+                self.mats[score+"-ec"] = {
+                    'mat': mat_corrected,
+                    'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score + ".ec." +
+                                mat_name.split(".")[-1],
+                    'score': score,
+                    'correction': "entropy_correction",
+                    'scaling_factor_eta': scaling_factor_eta
+                }
+
+            if count_stat_correction:
+
+                    #using gradient
+                    # mat =  io.contactmatrix.frobenius_score(self.g_x_pair, squared=False)
+                    # scaling_factor_eta, mat = io.contactmatrix.compute_local_correction(
+                    #     single_freq, self.g_x_pair, neff, self.regularization.lambda_pair,
+                    #     mat, squared=False, entropy=False
+                    # )
+
+                    scaling_factor_eta, mat_corrected = io.contactmatrix.compute_local_correction(
+                        single_freq, self.x_pair, neff, self.regularization.lambda_pair,
+                        mat, squared=squared, entropy=False
+                    )
+
+                    self.mats[score+"-csc"] = {
+                        'mat': mat_corrected,
+                        'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score + ".csc." +
+                                    mat_name.split(".")[-1],
+                        'score': score,
+                        'correction': "count_stat_correction",
+                        'scaling_factor_eta': scaling_factor_eta
+                    }
+
     def write_sampled_alignment(self, cd_alnfile):
 
         self.cd_alnfile = cd_alnfile
@@ -376,29 +519,46 @@ class CCMpred():
         with open(cd_alnfile, "w") as f:
             io.alignment.write_msa_psicov(f, msa_sampled)
 
-    def write_mat(self, apc=False):
+    def write_matrix(self):
 
-        if apc:
-            self.apc=True
-            self.mat = io.contactmatrix.apc(self.mat)
-
-        self.meta = self.create_meta_data()
-
-        io.contactmatrix.write_matrix(self.mat_file, self.mat, self.meta)
+        for mat_name, mat_dict in self.mats.iteritems():
+            meta = self.create_meta_data(mat_name)
+            io.contactmatrix.write_matrix(mat_dict['mat_file'], mat_dict['mat'], meta)
 
     def write_raw(self, outrawfile):
 
         self.outrawfile = outrawfile
-        raw_out = raw.CCMRaw(self.L, self.x_single[:, :20], self.x_pair[:, :, :21, :21], self.meta)
+        meta = self.create_meta_data()
+
+        raw_out = raw.CCMRaw(self.L, self.x_single[:, :20], self.x_pair[:, :, :21, :21], meta)
         print("\nWriting raw-formatted potentials to {0}".format(outrawfile))
         raw.write_oldraw(outrawfile, raw_out)
 
-    def write_binary_raw(self, outmsgpackfile ):
+
+    def write_binary_raw(self, outmsgpackfile, pair_gradient=False):
 
         self.outmsgpackfile = outmsgpackfile
-        raw_out = raw.CCMRaw(self.L, self.x_single[:, :20], self.x_pair[:, :, :21, :21], self.meta)
+        meta = self.create_meta_data()
+
+        raw_out = raw.CCMRaw(self.L, self.x_single[:, :20], self.x_pair[:, :, :21, :21], meta)
         print("\nWriting msgpack-formatted potentials to {0}".format(outmsgpackfile))
         raw.write_msgpack(outmsgpackfile, raw_out)
+
+        if pair_gradient:
+            outmsgpackfile_grad = outmsgpackfile.split(".")[0] + ".gx.gz"
+            raw_out = raw.CCMRaw(self.L, self.g_x_single[:, :20], self.g_x_pair[:, :, :21, :21], meta)
+            print("\nWriting msgpack-formatted gradient (without reg) to {0}".format(outmsgpackfile_grad))
+            raw.write_msgpack(outmsgpackfile_grad, raw_out)
+
+        # write corrected coupling values
+        for name, coupling_correction in self.couplings_corrected.iteritems():
+
+            outrawfile_correction = os.path.split(outmsgpackfile)[0] + "/" + os.path.split(outmsgpackfile)[1].split(".")[0]+ ".braw." + name  + ".gz"
+
+            print coupling_correction.shape
+            raw_out = raw.CCMRaw(self.L, self.x_single[:, :20], coupling_correction[:, :, :21, :21], meta)
+            print("\nWriting msgpack-formatted potentials with correction={0} to {1}".format(name, outrawfile_correction))
+            raw.write_msgpack(outrawfile_correction, raw_out)
 
     def write_binary_modelprobs(self, outmodelprobmsgpackfile):
 
@@ -411,5 +571,5 @@ class CCMpred():
         # if self.opt.dev_center_v:
         #     freqs = ccmpred.pseudocounts.calculate_frequencies(msa, weights, ccmpred.pseudocounts.constant_pseudocounts, pseudocount_n_single=1, pseudocount_n_pair=1, remove_gaps=True)
 
-        model_probabilities.write_msgpack(outmodelprobmsgpackfile, self.x_pair, self.neff, self.freqs, self.regularization.lambda_pair)
+        model_probabilities.write_msgpack(outmodelprobmsgpackfile, self.x_pair, self.pseudocounts.freqs[1], self.pseudocounts.Nij, self.regularization.lambda_pair)
 

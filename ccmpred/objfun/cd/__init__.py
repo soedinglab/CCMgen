@@ -13,7 +13,7 @@ from ccmpred.pseudocounts import PseudoCounts
 
 class ContrastiveDivergence():
 
-    def __init__(self, ccm, gibbs_steps=1, persistent=False, pll=False, sample_size=0):
+    def __init__(self, ccm, gibbs_steps=1, persistent=False, pll=False, sample_size=0, sample_ref="L"):
 
 
         self.msa = ccm.msa
@@ -25,6 +25,8 @@ class ContrastiveDivergence():
         self.pseudocount_type       = ccm.pseudocounts.pseudocount_type
         self.pseudocount_n_single   = ccm.pseudocounts.pseudocount_n_single
         self.pseudocount_n_pair     = ccm.pseudocounts.pseudocount_n_pair
+
+        print self.pseudocount_type, self.pseudocount_n_single, self.pseudocount_n_pair
 
 
         self.structured_to_linear = lambda x_single, x_pair: \
@@ -61,7 +63,7 @@ class ContrastiveDivergence():
 
         # get constant alignment counts - INCLUDING PSEUDO COUNTS
         # important for small alignments
-        self.freqs_single, self.freqs_pair = ccm.freqs
+        self.freqs_single, self.freqs_pair = ccm.pseudocounts.freqs
         self.msa_counts_single = self.freqs_single * self.neff
         self.msa_counts_pair = self.freqs_pair * self.neff
 
@@ -85,9 +87,16 @@ class ContrastiveDivergence():
             self.persistent_msa = self.msa.copy()
 
         self.sample_size = sample_size
+        self.sample_ref = sample_ref
         self.nr_seq_sample = self.nrow
-        if (sample_size > 0) and (sample_size * self.ncol) < self.nrow:
-             self.nr_seq_sample = sample_size * self.ncol
+        if (sample_size > 0):
+            if self.sample_ref == "L":
+                self.nr_seq_sample = int(sample_size * self.ncol)
+                if self.nr_seq_sample > self.nrow:
+                   self.nr_seq_sample = self.nrow
+            else:
+                self.nr_seq_sample = np.max([10, int(sample_size * self.neff)])
+
 
 
     def __repr__(self):
@@ -97,9 +106,10 @@ class ContrastiveDivergence():
             "PLL " if (self.pll) else ""
         )
 
-        str += "#sampled sequences={0} ({1} x N and {2} x L)  Gibbs steps={3} ".format(
+        str += "#sampled sequences={0} ({1}xN and {2}xNeff and {3}xL)  Gibbs steps={4} ".format(
             (self.nr_seq_sample),
             np.round(self.nr_seq_sample / float(self.nrow), decimals=3),
+            np.round(self.nr_seq_sample / self.neff, decimals=3),
             np.round(self.nr_seq_sample / float(self.ncol), decimals=3),
             self.gibbs_steps
         )
@@ -221,6 +231,7 @@ class ContrastiveDivergence():
         #setup sequences for sampling
         self.msa_sampled, self.msa_sampled_weights = self.init_sample_alignment()
 
+
         #Gibbs Sampling of sequences (each position of each sequence will be sampled this often: self.gibbs_steps)
         if self.pll:
             self.msa_sampled = self.sample_position_in_sequences(x)
@@ -235,18 +246,21 @@ class ContrastiveDivergence():
         # compute amino acid frequencies from sample
         # add pseudocounts for stability
         pseudocounts = PseudoCounts(self.msa_sampled, self.msa_sampled_weights)
-        sampled_freq_single, sampled_freq_pair = pseudocounts.calculate_frequencies(
+        pseudocounts.calculate_frequencies(
                 self.pseudocount_type,
                 self.pseudocount_n_single,
                 self.pseudocount_n_pair,
                 remove_gaps=False)
 
-        sampled_freq_single = pseudocounts.degap(sampled_freq_single, True)
-        sampled_freq_pair   = pseudocounts.degap(sampled_freq_pair, True)
+        sampled_freq_single = pseudocounts.degap(pseudocounts.freqs[0], True)
+        sampled_freq_pair   = pseudocounts.degap(pseudocounts.freqs[1], True)
+
+
 
         #compute counts and scale them accordingly to size of input MSA
         sample_counts_single    = sampled_freq_single * self.Ni[:, np.newaxis]
         sample_counts_pair      = sampled_freq_pair * self.Nij[:, :, np.newaxis, np.newaxis]
+
 
 
         #actually compute the gradients
@@ -268,9 +282,11 @@ class ContrastiveDivergence():
             g_pair[i, i, :, :] = 0
 
 
+
         #compute regularization
         x_single, x_pair = self.linear_to_structured(x)                     #x_single has dim L x 20
         _, g_single_reg, g_pair_reg = self.regularization(x_single, x_pair) #g_single_reg has dim L x 20
+
 
 
         #gradient for x_single only L x 20

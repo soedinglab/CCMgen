@@ -48,9 +48,13 @@ def structured_to_linear(x_single, x_pair, nogapstate=False, padding=True):
     if nogapstate:
         single_states = 20
 
-
     ncol = x_single.shape[0]
     nsingle = ncol * single_states
+
+    if (single_states == 21) and (x_single.shape[1] == 20):
+        temp = np.zeros((ncol, 21))
+        temp[:, :20] = x_single
+        x_single = temp
 
     if padding:
         nsingle_padded = nsingle + 32 - (nsingle % 32)

@@ -24,6 +24,8 @@ class conjugateGradient(object):
         )
         self.progress = pr.Progress(plotfile, plot_title)
 
+        self.g_x = None
+
 
     def __repr__(self):
         return "conjugate gradient optimization (ftol={0} max_linesearch={1} alpha_mul={2} wolfe={3}) \n" \
@@ -46,7 +48,8 @@ class conjugateGradient(object):
         self.progress.set_plot_title(subtitle)
 
         #for initialization of linesearch
-        fx, g = objfun.evaluate(x)
+        fx, g_x, g_reg = objfun.evaluate(x)
+        g = g_x + g_reg
         gnorm = np.sum(g*g)
 
 
@@ -79,7 +82,8 @@ class conjugateGradient(object):
 
         ret = {
             "code": 2,
-            "message": "Reached maximum number of iterations"
+            "message": "Reached maximum number of iterations",
+            "num_iterations": self.maxit
         }
 
         alpha = 1 / np.sqrt(gnorm)
@@ -96,11 +100,17 @@ class conjugateGradient(object):
                 dg = np.sum(s * g)
 
 
-            n_linesearch, fx, alpha, g, x = self.linesearch(x, fx, g, objfun, s, alpha)
+            n_linesearch, fx, alpha, g_x, g_reg, x = self.linesearch(x, fx, g, objfun, s, alpha)
+            g = g_x + g_reg
+
+            g_x_single, g_x_pair = objfun.linear_to_structured(g_x)
+            self.g_x = objfun.structured_to_linear(g_x_single, g_x_pair/2)
+
 
             if n_linesearch < 0:
                 ret['message'] = "Cannot find appropriate line search distance -- this might indicate a numerical problem with the gradient!"
                 ret['code'] = -2
+                ret['num_iterations'] = iteration
                 break
 
 
@@ -111,6 +121,7 @@ class conjugateGradient(object):
                 if rel_diff_fx < self.epsilon:
                     ret['message'] = 'Success!'
                     ret['code'] = 0
+                    ret['num_iterations'] = iteration
                     break
 
 
@@ -170,7 +181,8 @@ class conjugateGradient(object):
 
             x = x0 + alpha * s
 
-            fx_step, g = objfun.evaluate(x)
+            fx_step, g_x, g_reg = objfun.evaluate(x)
+            g = g_x + g_reg
 
             # armijo condition
             if fx_step < fx_init + alpha * dg_test:
@@ -180,9 +192,17 @@ class conjugateGradient(object):
                 #print("dg: {0} self.wolfe * dg_init: {1} dg_init: {2}".format(dg, self.wolfe * dg_init,  dg_init))
                 if dg < self.wolfe * dg_init:
                     fx = fx_step
-                    return n_linesearch, fx, alpha, g, x
+                    return n_linesearch, fx, alpha, g_x, g_reg, x
 
             alpha *= self.alpha_mul
+
+
+    def get_gradient_x(self):
+
+
+        return(self.g_x)
+
+
 
     def get_parameters(self):
         parameters={}

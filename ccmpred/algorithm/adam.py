@@ -1,10 +1,10 @@
 import numpy as np
 import ccmpred.logo
 import ccmpred.monitor.progress as pr
-import sys
 from collections import deque
 import ccmpred.model_probabilities
 import ccmpred.sanity_check
+from collections import deque
 
 class Adam():
     """
@@ -57,6 +57,9 @@ class Adam():
         self.convergence_prev=convergence_prev
         self.qij_condition = qij_condition
 
+
+        self.gpair_sign = deque([], maxlen=self.convergence_prev)
+
         plot_title = "L={0} N={1} Neff={2} Diversity={3}<br>".format(
             ccm.L, ccm.N, np.round(ccm.neff, decimals=3),
             np.round(ccm.diversity, decimals=3)
@@ -65,9 +68,7 @@ class Adam():
 
 
         if self.alpha0 == 0:
-            self.alpha0 = 1e-3 / np.log(ccm.neff)
-        if self.decay_rate == 0:
-            self.decay_rate = 3e-5 / np.log(ccm.neff)
+                self.alpha0 = 2e-3 *   np.log(ccm.neff)
 
     def __repr__(self):
 
@@ -113,9 +114,15 @@ class Adam():
 
         ret = {
             "code": 2,
-            "message": "Reached maximum number of iterations"
+            "message": "Reached maximum number of iterations",
+            "num_iterations": self.maxit
         }
 
+        #test for persistent contrastive divergence!
+        if objfun.persistent and self.epsilon > 1e-8:
+            objfun.persistent = False
+
+        upper_triangular_indices = np.triu_indices(objfun.ncol, k=1)
         fx = -1
         alpha=self.alpha0
         for i in range(self.maxit):
@@ -129,9 +136,35 @@ class Adam():
             g_reg_single, g_reg_pair = objfun.linear_to_structured(greg)
             g_single, g_pair = objfun.linear_to_structured(g)
 
+
+            #flattened
+            #print g_pair[0,10,3,5], "==", g_pair[10,0,5,3] #yes it is identical :)
+            g_pair_flat = g_pair[upper_triangular_indices[0], upper_triangular_indices[1],:20,:20].flatten()
+            gx_pair_flat = gx_pair[upper_triangular_indices[0], upper_triangular_indices[1],:20,:20].flatten()
+            g_reg_pair_flat = g_reg_pair[upper_triangular_indices[0], upper_triangular_indices[1],:20,:20].flatten()
+            x_pair_flat = x_pair[upper_triangular_indices[0], upper_triangular_indices[1],:20,:20].flatten()
+
+
+            #compute the percentage of gradient sign changes over the last "convergence_prev" iterations
+            gpair_sign_current = np.sign(gx_pair_flat)
+            self.gpair_sign.append(gpair_sign_current)
+            nr_gradients_non_zero = len(np.where(np.sum(np.array(self.gpair_sign) == 0, axis=0) < len(self.gpair_sign))[0])
+            nr_gradients_with_changes = len(np.where(np.sum(np.abs(np.diff(np.array(self.gpair_sign), axis=0)), axis=0) > 0)[0])
+
+            ids_nonzero = set(np.where(np.sum(np.array(self.gpair_sign) == 0, axis=0) < len(self.gpair_sign))[0])
+            ids_changes = set(np.where(np.sum(np.abs(np.diff(np.array(self.gpair_sign), axis=0)), axis=0) > 0)[0])
+            ids_nonzero_nochanges = list(ids_nonzero - ids_changes)
+            #print ids_nonzero_nochanges[:5], gpair_sign_current[ids_nonzero_nochanges[:5]], g_pair.flatten()[ids_nonzero_nochanges[:5]], x_pair.flatten()[ids_nonzero_nochanges[:5]]
+
+            mean_nr_changes = np.sum(np.diff(np.array(self.gpair_sign), axis=0) != 0) / np.float(nr_gradients_non_zero)
+            percent_gradient_changes = nr_gradients_with_changes / float(nr_gradients_non_zero)
+
+
+
+
             #update moment, adaptivity and parameter averages
             first_moment_pair    = self.beta1 * first_moment_pair + (1-self.beta1) * (g_pair)
-            second_moment_pair   = self.beta2 * second_moment_pair + (1-self.beta2) * (g_pair*g_pair)
+            second_moment_pair   = self.beta2 * second_moment_pair + (1-self.beta2) * (g_pair**2)
             x_moment_pair        = self.beta3 * x_moment_pair + (1-self.beta3) * (x_pair)
 
             #compute bias corrected moments
@@ -158,7 +191,7 @@ class Adam():
 
 
             #compute norm of coupling parameters
-            xnorm_pair = np.sqrt(np.sum(x_pair * x_pair))
+            xnorm_pair = np.sqrt(np.sum(x_pair_flat * x_pair_flat))  # np.sqrt(np.sum(x_pair * x_pair))
 
             #compute number of problems with qij
             problems = ccmpred.model_probabilities.get_nr_problematic_qij(
@@ -168,6 +201,7 @@ class Adam():
             if i > self.convergence_prev:
                 xnorm_prev = self.progress.optimization_log['||w||'][-self.convergence_prev]
                 xnorm_diff = np.abs((xnorm_prev - xnorm_pair)) / xnorm_prev
+
                 wij_diff_prev = self.progress.optimization_log['sum_w'][-self.convergence_prev]
                 wij_diff = np.abs((wij_diff_prev - problems['sum_deviation_wij'])) / wij_diff_prev
 
@@ -180,41 +214,47 @@ class Adam():
             if self.decay and xnorm_diff < self.decay_start and self.it_succesfull_stop_condition < 0:
                 self.it_succesfull_stop_condition = i
 
-
             #update learning rate
             if self.decay and self.it_succesfull_stop_condition > -1:
-                    t = i - self.it_succesfull_stop_condition
-                    if self.decay_type == "power":
-                        alpha *= self.decay_rate
-                    elif self.decay_type == "lin":
-                        alpha = self.alpha0 / (1 + t / self.decay_rate)
-                    elif self.decay_type == "step":
-                        alpha *= self.decay_rate
-                        self.decay_start *= 5e-1
-                        self.it_succesfull_stop_condition = -1
-                    elif self.decay_type == "sqrt":
-                        alpha = self.alpha0  / (1 + (np.sqrt(1 + t)) / self.decay_rate)
-                    elif self.decay_type == "sqrt":
-                        alpha *= 1.0  / (1 + (np.sqrt(1 + t)) / self.decay_rate)
-                    elif self.decay_type == "keras":
-                        alpha = self.alpha0 / (1 + self.decay_rate * (t+1))
-                        alpha *=  np.sqrt(1. - np.power(self.beta2, t+1)) / (1. - np.power(self.beta1,t+1))
-
+                t = i - self.it_succesfull_stop_condition
+                if self.decay_type == "sig":
+                    alpha *= 1.0 / (1 + self.decay_rate * t)
+                elif self.decay_type == "power":
+                    alpha *= self.decay_rate
+                elif self.decay_type == "lin":
+                    alpha = self.alpha0 / (1 + t * self.decay_rate)
+                elif self.decay_type == "step":
+                    alpha *= self.decay_rate
+                    self.decay_start *= 5e-1
+                    self.it_succesfull_stop_condition = -1
+                elif self.decay_type == "sqrt":
+                    alpha = self.alpha0  / (1 + (np.sqrt(1 + t)) / self.decay_rate)
+                elif self.decay_type == "sqrt":
+                    alpha *= 1.0  / (1 + (np.sqrt(1 + t)) / self.decay_rate)
+                elif self.decay_type == "keras":
+                    alpha = self.alpha0 / (1 + self.decay_rate * (t+1))
+                    alpha *=  np.sqrt(1. - np.power(self.beta2, t+1)) / (1. - np.power(self.beta1,t+1))
 
 
 
             #print out progress
             log_metrics={}
             log_metrics['||w||'] = xnorm_pair
-            log_metrics['||g_w||'] = np.sqrt(np.sum(gx_pair * gx_pair))
-            log_metrics['||greg_w||'] = np.sqrt(np.sum(g_reg_pair * g_reg_pair))
-            log_metrics['wij_diff'] = wij_diff
+            log_metrics['mean_gw_std'] = np.mean(gx_pair_flat) / np.std(gx_pair_flat)
+            log_metrics['meanchange'] = mean_nr_changes
+            log_metrics['%grad'] = percent_gradient_changes
+            log_metrics['||g||'] = np.sqrt(np.sum(g_pair_flat * g_pair_flat))
+            log_metrics['||g_w||'] = np.sqrt(np.sum(gx_pair_flat * gx_pair_flat))
+            log_metrics['||g_w||norm'] = log_metrics['||g_w||'] / len(gx_pair_flat)
+            log_metrics['||greg_w||'] = np.sqrt(np.sum(g_reg_pair_flat * g_reg_pair_flat))
+            log_metrics['xnorm_diff'] = xnorm_diff
             log_metrics['max_g'] = np.max(np.abs(gx))
             log_metrics['alpha'] = alpha
             log_metrics['#qij_uneq_1'] = problems['sum_qij_uneq_1']
             log_metrics['#neg_qij'] = problems['neg_qijab']
             log_metrics['#wij_uneq_0'] = problems['sum_wij_uneq_0']
             log_metrics['sum_w'] = problems['sum_deviation_wij']
+
 
             if not self.fix_v:
                 log_metrics['||v||'] = np.sqrt(np.sum(x_single * x_single))
@@ -227,24 +267,28 @@ class Adam():
 
 
             #stop condition
-            if self.early_stopping and  wij_diff < self.epsilon:
+            if self.early_stopping and  xnorm_diff < self.epsilon:
 
-                if self.qij_condition:
+                if self.epsilon > 1e-8:
+                    objfun.persistent = True
+                    self.epsilon = 1e-8
+                else:
+                    if self.qij_condition:
 
-                    if (problems['sum_qij_uneq_1'] == 0) and (problems['neg_qijab'] == 0):
+                        if (problems['sum_qij_uneq_1'] == 0) and (problems['neg_qijab'] == 0):
+                            ret = {
+                                "code": 1,
+                                "message": "Stopping condition (xnorm diff < {0} and #qij violations = 0 ) successfull.".format(self.epsilon),
+                                "num_iterations": i
+                             }
+                            return fx, x, ret
+                    else:
                         ret = {
                             "code": 1,
-                            "message": "Stopping condition (xnorm diff < {0} and #qij violations = 0 ) successfull.".format(
-                                self.epsilon)
-                         }
+                            "message": "Stopping condition (xnorm diff < {0}) successfull.".format(self.epsilon),
+                            "num_iterations": i
+                        }
                         return fx, x, ret
-                else:
-                    ret = {
-                        "code": 1,
-                        "message": "Stopping condition (xnorm diff < {0}) successfull.".format(
-                           self.epsilon)
-                    }
-                    return fx, x, ret
 
 
             #update parameters

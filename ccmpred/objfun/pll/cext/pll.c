@@ -30,12 +30,15 @@ double evaluate_pll(
 	// set fx and gradient to 0 initially
 	double fx = 0.0;
 
+	//gradient for single and pair potentials
 	memset(g, 0, sizeof(double) * nvar_padded);
+	//gradient only for pair potentials
 	memset(g2, 0, sizeof(double) * (nvar_padded - nsingle_padded));
 
 	double *precomp_norm = malloc(sizeof(double) * N_ALPHA * nrow * ncol);
 
 	//#pragma omp parallel for reduction(+:fx)
+	//iterate over WHOLE matrix (not only i<j)
 	for(uint32_t nj = 0; nj < nrow * ncol; nj++) {
 		uint32_t n = nj / ncol;
 		uint32_t j = nj % ncol;
@@ -105,6 +108,7 @@ double evaluate_pll(
 
 	//compute gradients for pair emissions
 	#pragma omp parallel for
+	//iterate over WHOLE matrix (not only i<j)
 	for(uint32_t nj = 0; nj < nrow * ncol; nj++) {
 
 		uint32_t n = nj / ncol;
@@ -125,6 +129,7 @@ double evaluate_pll(
 	} // nj
 
 	// add transposed onto un-transposed
+	// yields symmetrical double gradient
 	for(uint32_t b = 0; b < N_ALPHA; b++) {
 		for(uint32_t j = 0; j < ncol; j++) {
 			for(uint32_t a = 0; a < N_ALPHA; a++) {

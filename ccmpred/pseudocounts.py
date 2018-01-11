@@ -16,14 +16,51 @@ class PseudoCounts(object):
 
         #with weights
         self.counts = ccmpred.counts.both_counts(self.msa, self.weights)
+        self.freqs = None
 
-        self.pseudocount_n_single   = None
-        self.pseudocount_n_pair     = None
-        self.pseudocount_type       = None
-        self.remove_gaps            = None
-        self.pseudocount_ratio_single = None
-        self.pseudocount_ratio_pair = None
+        self.pseudocount_n_single       = None
+        self.pseudocount_n_pair         = None
+        self.pseudocount_type           = None
+        self.remove_gaps                = None
+        self.pseudocount_ratio_single    = None
+        self.pseudocount_ratio_pair     = None
 
+        #will be computed from Freq with pseudo-counts and Neff
+        self.Ni = None
+        self.Nij = None
+
+
+    def calculate_Ni(self, freqs_single=None):
+
+        if freqs_single is not None:
+            #counts may include pseudo-counts
+            single_counts = freqs_single * self.neff
+        else:
+            single_counts, pair_counts = self.counts
+
+        # reset gap counts
+        single_counts[:, 20] = 0
+
+        Ni = single_counts.sum(1)
+
+        self.Ni = Ni
+
+    def calculate_Nij(self, freqs_pair=None):
+
+        if freqs_pair is not None:
+            #counts may include pseudo-counts
+            pair_counts = freqs_pair * self.neff
+        else:
+            single_counts, pair_counts = self.counts
+
+        # reset gap counts
+        pair_counts[:, :, :, 20] = 0
+        pair_counts[:, :, 20, :] = 0
+
+        # non_gapped counts
+        Nij = pair_counts.sum(3).sum(2)
+
+        self.Nij = Nij
 
     def calculate_global_aa_freq(self):
 
@@ -54,7 +91,11 @@ class PseudoCounts(object):
         single_freq = single_counts / (self.N + 21)
         pair_freq = pair_counts / self.N
 
-        return single_freq, pair_freq
+        self.freqs = single_freq, pair_freq
+
+        #compute weighted non-gapped sequence counts
+        self.calculate_Ni(single_freq)
+        self.calculate_Nij(pair_freq)
 
     def calculate_frequencies_dev_center_v(self):
 
@@ -86,19 +127,25 @@ class PseudoCounts(object):
                        (pair_freq - single_freq[:, np.newaxis, :, np.newaxis] * single_freq[np.newaxis, :, np.newaxis, :]) + \
                        (single_freq_pc[:, np.newaxis, :, np.newaxis] * single_freq_pc[np.newaxis, :, np.newaxis, :])
 
-        return single_freq_pc, pair_freq_pc
+        self.freqs = single_freq_pc, pair_freq_pc
+
+        #compute weighted non-gapped sequence counts
+        self.calculate_Ni(single_freq_pc)
+        self.calculate_Nij(pair_freq_pc)
 
     def calculate_frequencies(self, pseudocount_type, pseudocount_n_single=1, pseudocount_n_pair=None, remove_gaps=False):
+
 
         self.pseudocount_n_single   = pseudocount_n_single
         self.pseudocount_n_pair     = pseudocount_n_pair
         self.pseudocount_type       = pseudocount_type
-        self.remove_gaps = remove_gaps
+        self.remove_gaps            = remove_gaps
 
         single_counts, pair_counts = self.counts
 
         if pseudocount_n_pair is None:
             pseudocount_n_pair = pseudocount_n_single
+
 
         self.pseudocount_ratio_single = pseudocount_n_single / (self.neff + pseudocount_n_single)
         self.pseudocount_ratio_pair = pseudocount_n_pair / (self.neff + pseudocount_n_pair)
@@ -118,7 +165,11 @@ class PseudoCounts(object):
                        (pair_freq - single_freq[:, np.newaxis, :, np.newaxis] * single_freq[np.newaxis, :, np.newaxis, :]) + \
                        (single_freq_pc[:, np.newaxis, :, np.newaxis] * single_freq_pc[np.newaxis, :, np.newaxis, :])
 
-        return single_freq_pc, pair_freq_pc
+        self.freqs = single_freq_pc, pair_freq_pc
+
+        #compute weighted non-gapped sequence counts
+        self.calculate_Ni(single_freq_pc)
+        self.calculate_Nij(pair_freq_pc)
 
     @staticmethod
     def degap(freq, keep_dims=False):
@@ -141,7 +192,7 @@ class PseudoCounts(object):
 
     def uniform_pseudocounts(self, single_freq):
         uniform_pc = np.zeros_like(single_freq)
-        uniform_pc.fill(1./21)
+        uniform_pc.fill(1. / single_freq.shape[1])
         return uniform_pc
 
     def constant_pseudocounts(self, single_freq):
