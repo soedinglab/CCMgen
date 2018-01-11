@@ -15,7 +15,7 @@ setup(
     author_email="Susann.Vorberg@gmail.com",
     url="https://bitbucket.org/svorberg/ccmpred-new",
     packages=find_packages(),
-    install_requires=['msgpack-python', 'numpy', 'plotly', 'scipy'],
+    install_requires=['msgpack-python', 'numpy', 'plotly', 'scipy', 'pandas', 'biopython'],
     ext_modules=[
         ext(
             'ccmpred.objfun.pll.cext.libpll',
