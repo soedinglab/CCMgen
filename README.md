@@ -39,8 +39,7 @@ Bias correction can be switched on by using the flags --apc and --entropy-correc
 
 Contact maps can be visualized using the script plot_contact_map.py. By specifying a PDB file (numbering of amino acids starting at 1!), the distance matrix is plotted in the lower right triangle. By specifying an alignment file, the percentage of gaps and the entropy are plotted as subplot.
 
-	python plot_contact_map.py --mat-file ./example/1mkcA00.frobenius.mat --alignment_file ./example/1mkcA00.aln --pdb-file ./example/1mkcA00.pdb --plot-out ./example/ --sequence-separation 8 --contact-threshold 8 --apc
-
+python plot_contact_map.py --mat-file ./example/1mkcA00.frobenius.mat --alignment-file ./example/1mkcA00.aln --pdb-file ./example/1mkcA00.pdb --plot-out ./example/ --seq-sep 4 --contact-threshold 8 --apc
 
 ## License
 
