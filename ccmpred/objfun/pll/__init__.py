@@ -33,7 +33,7 @@ class PseudoLikelihood():
         self.x = self.structured_to_linear(self.x_single, self.x_pair)
 
         #use msa counts with pseudo counts - numerically more stable?? but gradient does not fit ll fct!!
-        self.freqs_single, self.freqs_pair = ccm.pseudocounts.freqs
+        #self.freqs_single, self.freqs_pair = ccm.pseudocounts.freqs
         #msa_counts_single, msa_counts_pair = neff * freqs_single, neff * freqs_pair
         #use msa counts without pseudo counts
         msa_counts_single, msa_counts_pair = ccm.pseudocounts.counts
@@ -46,12 +46,13 @@ class PseudoLikelihood():
             msa_counts_pair[i, i, :, :] = 0
 
         #non_gapped counts
-        self.Ni = msa_counts_single.sum(1)
-        self.Nij = msa_counts_pair.sum(3).sum(2)
+        # self.Ni = msa_counts_single.sum(1)
+        # self.Nij = msa_counts_pair.sum(3).sum(2)
 
         #no pseudo counts in gradient calculation
         #pairwise gradient is two-fold
-        self.g_init = ccmpred.parameter_handling.structured_to_linear(msa_counts_single, 2 * msa_counts_pair)
+        self.g_init = ccmpred.parameter_handling.structured_to_linear(
+            msa_counts_single, 2 * msa_counts_pair)
 
         self.nsingle = self.ncol * 21
         self.nsingle_padded = self.nsingle + 32 - (self.nsingle % 32)
@@ -79,34 +80,13 @@ class PseudoLikelihood():
         fx, g = ccmpred.objfun.pll.cext.evaluate(x, self.g, self.g2, self.weights, self.msa)
         g -= self.g_init
 
-
         x_single, x_pair = self.linear_to_structured(x)
-        g_single, g_pair = self.linear_to_structured(g)
-
-
-        # print("x_single[0,0]: {0}".format(x_single[0,0]))
-        # print("g_single[0,0]: {0}".format(g_single[0,0]))
-        # print("---------------------------------------------")
-        # print("x_single[1,0]: {0}".format(x_single[1,0]))
-        # print("g_single[1,0]: {0}".format(g_single[1,0]))
-        # print("---------------------------------------------")
 
         #pairwise gradient is two-fold !
         fx_reg, g_single_reg, g_pair_reg = self.regularization(x_single, x_pair)
         g_pair_reg *= 2
         g_reg = self.structured_to_linear(g_single_reg, g_pair_reg)
         fx += fx_reg
-        #g += g_reg
-
-        # print("lambda_single: {0}".format(self.regularization.lambda_single))
-        # print("lambda_pair: {0}".format(self.regularization.lambda_pair))
-        # print("x_single[0,0]: {0}".format(x_single[0,0]))
-        # print("g_single_reg[0,0]: {0}".format(g_single_reg[0,0]))
-        # print("---------------------------------------------")
-        # print("x_single[1,0]: {0}".format(x_single[1,0]))
-        # print("g_single_reg[1,0]: {0}".format(g_single_reg[1,0]))
-        # print("---------------------------------------------")
-
 
         return fx, g, g_reg
 
