@@ -1,7 +1,7 @@
 import numpy as np
 import json
 import gzip
-
+import os
 
 def frobenius_score(x):
     """
@@ -67,7 +67,7 @@ def compute_scaling_factor_eta(x_pair, ui, uij, nr_states, squared=True):
 
 def compute_local_correction(single_freq, x_pair, Neff, lambda_w, mat, squared=True, entropy=False):
 
-    print("\nApply local correction  with squared={0} and entropy={1}.".format(squared, entropy))
+    print("\nApply entropy correction.".format(squared, entropy))
 
     #ignore gap positions
     nr_states = 20
@@ -106,4 +106,28 @@ def write_matrix(matfile, mat, meta):
             f.write("#>META> ".encode("utf-8") + json.dumps(meta).encode("utf-8") + b"\n")
         f.close()
 
+def read_matrix(matfile):
+    """
+    Read matrix file
+    :param mat_file: path to matrix file
+    :return: matrix
+    """
 
+    if not os.path.exists(matfile):
+        raise IOError("Matrix File " + str(matfile) + "cannot be found. ")
+
+
+    ### Read contact map (matfile can also be compressed file)
+    mat = np.genfromtxt(matfile, comments="#")
+
+    ### Read meta data from mat file
+    meta = {}
+    with open(matfile) as f:
+        for line in f:
+            if '#>META>' in line:
+                meta = json.loads(line.split("> ")[1])
+
+    if len(meta) == 0:
+        print(str(matfile) + " does not contain META info. (Line must start with #META!)")
+
+    return mat, meta
