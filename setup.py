@@ -31,6 +31,12 @@ setup(
         ext(
             'ccmpred.counts.libmsacounts',
             sources=['ccmpred/counts/msacounts.c']
+        ),        
+        ext(
+            'ccmpred.gaps.cext.libgaps',
+            sources=['ccmpred/gaps/cext/gaps.c'],
+            extra_compile_args=['-g','-std=c99'],
+            extra_link_args=['-g'],
         ),
         ext(
             'ccmpred.weighting.cext.libweighting',
