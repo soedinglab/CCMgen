@@ -19,7 +19,7 @@ Print available command line options:
 
 	python ccmpred.py -h
 
-Use pseudo-likelihood maximization to optimize couplings. Results differ slightly from C implementation of [CCMpred](https://github.com/soedinglab/CCMpred) due to the following modifications:
+Per default (`--ofn-pll`) CCMpredPy maximizes the pseudo-likelihood to obtain couplings. Results differ slightly from the C implementation of [CCMpred](https://github.com/soedinglab/CCMpred) due to the following modifications:
 - single potential regularization prior is centered at ML estimate of single potentials v*
 - single potentials are initialized at v*
 - regularization strength lambda_v = 10 in order to achieve comparable results to C implementation of [CCMpred](https://github.com/soedinglab/CCMpred)
@@ -29,17 +29,17 @@ This command will print the optimization progress to stdout and produce the file
 
 	python ccmpred.py ./example/1mkcA00.aln ./example/1mkcA00.mat
 
-The opimization progress can be visualized as an interactive plotly graph by additionaly specifying the --plot_opt_progress flag. The html containing the graph is updated during optimization and will be written to ./example/1mkcA00.opt_progress.html.
+The opimization progress can be visualized as an interactive plotly graph by additionaly specifying the `--plot_opt_progress flag`. The html file containing the graph is updated during optimization and will be written to ./example/1mkcA00.opt_progress.html.
 
 	python ccmpred.py --plot_opt_progress ./example/1mkcA00.aln ./example/1mkcA00.mat
 
-Bias correction can be switched on by using the flags --apc and --entropy-correction. Using these two additional flags will generate three contact map files ./1mkcA00.frobnenius.mat, ./1mkcA00.frobnenius.apc.mat and ./1mkcA00.frobnenius.ec.mat:
+Bias correction can be switched on by using the flags `--apc` and `--entropy-correction`. Using these two additional flags will generate three contact map files: `./example/1mkcA00.frobnenius.mat`, `./example/1mkcA00.frobnenius.apc.mat` and `./example/1mkcA00.frobnenius.ec.mat`:
 
-	python ccmpred.py --apc --entropy-correction ./example/1mkcA00.aln ./1mkcA00.mat
+	python ccmpred.py --apc --entropy-correction ./example/1mkcA00.aln ./example/1mkcA00.mat
 
-Contact maps can be visualized using the script plot_contact_map.py. By specifying a PDB file (numbering of amino acids starting at 1!), the distance matrix is plotted in the lower right triangle. By specifying an alignment file, the percentage of gaps and the entropy are plotted as subplot.
+Contact maps can be visualized using the script `plot_contact_map.py`. By specifying a PDB file (numbering of amino acids starting at 1!), the distance matrix is plotted in the lower right triangle. By specifying an alignment file, the percentage of gaps and the entropy are plotted as subplot.
 
-python plot_contact_map.py --mat-file ./example/1mkcA00.frobenius.mat --alignment-file ./example/1mkcA00.aln --pdb-file ./example/1mkcA00.pdb --plot-out ./example/ --seq-sep 4 --contact-threshold 8 --apc
+	python plot_contact_map.py --mat-file ./example/1mkcA00.frobenius.mat --alignment-file ./example/1mkcA00.aln --pdb-file ./example/1mkcA00.pdb --plot-out ./example/ --seq-sep 4 --contact-threshold 8 --apc
 
 ## License
 
