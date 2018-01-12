@@ -15,6 +15,8 @@ Alternatively, you can install CCMpredPy as a package directly from this reposit
 	
 Note: When installing on osx, make sure to use an appropriate gcc compiler and not clang, e.g. by setting `export CC=/usr/local/Cellar/gcc/X.X.X/bin/gcc-X` if gcc was installed via brew.
 
+Note2: Tested with Python 2.7.14
+
 ## Example Usage via Command Line
 
 Print available command line options:
