@@ -43,5 +43,5 @@ setup(
             sources=['ccmpred/weighting/cext/weighting.c']
         )
     ],
-    scripts=['ccmpred.py', 'replace_gaps.py', 'plot_contact_map.py']
+    scripts=['run_ccmpred.py', 'replace_gaps.py', 'plot_contact_map.py']
 )
