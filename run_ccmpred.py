@@ -3,7 +3,7 @@ import argparse
 import sys
 import os
 
-
+from ccmpred import CCMpred
 import ccmpred.logo
 import ccmpred.objfun.pll as pll
 import ccmpred.objfun.cd as cd
@@ -11,7 +11,7 @@ import ccmpred.algorithm.gradient_descent as gd
 import ccmpred.algorithm.conjugate_gradients as cg
 import ccmpred.algorithm.numdiff as nd
 import ccmpred.algorithm.adam as ad
-import ccmpred.CCMpred
+
 
 EPILOG = """
 CCMpredPy is a fast python implementation of the maximum pseudo-likelihood class of contact prediction methods. 
