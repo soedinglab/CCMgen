@@ -9,9 +9,11 @@ Clone this repository to your own computer using `git clone`. Then, you can comp
 
 	python setup.py build_ext --inplace
   
-Alternatively, you can install ccmpredpy as a package directly from this repository using pip by running:
+Alternatively, you can install CCMpredPy as a package directly from this repository using pip by running:
 
 	pip install git+https://github.com/susannvorberg/CCmpredPy@master
+	
+Note: When installing on osx, make sure to use the gcc compiler and not clang, e.g. by setting `export CC=/usr/local/Cellar/gcc/X.X.X/bin/gcc-X` if gcc was installed via brew.
 
 ## Example Usage via Command Line
 
