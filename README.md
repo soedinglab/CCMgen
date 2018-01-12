@@ -11,7 +11,7 @@ Clone this repository to your own computer using `git clone`. Then, you can comp
   
 Alternatively, you can install ccmpredpy as a package directly from this repository using pip by running:
 
-	pip install git+https://bitbucket.org/svorberg/ccmpred-new@master
+	pip install git+https://github.com/susannvorberg/CCmpredPy@master
 
 ## Example Usage via Command Line
 
