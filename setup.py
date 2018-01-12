@@ -11,11 +11,11 @@ setup(
     version="1.0.0",
     description="Residue-residue contact prediction from correlated mutations predicted quickly and precisely",
     license="AGPLv3",
-    author="Susann Vorberg",
+    author="Stefan Seemayer, Susann Vorberg",
     author_email="Susann.Vorberg@gmail.com",
-    url="https://bitbucket.org/svorberg/ccmpred-new",
+    url="https://github.com/susannvorberg/CCmpredPy",
     packages=find_packages(),
-    install_requires=['msgpack-python', 'numpy', 'plotly', 'scipy', 'pandas', 'biopython'],
+    install_requires=['msgpack-python', 'numpy', 'plotly', 'scipy', 'pandas', 'biopython', 'colorlover'],
     ext_modules=[
         ext(
             'ccmpred.objfun.pll.cext.libpll',
