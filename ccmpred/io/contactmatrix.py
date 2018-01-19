@@ -29,7 +29,7 @@ def apc(cmat):
 
     return cmat - apc_term
 
-def compute_scaling_factor_eta(x_pair, ui, uij, nr_states, squared=True):
+def compute_scaling_factor_eta(x_pair, uij, nr_states, squared=True):
     """
     Set the strength of the entropy correction by optimization eta with least squares
 
@@ -49,8 +49,7 @@ def compute_scaling_factor_eta(x_pair, ui, uij, nr_states, squared=True):
         prod = x_pair_sq[:,:,:nr_states,:nr_states] * uij #(L,L,21,21) (L,L,21,21)
         scaling_factor_eta = np.sum(prod)
 
-        sum_ui_sq = np.sum(ui * ui)
-        denominator = sum_ui_sq * sum_ui_sq
+        denominator = np.sum(uij * uij)
         scaling_factor_eta /= denominator
 
     else:
@@ -82,7 +81,7 @@ def compute_local_correction(single_freq, x_pair, Neff, lambda_w, mat, squared=T
     uij = np.transpose(np.multiply.outer(ui, ui), (0,2,1,3))
 
     ### compute scaling factor eta
-    scaling_factor_eta = compute_scaling_factor_eta(x_pair, ui, uij, nr_states, squared=squared)
+    scaling_factor_eta = compute_scaling_factor_eta(x_pair, uij, nr_states, squared=squared)
 
     if not squared:
         correction = scaling_factor_eta * np.sqrt(np.sum(uij, axis=(3, 2)))
