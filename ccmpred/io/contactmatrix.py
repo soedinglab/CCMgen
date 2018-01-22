@@ -64,12 +64,10 @@ def compute_scaling_factor_eta(x_pair, uij, nr_states, squared=True):
 
     return scaling_factor_eta
 
-def compute_local_correction(single_freq, x_pair, Neff, lambda_w, mat, squared=True, entropy=False):
+def compute_local_correction(single_freq, x_pair, Neff, lambda_w, mat, squared=True, entropy=False, nr_states=20):
 
-    print("\nApply entropy correction.".format(squared, entropy))
+    print("\nApply entropy correction (using {0} states).".format(nr_states))
 
-    #ignore gap positions
-    nr_states = 20
 
     #correct for fractional counts
     N_factor = np.sqrt(Neff) * (1.0 / lambda_w)
@@ -89,6 +87,42 @@ def compute_local_correction(single_freq, x_pair, Neff, lambda_w, mat, squared=T
         correction = scaling_factor_eta * np.sum(uij, axis=(3, 2))
 
     return scaling_factor_eta, mat - correction
+
+def compute_joint_entropy_correction(pair_freq, neff, lambda_w, braw_x_pair, nr_states = 21):
+
+    print("\nApply joint entropy correction (using {0} states).".format(nr_states))
+
+    N_factor = neff / (lambda_w * lambda_w)
+
+    joint_entropy = - np.sum(
+        pair_freq[:, :, :nr_states, :nr_states] * np.log2(pair_freq[:, :, :nr_states, :nr_states]),
+        axis=(3, 2)
+    )
+    uij = N_factor * joint_entropy
+    c_ij = frobenius_score(braw_x_pair)
+
+    ### compute scaling factor eta
+    scaling_factor = np.sum(c_ij * uij) / np.sum(uij * uij)
+
+    corrected_mat = c_ij - scaling_factor * uij
+
+    return scaling_factor, corrected_mat
+
+def compute_corrected_mat_sergey_style(pair_freq, braw_x_pair, nr_states = 21):
+
+    print("\nApply sergeys joint entropy correction (using {0} states).".format(nr_states))
+
+    joint_entropy = - np.sum(
+        pair_freq[:, :, :nr_states, :nr_states] * np.log2(pair_freq[:, :, :nr_states, :nr_states]),
+        axis=(3, 2)
+    )
+    correction  = joint_entropy + np.exp(-joint_entropy)
+
+    corrected_braw = braw_x_pair[:, :, :nr_states, :nr_states] / correction[:,:, np.newaxis, np.newaxis]
+
+    mat = frobenius_score(corrected_braw)
+
+    return(mat)
 
 def write_matrix(matfile, mat, meta):
 

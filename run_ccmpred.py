@@ -83,6 +83,8 @@ def parse_args():
     grp_corr = parser.add_argument_group("Corrections")
     grp_corr.add_argument("--apc",                  dest="apc",  action="store_true", default=False,  help="Apply average product correction (APC). [default: %(default)s] ")
     grp_corr.add_argument("--entropy-correction",   dest="entropy_correction", action="store_true", default=False, help="Apply entropy correction. [default: %(default)s]")
+    grp_corr.add_argument("--joint-entropy-correction", dest="joint_entropy_correction", action="store_true", default=False, help="Apply joint entropy correction. [default: %(default)s]")
+    grp_corr.add_argument("--sergeys-joint-entropy-correction", dest="sergeys-joint_entropy_correction", action="store_true", default=False, help="Apply sergeys joint entropy correction. [default: %(default)s]")
 
 
     grp_out = parser.add_argument_group("Output Options")
@@ -258,7 +260,9 @@ def main():
     # and bias correction to contact score
     ccm.compute_correction(
         apc=opt.apc,
-        entropy_correction=opt.entropy_correction
+        entropy_correction=opt.entropy_correction,
+        joint_entropy=opt.joint_entropy_correction,
+        sergeys_jec=opt.sergeys_joint_entropy_correction
     )
 
     #specify meta data, and write (corrected) contact matrices to files
