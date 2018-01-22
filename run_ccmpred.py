@@ -84,7 +84,7 @@ def parse_args():
     grp_corr.add_argument("--apc",                  dest="apc",  action="store_true", default=False,  help="Apply average product correction (APC). [default: %(default)s] ")
     grp_corr.add_argument("--entropy-correction",   dest="entropy_correction", action="store_true", default=False, help="Apply entropy correction. [default: %(default)s]")
     grp_corr.add_argument("--joint-entropy-correction", dest="joint_entropy_correction", action="store_true", default=False, help="Apply joint entropy correction. [default: %(default)s]")
-    grp_corr.add_argument("--sergeys-joint-entropy-correction", dest="sergeys-joint_entropy_correction", action="store_true", default=False, help="Apply sergeys joint entropy correction. [default: %(default)s]")
+    grp_corr.add_argument("--sergeys-joint-entropy-correction", dest="sergeys_joint_entropy_correction", action="store_true", default=False, help="Apply sergeys joint entropy correction. [default: %(default)s]")
 
 
     grp_out = parser.add_argument_group("Output Options")
