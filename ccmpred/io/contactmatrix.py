@@ -95,7 +95,7 @@ def compute_local_correction(
 
 def compute_joint_entropy_correction(pair_freq, neff, lambda_w, x_pair, nr_states = 21, log=np.log2):
 
-    print("\nApply joint entropy correction (using {0} states).".format(nr_states))
+    print("\nApply joint entropy correction (using {0} states and {1}).".format(nr_states, log.__name__))
 
     N_factor = neff / (lambda_w * lambda_w)
 
@@ -115,7 +115,7 @@ def compute_joint_entropy_correction(pair_freq, neff, lambda_w, x_pair, nr_state
 
 def compute_corrected_mat_sergey_style(pair_freq, x_pair, nr_states = 21, log=np.log2):
 
-    print("\nApply sergeys joint entropy correction (using {0} states).".format(nr_states))
+    print("\nApply sergeys joint entropy correction (using {0} states and {1}).".format(nr_states, log.__name__))
 
     joint_entropy = - np.sum(
         pair_freq[:, :, :nr_states, :nr_states] * log(pair_freq[:, :, :nr_states, :nr_states]),
