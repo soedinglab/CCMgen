@@ -391,11 +391,6 @@ class CCMpred():
         print("\n{0} with code {code} -- {message}\n".format(condition, **self.algret))
 
 
-        if self.max_gap_ratio < 100:
-            self.x_single, self.x_pair = gaps.backinsert_gapped_positions(self.x_single, self.x_pair, self.gapped_positions)
-            self.L = self.x_single.shape[0]
-
-
 
         # #Refine with persistent CD
         # refine=False
@@ -565,8 +560,15 @@ class CCMpred():
         """
 
         for mat_name, mat_dict in self.mats.iteritems():
+
+            mat = mat_dict['mat']
+            if self.max_gap_ratio < 100:
+
+                mat = gaps.backinsert_gapped_positions_mat(mat, self.gapped_positions)
+                self.L = mat.shape[0]
+
             meta = self.create_meta_data(mat_name)
-            io.contactmatrix.write_matrix(mat_dict['mat_file'], mat_dict['mat'], meta)
+            io.contactmatrix.write_matrix(mat_dict['mat_file'], mat, meta)
 
     def write_binary_raw(self, out_binary_raw_file):
         """
@@ -575,6 +577,11 @@ class CCMpred():
         :param out_binary_raw_file: path to out file
         :return:
         """
+
+        if self.max_gap_ratio < 100:
+            self.x_single, self.x_pair = gaps.backinsert_gapped_positions(
+                self.x_single, self.x_pair, self.gapped_positions)
+            self.L = self.x_single.shape[0]
 
         self.out_binary_raw_file = out_binary_raw_file
         meta = self.create_meta_data()

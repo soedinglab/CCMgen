@@ -13,6 +13,12 @@ def remove_gaps_col_freqs(msa):
     return remove_gaps_probs(msa, counts)
 
 
+def backinsert_gapped_positions_mat(mat, gapped_positions):
+
+    for position in gapped_positions:
+        mat = np.insert(mat, position, 0, axis=0)
+        mat = np.insert(mat, position, 0, axis=1)
+
 def backinsert_gapped_positions(x_single, x_pair, gapped_positions):
 
     for position in gapped_positions:
