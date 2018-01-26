@@ -142,7 +142,7 @@ def parse_args():
 
     grp_gp = parser.add_argument_group("Gap Treatment")
     grp_gp.add_argument("--max_gap_ratio",  dest="max_gap_ratio",   default=100, type=int, help="Ignore alignment positions with > MAX_GAP_RATIO percent gaps. [default: %(default)s == no removal of gaps]")
-
+    grp_gp.add_argument("--min_coverage",   dest="min_coverage",    default=0, type=int,   help="Remove sequences that do not cover at least MIN_COVERAGE percent of positions. [default: %(default)s == no removal of sequences]")
 
     grp_pc = parser.add_argument_group("Pseudocounts")
     grp_pc.add_argument("--pc-uniform",     dest="pseudocounts", action="store_const", const="uniform_pseudocounts", default="uniform_pseudocounts",     help="Use uniform pseudocounts, e.g 1/21 [default: %(default)s]")
@@ -209,7 +209,7 @@ def main():
     ##############################
 
     #read alignment and compute amino acid counts and frequencies
-    ccm.read_alignment(opt.aln_format, opt.max_gap_ratio)
+    ccm.read_alignment(opt.aln_format, opt.max_gap_ratio, opt.min_coverage)
     ccm.compute_sequence_weights(opt.weight, opt.wt_ignore_gaps, opt.wt_cutoff)
     ccm.compute_frequencies(opt.pseudocounts, opt.pseudocount_single,  opt.pseudocount_pair)
 

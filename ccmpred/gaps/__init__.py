@@ -23,6 +23,22 @@ def backinsert_gapped_positions(x_single, x_pair, gapped_positions):
     return x_single, x_pair
 
 
+def remove_gapped_sequences(msa, min_coverage):
+
+    if min_coverage <= 0:
+        return msa
+
+    msa_gap_count_per_sequence = (msa == 20).sum(1)
+
+    max_gap_percentage_per_sequence = (msa_gap_count_per_sequence / 100.0 * msa.shape[1])
+
+    high_coverage = np.where(max_gap_percentage_per_sequence <  min_coverage)
+
+    print("Removed {0} sequences with > {1} percent gaps.".format(
+        len(msa.shape[1] - high_coverage[0]), min_coverage/100.0))
+
+    return np.ascontiguousarray(msa[high_coverage[0], :])
+
 def remove_gapped_positions(msa, max_gap_percentage):
 
     if max_gap_percentage >= 100:
@@ -35,8 +51,8 @@ def remove_gapped_positions(msa, max_gap_percentage):
     ungapped_positions  = np.where(msa_gap_counts <  max_gap_count)
     gapped_positions    = np.where(msa_gap_counts >=  max_gap_count)
 
-    if max_gap_percentage < 100:
-        print("Removed {0} alignment positions with > {1} percent gaps.".format(
-            len(gapped_positions[0]), max_gap_percentage/100.0))
+
+    print("Removed {0} alignment positions with > {1} percent gaps.".format(
+        len(gapped_positions[0]), max_gap_percentage/100.0))
 
     return np.ascontiguousarray(msa[:, ungapped_positions[0]]), gapped_positions[0]

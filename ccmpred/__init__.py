@@ -31,7 +31,8 @@ class CCMpred():
 
         self.msa            = None
         self.gapped_positions = None
-        self.max_gap_ratio  = None
+        self.max_gap_ratio  = 100
+        self.min_coverage   = 0
         self.N              = None
         self.L              = None
         self.neff           = None
@@ -117,6 +118,7 @@ class CCMpred():
         meta['workflow'][0]['msafile']['ncol'] = self.L
         meta['workflow'][0]['msafile']['file'] = self.alignment_file
         meta['workflow'][0]['msafile']['max_gap_ratio'] = self.max_gap_ratio
+        meta['workflow'][0]['msafile']['min_coverage'] = self.min_coverage
 
         meta['workflow'][0]['pseudocounts'] = {}
         meta['workflow'][0]['pseudocounts']['pseudocount_type'] = self.pseudocounts.pseudocount_type
@@ -189,10 +191,16 @@ class CCMpred():
 
         return meta
 
-    def read_alignment(self, aln_format="psicov", max_gap_ratio=100):
+    def read_alignment(self, aln_format="psicov", max_gap_ratio=100, min_coverage=0):
         self.msa = io.read_msa(self.alignment_file, aln_format)
-        self.msa, self.gapped_positions = gaps.remove_gapped_positions(self.msa, max_gap_ratio)
-        self.max_gap_ratio = max_gap_ratio
+
+        if min_coverage > 0:
+            self.msa = gaps.remove_gapped_sequences(self.msa, min_coverage)
+            self.min_coverage=min_coverage
+
+        if max_gap_ratio < 100:
+            self.msa, self.gapped_positions = gaps.remove_gapped_positions(self.msa, max_gap_ratio)
+            self.max_gap_ratio = max_gap_ratio
 
         self.N = self.msa.shape[0]
         self.L = self.msa.shape[1]
