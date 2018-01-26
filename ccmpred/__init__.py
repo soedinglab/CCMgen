@@ -139,6 +139,8 @@ class CCMpred():
                 meta['workflow'][0]['contact_map']['scaling_factor_eta'] = self.mats[mat_name]['scaling_factor_eta']
             if 'nr_states' in self.mats[mat_name].keys():
                 meta['workflow'][0]['contact_map']['nr_states'] = self.mats[mat_name]['nr_states']
+            if 'log' in self.mats[mat_name].keys():
+                meta['workflow'][0]['contact_map']['nr_states'] = self.mats[mat_name]['log']
             meta['workflow'][0]['contact_map']['score'] = self.mats[mat_name]['score']
             meta['workflow'][0]['contact_map']['matfile'] = self.mats[mat_name]['mat_file']
 
@@ -467,61 +469,66 @@ class CCMpred():
                     'correction': "apc"
                     }
 
-            if entropy_correction and score == "frobenius":
+            for nr_states, log in [(20, np.log2), (21, np.log2), (21, np.log)]:
 
-                # use amino acid frequencies including gap states and with pseudo-counts
-                single_freq = self.pseudocounts.freqs[0]
+                if entropy_correction and score == "frobenius":
 
-                scaling_factor_eta, mat_corrected = io.contactmatrix.compute_local_correction(
-                    single_freq, self.x_pair, self.neff, self.regularization.lambda_pair,
-                    score_matrix, squared=False, entropy=True
-                )
+                    # use amino acid frequencies including gap states and with pseudo-counts
+                    single_freq = self.pseudocounts.freqs[0]
 
-                self.mats[score_mat+"-ec"] = {
-                    'mat': mat_corrected,
-                    'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score + ".ec." +
-                                mat_name.split(".")[-1],
-                    'score': score,
-                    'correction': "entropy_correction",
-                    'scaling_factor_eta': scaling_factor_eta
-                }
+                    scaling_factor_eta, mat_corrected = io.contactmatrix.compute_local_correction(
+                        single_freq, self.x_pair, self.neff, self.regularization.lambda_pair,
+                        squared=False, entropy=True, nr_states=nr_states, log=log
+                    )
+
+                    self.mats[score_mat+"-ec"] = {
+                        'mat': mat_corrected,
+                        'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score + ".ec." +
+                                    mat_name.split(".")[-1],
+                        'score': score,
+                        'correction': "entropy_correction",
+                        'scaling_factor_eta': scaling_factor_eta,
+                        'nr_states': nr_states,
+                        'log': log.__name__
+                    }
 
 
-            if joint_entropy and score == "frobenius":
-                # use amino acid frequencies including gap states and with pseudo-counts
-                pair_freq = self.pseudocounts.freqs[1]
-                nr_states = 21
+                if joint_entropy and score == "frobenius":
+                    # use amino acid frequencies including gap states and with pseudo-counts
+                    pair_freq = self.pseudocounts.freqs[1]
 
-                scaling_factor_eta, mat_corrected = io.contactmatrix.compute_joint_entropy_correction(
-                    pair_freq, self.neff, self.regularization.lambda_pair, self.x_pair, nr_states = nr_states
-                )
+                    scaling_factor_eta, mat_corrected = io.contactmatrix.compute_joint_entropy_correction(
+                        pair_freq, self.neff, self.regularization.lambda_pair, self.x_pair,
+                        nr_states = nr_states, log=log
+                    )
 
-                self.mats[score_mat + "-jec"] = {
-                    'mat': mat_corrected,
-                    'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score + ".jec." +
-                                mat_name.split(".")[-1],
-                    'score': score,
-                    'correction': "joint_entropy_correction",
-                    'scaling_factor_eta': scaling_factor_eta,
-                    'nr_states': nr_states
-                }
+                    self.mats[score_mat + "-jec"] = {
+                        'mat': mat_corrected,
+                        'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score + ".jec." +
+                                    mat_name.split(".")[-1],
+                        'score': score,
+                        'correction': "joint_entropy_correction",
+                        'scaling_factor_eta': scaling_factor_eta,
+                        'nr_states': nr_states,
+                        'log': log.__name__
+                    }
 
-            if sergeys_jec and score == "frobenius":
-                # use amino acid frequencies including gap states and with pseudo-counts
-                pair_freq = self.pseudocounts.freqs[1]
-                nr_states = 21
+                if sergeys_jec and score == "frobenius":
+                    # use amino acid frequencies including gap states and with pseudo-counts
+                    pair_freq = self.pseudocounts.freqs[1]
 
-                mat_corrected = io.contactmatrix.compute_corrected_mat_sergey_style(
-                    pair_freq, self.x_pair, nr_states = nr_states)
+                    mat_corrected = io.contactmatrix.compute_corrected_mat_sergey_style(
+                        pair_freq, self.x_pair, nr_states = nr_states, log=log)
 
-                self.mats[score_mat + "-sjec"] = {
-                    'mat': mat_corrected,
-                    'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score + ".sjec." +
-                                mat_name.split(".")[-1],
-                    'score': score,
-                    'correction': "sergeys joint entropy correction",
-                    'nr_states': nr_states
-                }
+                    self.mats[score_mat + "-sjec"] = {
+                        'mat': mat_corrected,
+                        'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score + ".sjec." +
+                                    mat_name.split(".")[-1],
+                        'score': score,
+                        'correction': "sergeys joint entropy correction",
+                        'nr_states': nr_states,
+                        'log': log.__name__
+                    }
 
     def write_sampled_alignment(self, cd_alnfile):
 

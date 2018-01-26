@@ -35,19 +35,19 @@ def compute_scaling_factor_eta(x_pair, uij, nr_states, squared=True):
 
     Minimize sum_i,j sum_a,b (w_ijab^2 -  eta * u_ia * u_jb)^2
 
-    :param x_pair:
-    :param ui:
+    :param x_pair:      raw coupling scores
     :param uij:
-    :param nr_states:
+    :param nr_states:   normalize entropy wrt 20 or 21 characters
     :param squared:
     :return:
     """
 
+    squared_sum_couplings = np.sum(x_pair[:,:,:20,:20] * x_pair[:,:,:20,:20], axis=(3,2))
+
     if squared:
 
-        x_pair_sq = x_pair * x_pair
-        prod = x_pair_sq[:,:,:nr_states,:nr_states] * uij #(L,L,21,21) (L,L,21,21)
-        scaling_factor_eta = np.sum(prod)
+        squared_sum_entropy = np.sum(uij[:,:,:nr_states,:nr_states], axis=(3,2))
+        scaling_factor_eta = np.sum(squared_sum_couplings * squared_sum_entropy)
 
         denominator = np.sum(uij * uij)
         scaling_factor_eta /= denominator
@@ -55,16 +55,19 @@ def compute_scaling_factor_eta(x_pair, uij, nr_states, squared=True):
     else:
 
         #According to Stefan's CCMgen paper
-        c_ij =  np.sqrt(np.sum(x_pair * x_pair, axis=(3,2)))
-        e_ij =  np.sqrt(np.sum(uij, axis=(3,2)))
+        #both are LxL matrices
+        c_ij =  np.sqrt(squared_sum_couplings)
+        e_ij =  np.sqrt(np.sum(uij[:,:,:nr_states,:nr_states], axis=(3,2)))
 
         scaling_factor_eta = np.sum(c_ij  * e_ij)
-        denominator = np.sum(uij)
+        denominator = np.sum(uij[:,:,:nr_states,:nr_states])
         scaling_factor_eta /= denominator
 
     return scaling_factor_eta
 
-def compute_local_correction(single_freq, x_pair, Neff, lambda_w, mat, squared=True, entropy=False, nr_states=20):
+def compute_local_correction(
+        single_freq, x_pair, Neff, lambda_w, squared=True,
+        entropy=False, nr_states=20, log=np.log2):
 
     print("\nApply entropy correction (using {0} states).".format(nr_states))
 
@@ -73,7 +76,7 @@ def compute_local_correction(single_freq, x_pair, Neff, lambda_w, mat, squared=T
     N_factor = np.sqrt(Neff) * (1.0 / lambda_w)
 
     if entropy:
-        ui = N_factor * single_freq[:, :nr_states] * np.log2(single_freq[:, :nr_states])
+        ui = N_factor * single_freq[:, :nr_states] * log(single_freq[:, :nr_states])
     else:
         ui = N_factor * single_freq[:, :nr_states] * (1 - single_freq[:, :nr_states])
     uij = np.transpose(np.multiply.outer(ui, ui), (0,2,1,3))
@@ -82,24 +85,26 @@ def compute_local_correction(single_freq, x_pair, Neff, lambda_w, mat, squared=T
     scaling_factor_eta = compute_scaling_factor_eta(x_pair, uij, nr_states, squared=squared)
 
     if not squared:
+        mat = frobenius_score(x_pair)
         correction = scaling_factor_eta * np.sqrt(np.sum(uij, axis=(3, 2)))
     else:
+        mat = np.sum(x_pair * x_pair, axis=(2, 3))
         correction = scaling_factor_eta * np.sum(uij, axis=(3, 2))
 
     return scaling_factor_eta, mat - correction
 
-def compute_joint_entropy_correction(pair_freq, neff, lambda_w, braw_x_pair, nr_states = 21):
+def compute_joint_entropy_correction(pair_freq, neff, lambda_w, x_pair, nr_states = 21, log=np.log2):
 
     print("\nApply joint entropy correction (using {0} states).".format(nr_states))
 
     N_factor = neff / (lambda_w * lambda_w)
 
     joint_entropy = - np.sum(
-        pair_freq[:, :, :nr_states, :nr_states] * np.log2(pair_freq[:, :, :nr_states, :nr_states]),
+        pair_freq[:, :, :nr_states, :nr_states] * log(pair_freq[:, :, :nr_states, :nr_states]),
         axis=(3, 2)
     )
     uij = N_factor * joint_entropy
-    c_ij = frobenius_score(braw_x_pair)
+    c_ij = frobenius_score(x_pair)
 
     ### compute scaling factor eta
     scaling_factor = np.sum(c_ij * uij) / np.sum(uij * uij)
@@ -108,19 +113,19 @@ def compute_joint_entropy_correction(pair_freq, neff, lambda_w, braw_x_pair, nr_
 
     return scaling_factor, corrected_mat
 
-def compute_corrected_mat_sergey_style(pair_freq, braw_x_pair, nr_states = 21):
+def compute_corrected_mat_sergey_style(pair_freq, x_pair, nr_states = 21, log=np.log2):
 
     print("\nApply sergeys joint entropy correction (using {0} states).".format(nr_states))
 
     joint_entropy = - np.sum(
-        pair_freq[:, :, :nr_states, :nr_states] * np.log2(pair_freq[:, :, :nr_states, :nr_states]),
+        pair_freq[:, :, :nr_states, :nr_states] * log(pair_freq[:, :, :nr_states, :nr_states]),
         axis=(3, 2)
     )
-    correction  = joint_entropy + np.exp(-joint_entropy)
+    correction  = 1.0 + joint_entropy
 
-    corrected_braw = braw_x_pair[:, :, :nr_states, :nr_states] / correction[:,:, np.newaxis, np.newaxis]
-
-    mat = frobenius_score(corrected_braw)
+    #frobenius is computed on 20x20 (no gaps)
+    #whereas joint entropy might be normalized using 21 states
+    mat = frobenius_score(x_pair) /  correction
 
     return(mat)
 
