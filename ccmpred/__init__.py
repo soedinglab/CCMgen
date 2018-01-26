@@ -477,69 +477,77 @@ class CCMpred():
                     'correction': "apc"
                     }
 
-            for nr_states, log in [(20, np.log2), (21, np.log2), (21, np.log)]:
-
-                if entropy_correction and score == "frobenius":
-
-                    # use amino acid frequencies including gap states and with pseudo-counts
-                    single_freq = self.pseudocounts.freqs[0]
-
-                    scaling_factor_eta, mat_corrected = io.contactmatrix.compute_local_correction(
-                        single_freq, self.x_pair, self.neff, self.regularization.lambda_pair,
-                        squared=False, entropy=True, nr_states=nr_states, log=log
-                    )
-
-                    self.mats[score_mat+"-ec."+ str(nr_states) + "." + str(log.__name__)] = {
-                        'mat': mat_corrected,
-                        'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score +
-                                    ".ec." + str(nr_states) + "." + str(log.__name__) + "." +
-                                    mat_name.split(".")[-1],
-                        'score': score,
-                        'correction': "entropy_correction",
-                        'scaling_factor_eta': scaling_factor_eta,
-                        'nr_states': nr_states,
-                        'log': log.__name__
-                    }
 
 
-                if joint_entropy and score == "frobenius":
-                    # use amino acid frequencies including gap states and with pseudo-counts
-                    pair_freq = self.pseudocounts.freqs[1]
+            if entropy_correction and score == "frobenius":
+                nr_states = 20
+                log = np.log2
 
-                    scaling_factor_eta, mat_corrected = io.contactmatrix.compute_joint_entropy_correction(
-                        pair_freq, self.neff, self.regularization.lambda_pair, self.x_pair,
-                        nr_states = nr_states, log=log
-                    )
+                # use amino acid frequencies including gap states and with pseudo-counts
+                single_freq = self.pseudocounts.freqs[0]
 
-                    self.mats[score_mat + "-jec."+ str(nr_states) + "." + str(log.__name__)] = {
-                        'mat': mat_corrected,
-                        'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score +
-                                    ".jec." + str(nr_states) + "." + str(log.__name__) + "." +
-                                    mat_name.split(".")[-1],
-                        'score': score,
-                        'correction': "joint_entropy_correction",
-                        'scaling_factor_eta': scaling_factor_eta,
-                        'nr_states': nr_states,
-                        'log': log.__name__
-                    }
+                scaling_factor_eta, mat_corrected = io.contactmatrix.compute_local_correction(
+                    single_freq, self.x_pair, self.neff, self.regularization.lambda_pair,
+                    squared=False, entropy=True, nr_states=nr_states, log=log
+                )
 
-                if sergeys_jec and score == "frobenius":
-                    # use amino acid frequencies including gap states and with pseudo-counts
-                    pair_freq = self.pseudocounts.freqs[1]
+                self.mats[score_mat+"-ec."+ str(nr_states) + "." + str(log.__name__)] = {
+                    'mat': mat_corrected,
+                    'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score +
+                                ".ec." + str(nr_states) + "." + str(log.__name__) + "." +
+                                mat_name.split(".")[-1],
+                    'score': score,
+                    'correction': "entropy_correction",
+                    'scaling_factor_eta': scaling_factor_eta,
+                    'nr_states': nr_states,
+                    'log': log.__name__
+                }
 
-                    mat_corrected = io.contactmatrix.compute_corrected_mat_sergey_style(
-                        pair_freq, self.x_pair, nr_states = nr_states, log=log)
 
-                    self.mats[score_mat + "-sjec."+ str(nr_states) + "." + str(log.__name__)] = {
-                        'mat': mat_corrected,
-                        'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score +
-                                    ".sjec." + str(nr_states) + "." + str(log.__name__) + "." +
-                                    mat_name.split(".")[-1],
-                        'score': score,
-                        'correction': "sergeys joint entropy correction",
-                        'nr_states': nr_states,
-                        'log': log.__name__
-                    }
+            if joint_entropy and score == "frobenius":
+                nr_states = 21
+                log = np.log2
+
+                # use amino acid frequencies including gap states and with pseudo-counts
+                pair_freq = self.pseudocounts.freqs[1]
+
+                scaling_factor_eta, mat_corrected = io.contactmatrix.compute_joint_entropy_correction(
+                    pair_freq, self.neff, self.regularization.lambda_pair, self.x_pair,
+                    nr_states = nr_states, log=log
+                )
+
+                self.mats[score_mat + "-jec."+ str(nr_states) + "." + str(log.__name__)] = {
+                    'mat': mat_corrected,
+                    'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score +
+                                ".jec." + str(nr_states) + "." + str(log.__name__) + "." +
+                                mat_name.split(".")[-1],
+                    'score': score,
+                    'correction': "joint_entropy_correction",
+                    'scaling_factor_eta': scaling_factor_eta,
+                    'nr_states': nr_states,
+                    'log': log.__name__
+                }
+
+            if sergeys_jec and score == "frobenius":
+                nr_states = 21
+                log = np.log2
+
+                # use amino acid frequencies including gap states and with pseudo-counts
+                pair_freq = self.pseudocounts.freqs[1]
+
+                mat_corrected = io.contactmatrix.compute_corrected_mat_sergey_style(
+                    pair_freq, self.x_pair, nr_states = nr_states, log=log)
+
+                self.mats[score_mat + "-sjec."+ str(nr_states) + "." + str(log.__name__)] = {
+                    'mat': mat_corrected,
+                    'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score +
+                                ".sjec." + str(nr_states) + "." + str(log.__name__) + "." +
+                                mat_name.split(".")[-1],
+                    'score': score,
+                    'correction': "sergeys joint entropy correction",
+                    'nr_states': nr_states,
+                    'log': log.__name__
+                }
 
     def write_sampled_alignment(self, cd_alnfile):
 
