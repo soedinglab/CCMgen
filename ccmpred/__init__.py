@@ -491,7 +491,8 @@ class CCMpred():
 
                     self.mats[score_mat+"-ec"] = {
                         'mat': mat_corrected,
-                        'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score + ".ec." +
+                        'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score +
+                                    ".ec." + str(nr_states) + "." + str(log.__name__) + "." +
                                     mat_name.split(".")[-1],
                         'score': score,
                         'correction': "entropy_correction",
@@ -512,7 +513,8 @@ class CCMpred():
 
                     self.mats[score_mat + "-jec"] = {
                         'mat': mat_corrected,
-                        'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score + ".jec." +
+                        'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score +
+                                    ".jec." + str(nr_states) + "." + str(log.__name__) + "." +
                                     mat_name.split(".")[-1],
                         'score': score,
                         'correction': "joint_entropy_correction",
@@ -530,7 +532,8 @@ class CCMpred():
 
                     self.mats[score_mat + "-sjec"] = {
                         'mat': mat_corrected,
-                        'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score + ".sjec." +
+                        'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score +
+                                    ".sjec." + str(nr_states) + "." + str(log.__name__) + "." +
                                     mat_name.split(".")[-1],
                         'score': score,
                         'correction': "sergeys joint entropy correction",
