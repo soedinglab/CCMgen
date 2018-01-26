@@ -478,8 +478,13 @@ class CCMpred():
                 nr_states = 20
                 log = np.log2
 
+
                 # use amino acid frequencies including gap states and with pseudo-counts
                 single_freq = self.pseudocounts.freqs[0]
+
+
+                print(single_freq.shape)
+                print(self.x_pair.shape)
 
                 scaling_factor_eta, mat_corrected = io.contactmatrix.compute_local_correction(
                     single_freq, self.x_pair, self.neff, self.regularization.lambda_pair,
