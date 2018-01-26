@@ -489,7 +489,7 @@ class CCMpred():
                         squared=False, entropy=True, nr_states=nr_states, log=log
                     )
 
-                    self.mats[score_mat+"-ec"] = {
+                    self.mats[score_mat+"-ec."+ str(nr_states) + "." + str(log.__name__)] = {
                         'mat': mat_corrected,
                         'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score +
                                     ".ec." + str(nr_states) + "." + str(log.__name__) + "." +
@@ -511,7 +511,7 @@ class CCMpred():
                         nr_states = nr_states, log=log
                     )
 
-                    self.mats[score_mat + "-jec"] = {
+                    self.mats[score_mat + "-jec."+ str(nr_states) + "." + str(log.__name__)] = {
                         'mat': mat_corrected,
                         'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score +
                                     ".jec." + str(nr_states) + "." + str(log.__name__) + "." +
@@ -530,7 +530,7 @@ class CCMpred():
                     mat_corrected = io.contactmatrix.compute_corrected_mat_sergey_style(
                         pair_freq, self.x_pair, nr_states = nr_states, log=log)
 
-                    self.mats[score_mat + "-sjec"] = {
+                    self.mats[score_mat + "-sjec."+ str(nr_states) + "." + str(log.__name__)] = {
                         'mat': mat_corrected,
                         'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score +
                                     ".sjec." + str(nr_states) + "." + str(log.__name__) + "." +
