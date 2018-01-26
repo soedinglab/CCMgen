@@ -483,9 +483,6 @@ class CCMpred():
                 single_freq = self.pseudocounts.freqs[0]
 
 
-                print(single_freq.shape)
-                print(self.x_pair.shape)
-
                 scaling_factor_eta, mat_corrected = io.contactmatrix.compute_local_correction(
                     single_freq, self.x_pair, self.neff, self.regularization.lambda_pair,
                     squared=False, entropy=True, nr_states=nr_states, log=log

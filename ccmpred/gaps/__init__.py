@@ -36,12 +36,13 @@ def remove_gapped_sequences(msa, min_coverage):
 
     msa_gap_count_per_sequence = (msa == 20).sum(1)
 
-    max_gap_percentage_per_sequence = (msa_gap_count_per_sequence / 100.0 * msa.shape[1])
+    #how many allowed positions with gaps?
+    max_gap_percentage_per_sequence = (min_coverage / 100.0 * msa.shape[1])
 
-    high_coverage = np.where(max_gap_percentage_per_sequence <  min_coverage)
+    high_coverage = np.where(msa_gap_count_per_sequence <  max_gap_percentage_per_sequence)
 
     print("Removed {0} sequences with > {1} percent gaps.".format(
-        len(msa.shape[1] - high_coverage[0]), min_coverage/100.0))
+        len(msa.shape[0] - high_coverage[0]), min_coverage/100.0))
 
     return np.ascontiguousarray(msa[high_coverage[0], :])
 
