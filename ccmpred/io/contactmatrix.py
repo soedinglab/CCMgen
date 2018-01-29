@@ -69,7 +69,7 @@ def compute_local_correction(
         single_freq, x_pair, Neff, lambda_w, squared=True,
         entropy=False, nr_states=20, log=np.log2):
 
-    print("\nApply entropy correction (using {0} states).".format(nr_states))
+    print("\nApply entropy correction (using {0} states and {1}).".format(nr_states, log.__name__))
 
 
     #correct for fractional counts

@@ -14,10 +14,12 @@ def remove_gaps_col_freqs(msa):
 
 
 def backinsert_gapped_positions_mat(mat, gapped_positions):
-
+    print(gapped_positions)
     for position in gapped_positions:
-        mat = np.insert(mat, position, 0, axis=0)
-        mat = np.insert(mat, position, 0, axis=1)
+        print(mat.shape, position)
+        mat = np.insert(mat, position, [0], axis=0)
+        mat = np.insert(mat, position, [0], axis=1)
+
 
 def backinsert_gapped_positions(x_single, x_pair, gapped_positions):
 
@@ -36,13 +38,13 @@ def remove_gapped_sequences(msa, min_coverage):
 
     msa_gap_count_per_sequence = (msa == 20).sum(1)
 
-    #how many allowed positions with gaps?
+    #how many positions per sequence are allowed to contain gaps?
     max_gap_percentage_per_sequence = (min_coverage / 100.0 * msa.shape[1])
 
     high_coverage = np.where(msa_gap_count_per_sequence <  max_gap_percentage_per_sequence)
 
     print("Removed {0} sequences with > {1} percent gaps.".format(
-        len(msa.shape[0] - high_coverage[0]), min_coverage/100.0))
+        msa.shape[0] - len(high_coverage[0]), min_coverage/100.0))
 
     return np.ascontiguousarray(msa[high_coverage[0], :])
 
