@@ -565,9 +565,7 @@ class CCMpred():
 
             mat = mat_dict['mat']
             if self.max_gap_ratio < 100:
-                print(mat.shape)
                 mat = gaps.backinsert_gapped_positions_mat(mat, self.gapped_positions)
-                print(mat.shape)
                 self.L = mat.shape[0]
 
             meta = self.create_meta_data(mat_name)
