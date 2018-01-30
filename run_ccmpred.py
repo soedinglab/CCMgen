@@ -8,6 +8,7 @@ import ccmpred.logo
 import ccmpred.objfun.pll as pll
 import ccmpred.objfun.cd as cd
 import ccmpred.algorithm.gradient_descent as gd
+import ccmpred.algorithm.lbfgs as lbfgs
 import ccmpred.algorithm.conjugate_gradients as cg
 import ccmpred.algorithm.numdiff as nd
 import ccmpred.algorithm.adam as ad
@@ -34,6 +35,10 @@ ALGORITHMS = {
         ccm,
         maxit=opt.maxit, epsilon=opt.epsilon,
         convergence_prev=opt.convergence_prev, plotfile=opt.plotfile),
+    "lbfgs": lambda opt, ccm: lbfgs.LBFGS(
+        ccm,
+        maxit=opt.maxit, plotfile=opt.plotfile
+    ),
     "gradient_descent": lambda opt, ccm: gd.gradientDescent(
         ccm,
         maxit=opt.maxit, alpha0=opt.alpha0, decay=opt.decay, decay_start=opt.decay_start,
@@ -102,6 +107,7 @@ def parse_args():
 
     grp_al = parser.add_argument_group("Optimization Algorithms")
     grp_al.add_argument("--alg-cg", dest="algorithm", action="store_const", const='conjugate_gradients', default='conjugate_gradients', help='Use conjugate gradients (CG) (standard for pLL (default) [default: %(default)s] ')
+    grp_al.add_argument("--alg-lbfgs", dest="algorithm", action="store_const", const='lbfgs', help='Use LBFGS optimizer (to use with pLL) ')
     grp_al.add_argument("--alg-gd", dest="algorithm", action="store_const", const='gradient_descent', help='Use gradient descent (GD) (standard for CD) ')
     grp_al.add_argument("--alg-nd", dest="algorithm", action="store_const", const='numerical_differentiation', help='Debug gradients with numerical differentiation ')
     grp_al.add_argument("--alg-ad", dest="algorithm", action="store_const", const='adam', help='Use ADAM (alternative for CD) according to Kingma & Ba, 2017 ')
@@ -175,7 +181,7 @@ def parse_args():
     if not args.optimize and not args.initrawfile:
         parser.error("--do-not-optimize is only supported when -i (--init-from-raw) is specified!")
 
-    if args.objfun == "pll" and (args.algorithm != "conjugate_gradients" and args.algorithm != "numerical_differentiation"):
+    if args.objfun == "pll" and (args.algorithm != "conjugate_gradients" and args.algorithm != "numerical_differentiation" and args.algorithm != "lbfgs"):
         parser.error("pseudo-log-likelihood (--ofn-pll) needs to be optimized with conjugate gradients (--alg-cg)!")
 
     if args.objfun == "cd" and (args.algorithm != "gradient_descent" and args.algorithm != "adam"):
