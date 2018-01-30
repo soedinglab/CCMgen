@@ -7,12 +7,13 @@ class LBFGS(object):
 
     def __init__(
             self, ccm,
-            maxit=100, ftol=1e-4, max_linesearch=5,
+            maxit=100, ftol=1e-4, max_linesearch=20, maxcor=5,
             plotfile=None):
 
         self.max_linesearch=max_linesearch
         self.ftol = ftol
         self.maxit = maxit
+        self.maxcor = maxcor
 
         plot_title = "L={0} N={1} Neff={2} Diversity={3}<br>".format(
             ccm.L, ccm.N, np.round(ccm.neff, decimals=3),
@@ -37,7 +38,7 @@ class LBFGS(object):
 
         return fx, g
 
-    def print_and_plot(self, x):
+    def print_and_plot(self, x, ):
 
         self.iteration += 1
 
@@ -72,7 +73,7 @@ class LBFGS(object):
                 'maxiter': self.maxit,
                 'ftol': self.ftol,
                 'maxfun': 15000,
-                'maxcor': 5,
+                'maxcor': self.maxcor,
                 'disp': False
             },
             callback=self.print_and_plot

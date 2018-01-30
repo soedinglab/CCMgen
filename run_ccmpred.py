@@ -37,7 +37,8 @@ ALGORITHMS = {
         convergence_prev=opt.convergence_prev, plotfile=opt.plotfile),
     "lbfgs": lambda opt, ccm: lbfgs.LBFGS(
         ccm,
-        maxit=opt.maxit, plotfile=opt.plotfile
+        maxit=opt.maxit, ftol=opt.ftol, max_linesearch=opt.max_linesearch, maxcor=opt.max_cor,
+        plotfile=opt.plotfile
     ),
     "gradient_descent": lambda opt, ccm: gd.gradientDescent(
         ccm,
@@ -113,6 +114,9 @@ def parse_args():
     grp_al.add_argument("--alg-ad", dest="algorithm", action="store_const", const='adam', help='Use ADAM (alternative for CD) according to Kingma & Ba, 2017 ')
 
     grp_als = parser.add_argument_group("Algorithm specific settings")
+    grp_als.add_argument("--lbfgs-ftol",        dest="ftol",            default=1e-4,       type=float,     help="LBFGS: convergence criterion ftol. [default: %(default)s]")
+    grp_als.add_argument("--lbfgs-max-linesearch", dest="max_linesearch", default=5,        type=int,       help="LBFGS: maximum number of linesearch steps. [default: %(default)s]")
+    grp_als.add_argument("--lbfgs-maxcor",      dest="max_cor",         default=5,          type=int,       help="LBFGS: maximum number of corrections for memory. [default: %(default)s]")
     grp_als.add_argument("--ad-beta1",          dest="beta1",           default=0.9,        type=float,     help="ADAM: Set beta 1 parameter (moemntum). [default: %(default)s]")
     grp_als.add_argument("--ad-beta2",          dest="beta2",           default=0.999,      type=float,     help="ADAM:Set beta 2 parameter (adaptivity) [default: %(default)s]")
     grp_als.add_argument("--ad-beta3",          dest="beta3",           default=0.9,        type=float,       help="ADAM:Set beta 3 parameter (temporal averaging) [default: %(default)s]")
