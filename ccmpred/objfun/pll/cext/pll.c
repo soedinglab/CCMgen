@@ -38,7 +38,7 @@ double evaluate_pll(
 	double *precomp_norm = malloc(sizeof(double) * N_ALPHA * nrow * ncol);
 
 	//#pragma omp parallel for reduction(+:fx)
-	//iterate over WHOLE matrix (not only i<j)
+	//iterate over ALL pairs (not only i<j)
 	for(uint32_t nj = 0; nj < nrow * ncol; nj++) {
 		uint32_t n = nj / ncol;
 		uint32_t j = nj % ncol;
@@ -46,14 +46,16 @@ double evaluate_pll(
 		double precomp[N_ALPHA];
 		double precomp_sum = 0;
 
-		// compute 	precomp(a) = V_j(a) + sum(i \in V_j) w_{ij}(a, X^n_i)
-		//			precomp_sum = log( sum(a=1..20) exp(precomp(a)) ) --> log Z^n_j
+        // compute logarithm of partition function Z_nj
+		//  	precomp(a) = V_j(a) + sum(i < L) w_{ji}(a, x_ni)
+		//		precomp_sum = log( sum(a=1..20) exp(precomp(a)) ) --> log Z_nj
 		for(int a = 0; a < N_ALPHA - 1; a++) {
 			precomp[a] = V(a, j);
 
 			for(uint32_t i = 0; i < ncol; i++) {
 				unsigned char xni = X(n, i);
 
+                //ignore gaps
 				if (xni < N_ALPHA - 1) {
 					precomp[a] += W(a, j, xni, i);
 				}
@@ -64,17 +66,26 @@ double evaluate_pll(
 		precomp[N_ALPHA - 1] = 0;	// set precomp(gap) to zero
 		precomp_sum = log(precomp_sum);
 
-		// compute exp(V_j(a) + sum(i \in V_j) w_{ij}(a, X^n_i)) / Z^n_j  [--> exp(precomp) / exp(log(Z))]
+
+		// compute exp(V_j(a) + sum(i < L) w_{ji}(a, x_ni)) / Z_nj
+		// needed for gradient computation
+		// --> exp(precomp) / exp(log(Z))
+		// --> exp(precomp - log(Z))
+		//ignore gaps!
 		for(int a = 0; a < N_ALPHA - 1; a++) {
 			precomp_norm[(n * N_ALPHA + a) * ncol + j] = exp(precomp[a] - precomp_sum);
 		}
 		precomp_norm[(n * N_ALPHA + N_ALPHA - 1) * ncol + j] = 0;
 
+
+
 		unsigned char xnj = X(n,j);
 
-		// function value for sequence n and column j:
-		//							weight(n) * (precomp( xnj ) - log Z^n_j)
-		//							weight(n) * ( V_j(xnj) + sum(i \in V_j) w_{ij}(xnj, Xni) - log Z^n_j)
+        // actually add up the function value if x_nj is not a gap
+        // * -1.0 because we are using negative log likelihood
+		//		weight(n) * (precomp( x_nj ) - log Z_nj)
+		//		weight(n) * ( V_j(x_nj) + sum(i < L) w_{ji}(x_nj, x_ni) - log Z_nj)
+
 		if(xnj < N_ALPHA - 1) {
 			fx += weight * (precomp_sum - precomp[xnj]);
 		}
