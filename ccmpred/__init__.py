@@ -475,7 +475,7 @@ class CCMpred():
 
 
             if entropy_correction and score == "frobenius":
-                nr_states = 20
+                nr_states = 21
                 log = np.log2
 
 
@@ -502,7 +502,7 @@ class CCMpred():
 
 
             if joint_entropy and score == "frobenius":
-                nr_states = 20
+                nr_states = 21
                 log = np.log2
 
                 # use amino acid frequencies including gap states and with pseudo-counts
@@ -526,7 +526,7 @@ class CCMpred():
                 }
 
             if sergeys_jec and score == "frobenius":
-                nr_states = 20
+                nr_states = 21
                 log = np.log2
 
                 # use amino acid frequencies including gap states and with pseudo-counts
