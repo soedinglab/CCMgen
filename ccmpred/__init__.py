@@ -16,7 +16,7 @@ import centering
 import raw
 import parameter_handling
 import sanity_check
-from regularization import L2
+from regularization import L1, L2
 
 class CCMpred():
     """
@@ -52,6 +52,7 @@ class CCMpred():
         self.regularization = None
         self.reg_type = None
         self.reg_scaling = None
+        self.single_prior = None
         self.single_potential_init = None
         self.pair_potential_init = None
 
@@ -157,6 +158,7 @@ class CCMpred():
         meta['workflow'][0]['regularization'] = {}
         meta['workflow'][0]['regularization']['regularization_type'] =     self.reg_type
         meta['workflow'][0]['regularization']['regularization_scaling'] =  self.reg_scaling
+        meta['workflow'][0]['regularization']['single_prior'] =  self.single_prior
 
         if self.regularization is not None:
             meta['workflow'][0]['regularization']['lambda_single'] = self.regularization.lambda_single
@@ -301,7 +303,8 @@ class CCMpred():
             'correction': "no"
         }
 
-    def specify_regularization(self, lambda_single, lambda_pair_factor, reg_type="v-center", scaling="L"):
+    def specify_regularization(self, lambda_single, lambda_pair_factor,
+                               reg_type="L2", scaling="L", single_prior="v-center"):
         """
 
         use L2 regularization for single potentials and pair potentials
@@ -316,8 +319,9 @@ class CCMpred():
         #save setting for meta data
         self.reg_type = reg_type
         self.reg_scaling = scaling
+        self.single_prior = scaling
 
-        if reg_type == "v-center":
+        if single_prior == "v-center":
             prior_v_mu = centering.center_v(self.pseudocounts.freqs)
         else:
             prior_v_mu = centering.center_zero(self.pseudocounts.freqs)
@@ -327,7 +331,11 @@ class CCMpred():
         else:
             multiplier = 1
 
-        self.regularization = L2(lambda_single, lambda_pair_factor, multiplier, prior_v_mu)
+        if reg_type == "L2":
+            self.regularization = L2(lambda_single, lambda_pair_factor, multiplier, prior_v_mu)
+        else:
+            self.regularization = L1(lambda_single, lambda_pair_factor, multiplier, prior_v_mu)
+
         print(self.regularization)
 
     def intialise_potentials(self, initrawfile=None):

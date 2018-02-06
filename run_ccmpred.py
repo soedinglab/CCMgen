@@ -142,12 +142,14 @@ def parse_args():
     grp_wt.add_argument("--wt-cutoff",          dest="wt_cutoff",       type=float, default=0.8, help="Sequence identity threshold. [default: %(default)s]")
 
     grp_rg = parser.add_argument_group("Regularization")
-    grp_rg.add_argument("--reg-l2-lambda-single",           dest="lambda_single",           type=float, default=10,     help='Regularization coefficient for single potentials (L2 regularization) [default: %(default)s]')
-    grp_rg.add_argument("--reg-l2-lambda-pair-factor",      dest="lambda_pair_factor",      type=float, default=0.2,    help='Regularization parameter for pair potentials (L2 regularization with lambda_pair  = lambda_pair-factor * scaling) [default: %(default)s]')
-    grp_rg.add_argument("--reg-l2-scale_by_L",              dest="scaling",     action="store_const", const="L", default="L",   help="lambda_pair = lambda_pair-factor * (L-1) [default: %(default)s]")
-    grp_rg.add_argument("--reg-l2-noscaling",               dest="scaling",     action="store_const", const="1",                help="lambda_pair = lambda_pair-factor")
-    grp_rg.add_argument("--v-center",                       dest="reg_type",    action="store_const", const="v-center", default="v-center", help="Use mu=v* in Gaussian prior for single emissions and initialization. [default: %(default)s]")
-    grp_rg.add_argument("--v-zero",                         dest="reg_type",    action="store_const", const="v-zero",           help="Use mu=0 in Gaussian prior for single emissions and initialisation.")
+    grp_rg.add_argument("--reg-lambda-single",          dest="lambda_single",           type=float, default=10,     help='Regularization coefficient for single potentials (L2 regularization) [default: %(default)s]')
+    grp_rg.add_argument("--reg-lambda-pair-factor",     dest="lambda_pair_factor",      type=float, default=0.2,    help='Regularization parameter for pair potentials (L2 regularization with lambda_pair  = lambda_pair-factor * scaling) [default: %(default)s]')
+    grp_rg.add_argument("--reg-L1",                     dest="reg_type",            action="store_const", const="L1", help="Use L1 regularization [default: %(default)s]")
+    grp_rg.add_argument("--reg-L2",                     dest="reg_type",            action="store_const", const="L2", default="L2", help="Use L2 regularization [default: %(default)s]")
+    grp_rg.add_argument("--reg-noscaling",              dest="scaling",             action="store_const", const="1",                help="lambda_pair = lambda_pair_factor")
+    grp_rg.add_argument("--reg-scale-by-L",             dest="scaling",             action="store_const", const="L",                help="lambda_pair = lambda_pair_factor * (L-1)")
+    grp_rg.add_argument("--v-center",                   dest="single_prior",        action="store_const", const="v-center",    default="v-center", help="Use mu=v* in Gaussian prior for single emissions and initialization. [default: %(default)s]")
+    grp_rg.add_argument("--v-zero",                     dest="single_prior",        action="store_const", const="v-zero",      help="Use mu=0 in Gaussian prior for single emissions and initialisation.")
 
 
     grp_gp = parser.add_argument_group("Gap Treatment")
@@ -235,7 +237,7 @@ def main():
         sys.exit(0)
 
     #setup L2 regularization
-    ccm.specify_regularization(opt.lambda_single, opt.lambda_pair_factor, reg_type=opt.reg_type, scaling=opt.scaling)
+    ccm.specify_regularization(opt.lambda_single, opt.lambda_pair_factor, reg_type=opt.reg_type, scaling=opt.scaling, single_prior=opt.single_prior)
 
     #intialise single and pair potentials either:
     #   - according to regularization priors
