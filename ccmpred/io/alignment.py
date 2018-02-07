@@ -1,7 +1,7 @@
 import numpy as np
-
 import ccmpred.counts
 
+AMINO_ACIDS = "ARNDCQEGHILKMFPSTWYV-"
 
 def read_msa(f, format, return_indices=True, return_identifiers=False):
     if format == 'psicov':
