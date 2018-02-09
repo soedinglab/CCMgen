@@ -70,9 +70,15 @@ class gradientDescent():
         upper_triangular_indices = np.triu_indices(objfun.ncol, k = 1)
         fx = -1
         alpha = self.alpha0
+        persistent=False
         for i in range(self.maxit):
 
-            fx, gx, greg = objfun.evaluate(x)
+            #in case CD has property persistent=True
+            #turn on persistent CD when learning rate is small enough
+            if objfun.persistent and alpha < self.alpha0/10:
+                persistent=True
+
+            fx, gx, greg = objfun.evaluate(x, persistent)
             g = gx + greg
 
             #decompose gradients and parameters
@@ -115,6 +121,7 @@ class gradientDescent():
                 if self.decay_type == "exp":
                     alpha = self.alpha0  * np.exp(- self.decay_rate * t)
 
+
             #print out progress
             log_metrics={}
             log_metrics['||w||'] = xnorm_pair
@@ -125,6 +132,7 @@ class gradientDescent():
             log_metrics['xnorm_diff'] = xnorm_diff
             log_metrics['max_g'] = np.max(np.abs(gx))
             log_metrics['alpha'] = alpha
+            log_metrics['PCD'] = persistent
 
             if not self.fix_v:
                 log_metrics['||v||'] = np.sqrt(np.sum(x_single * x_single))
