@@ -31,20 +31,20 @@ def backinsert_gapped_positions(x_single, x_pair, gapped_positions):
     return x_single, x_pair
 
 
-def remove_gapped_sequences(msa, min_coverage):
+def remove_gapped_sequences(msa, max_gap_seq):
 
-    if min_coverage <= 0:
+    if max_gap_seq >= 100:
         return msa
 
     msa_gap_count_per_sequence = (msa == 20).sum(1)
 
     #how many positions per sequence are allowed to contain gaps?
-    max_gap_percentage_per_sequence = (min_coverage / 100.0 * msa.shape[1])
+    max_gap_percentage_per_sequence = (max_gap_seq / 100.0 * msa.shape[1])
 
     high_coverage = np.where(msa_gap_count_per_sequence <  max_gap_percentage_per_sequence)
 
     print("Removed {0} sequences with > {1} percent gaps.".format(
-        msa.shape[0] - len(high_coverage[0]), min_coverage/100.0))
+        msa.shape[0] - len(high_coverage[0]), max_gap_seq/100.0))
 
     return np.ascontiguousarray(msa[high_coverage[0], :])
 
