@@ -46,7 +46,7 @@ class Progress():
 
 
         log = "{0:>{1}}".format(n_iter, '8g')
-        for name, metric in sorted(kwargs.iteritems()):
+        for name, metric in sorted(kwargs.items()):
             self.optimization_log[name].append(metric)
             log += "{0:>{1}}".format(metric, '15g')
         print(log)
@@ -67,7 +67,7 @@ class Progress():
         title += self.title
 
         data = []
-        for name, metric in self.optimization_log.iteritems():
+        for name, metric in self.optimization_log.items():
             data.append(
                 go.Scatter(
                     x=range(1, len(self.optimization_log[name]) + 1),
