@@ -9,7 +9,7 @@ def check_single_potentials(x_single, verbose=0, epsilon=1e-5):
 
         if verbose:
             for ind in nr_pot_sum_not_zero[:10]:
-                print "eg: i={0:<2} has sum_a(v_ia)={1}".format(ind+1, np.sum(x_single[ind]))
+                print("e.g.: i={0:<2} has sum_a(v_ia)={1}".format(ind+1, np.sum(x_single[ind])))
 
         return 0
 
@@ -26,7 +26,7 @@ def check_pair_potentials(x_pair, verbose=0, epsilon=1e-5):
             for ind in nr_pot_sum_not_zero[:10]:
                 i = indices_triu[0][ind]
                 j = indices_triu[1][ind]
-                print "eg: i={0:<2} j={1:<2} has sum_ab(w_ijab)={2}".format(i+1, j+1, np.sum(x_pair[i,j]))
+                print("e.g.: i={0:<2} j={1:<2} has sum_ab(w_ijab)={2}".format(i+1, j+1, np.sum(x_pair[i,j])))
 
         return 0
 
