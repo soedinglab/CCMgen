@@ -80,7 +80,7 @@ class ContrastiveDivergence():
         #         self.nr_seq_sample = np.max([10, int(sample_size * self.neff)])
 
         self.persistent=persistent
-        seq_id = range(self.nrow) * int(np.ceil(self.nr_seq_sample / float(self.nrow)))
+        seq_id = list(range(self.nrow)) * int(np.ceil(self.nr_seq_sample / float(self.nrow)))
         self.msa_persistent = self.msa[seq_id]
         self.weights_persistent = self.weights[seq_id]
 
