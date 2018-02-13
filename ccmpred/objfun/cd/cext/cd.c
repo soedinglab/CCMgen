@@ -139,8 +139,6 @@ void gibbs_sample_sequences(
 		fl_free(pcondcurr);
 	}
 
-
-
 }
 
 
