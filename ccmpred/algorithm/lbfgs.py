@@ -82,7 +82,7 @@ class LBFGS(object):
 
         ret = {
             "code": res.status,
-            "message": res.message,
+            "message": res.message.decode("utf-8"),
             "num_iterations": res.nit
         }
 
