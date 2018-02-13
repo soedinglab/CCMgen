@@ -66,12 +66,8 @@ class PseudoLikelihood():
 
 
     def finalize(self, x):
-        return ccmpred.parameter_handling.linear_to_structured(x,
-                                                            self.ncol,
-                                                            clip=True,
-                                                            nogapstate=False,
-                                                            add_gap_state=False,
-                                                            padding=True)
+        return ccmpred.parameter_handling.linear_to_structured(
+            x, self.ncol, clip=True, nogapstate=False, add_gap_state=False, padding=True)
 
     def evaluate(self, x):
 
