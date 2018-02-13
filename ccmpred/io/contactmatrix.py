@@ -2,6 +2,7 @@ import numpy as np
 import json
 import gzip
 import os
+import sys
 
 def frobenius_score(x):
     """
@@ -136,12 +137,13 @@ def write_matrix(matfile, mat, meta):
     if matfile.endswith(".gz"):
         with gzip.open(matfile, 'wb') as f:
             np.savetxt(f, mat)
-            f.write("#>META> ".encode("utf-8") + json.dumps(meta).encode("utf-8") + b"\n")
+            #f.write("#>META> ".encode("utf-8") + json.dumps(meta).encode("utf-8") + "\n".encode("utf-8"))
+            f.write("#>META> " + json.dumps(meta) + "\n")
         f.close()
     else:
         np.savetxt(matfile, mat)
         with open(matfile,'a') as f:
-            f.write("#>META> ".encode("utf-8") + json.dumps(meta).encode("utf-8") + b"\n")
+            f.write("#>META> " + json.dumps(meta) + "\n")
         f.close()
 
 def read_matrix(matfile):
