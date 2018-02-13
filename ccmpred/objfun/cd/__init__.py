@@ -192,7 +192,7 @@ class ContrastiveDivergence():
 
     def get_parameters(self):
         parameters = {}
-        parameters['gibbs_steps'] = self.gibbs_steps
+        parameters['gibbs_steps'] = int(self.gibbs_steps)
         parameters['sample_size'] = self.sample_size
         parameters['nr_seq_sample'] = self.nr_seq_sample
 
