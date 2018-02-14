@@ -136,14 +136,15 @@ class CCMpred():
         if mat_name is not None:
             meta['workflow'][0]['contact_map'] = {}
             meta['workflow'][0]['contact_map']['correction'] = self.mats[mat_name]['correction']
+            meta['workflow'][0]['contact_map']['score'] = self.mats[mat_name]['score']
+            meta['workflow'][0]['contact_map']['matfile'] = self.mats[mat_name]['mat_file']
             if 'scaling_factor_eta' in self.mats[mat_name].keys():
                 meta['workflow'][0]['contact_map']['scaling_factor_eta'] = self.mats[mat_name]['scaling_factor_eta']
             if 'nr_states' in self.mats[mat_name].keys():
                 meta['workflow'][0]['contact_map']['nr_states'] = self.mats[mat_name]['nr_states']
             if 'log' in self.mats[mat_name].keys():
                 meta['workflow'][0]['contact_map']['nr_states'] = self.mats[mat_name]['log']
-            meta['workflow'][0]['contact_map']['score'] = self.mats[mat_name]['score']
-            meta['workflow'][0]['contact_map']['matfile'] = self.mats[mat_name]['mat_file']
+
 
 
         meta['workflow'][0]['results'] = {}
@@ -176,6 +177,7 @@ class CCMpred():
             meta['workflow'][0]['results']['opt_message'] = self.algret['message']
             meta['workflow'][0]['results']['opt_code'] = self.algret['code']
             meta['workflow'][0]['results']['num_iterations'] = self.algret['num_iterations']
+            meta['workflow'][0]['results']['runtime'] = self.algret['runtime']
             meta['workflow'][0]['results']['fx_final'] = self.fx
 
         if self.f is not None:
@@ -395,8 +397,10 @@ class CCMpred():
         if plotfile:
             print("The optimization log file will be written to {0}".format(plotfile))
 
-
+        start=datetime.datetime.now()
         self.fx, self.x, self.algret    = self.alg.minimize(self.f, self.f.x)
+        self.algret['runtime']=(datetime.datetime.now() - start).total_seconds() / 60
+
         self.x_single, self.x_pair      = self.f.finalize(self.x)
 
         ###experimental - only for pll with cg
@@ -560,7 +564,7 @@ class CCMpred():
                     'log': log.__name__
                 }
 
-    def generate_sample(self, x, size=10000, burn_in=100, decorrelation_time=10):
+    def generate_sample(self, x, size=10000, burn_in=500, decorrelation_time=100):
 
         # initialize markov chains with original sequences (at max 1000 sequences from original MSA)
         sample_size_per_it = np.min([self.N, 1000])
@@ -575,6 +579,13 @@ class CCMpred():
         ##repeat sampling until 10k sequences are obtained
         repeat = int(np.ceil(size / sample_size_per_it))
         for i in range(repeat):
+
+            # sample_size_per_it = np.min([self.N, 1000])
+            # sample_seq_id = np.random.choice(self.N, sample_size_per_it, replace=False)
+            # msa_sampled = self.msa[sample_seq_id]
+            # # burn in phase to move away from initial sequences
+            # msa_sampled = ccmpred.sampling.gibbs_sample_sequences(x, msa_sampled, gibbs_steps=burn_in)
+
             # Gibbs Sampling of sequences (each position of each sequence will be sampled this often: GIBBS_STEPS)
             msa_sampled = ccmpred.sampling.gibbs_sample_sequences(x, msa_sampled, gibbs_steps=decorrelation_time)
 
@@ -584,11 +595,11 @@ class CCMpred():
             print("sampled alignment has {0} sequences...".format(sample_out.shape[0]))
         return sample_out
 
-    def write_sampled_alignment(self, sample_alnfile=None, plot_alnstats_file=None):
+    def write_sampled_alignment(self, sample_alnfile=None, burn_in=500, decorrelation_time=100, plot_alnstats_file=None):
 
 
         x = parameter_handling.structured_to_linear(self.x_single, self.x_pair, nogapstate=True, padding=False)
-        msa_sampled = self.generate_sample(x, size=10000, burn_in=500, decorrelation_time=100)
+        msa_sampled = self.generate_sample(x, size=10000, burn_in=burn_in, decorrelation_time=decorrelation_time)
 
         if sample_alnfile is not None:
             self.sample_alnfile = sample_alnfile
