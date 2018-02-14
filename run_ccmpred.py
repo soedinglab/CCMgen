@@ -98,7 +98,9 @@ def parse_args():
 
     grp_out = parser.add_argument_group("Output Options")
     grp_out.add_argument("--write-sample-alignment", dest="sample_alnfile",      default=None, metavar="ALNFILE", help="Write PSICOV-formatted sampled alignment to ALNFILE")
-    grp_out.add_argument("-b", "--write-binary-raw", dest="out_binary_raw_file",  default=None, help="Write potentials as binary MessagePack file. [default: %(default)s]")
+    grp_out.add_argument("--burn-in",                dest="sample_burnin",       default=500, type=int, help="Burnin-phase for starting to write out sequences [default: %(default)s]")
+    grp_out.add_argument("--decorrelation-time",     dest="sample_decorr",       default=100, type=int,  help="Decorrelation time, interavl for keeping next sample [default: %(default)s]")
+    grp_out.add_argument("-b", "--write-binary-raw", dest="out_binary_raw_file", default=None, help="Write potentials as binary MessagePack file. [default: %(default)s]")
 
 
     grp_of = parser.add_argument_group("Objective Functions")
@@ -295,7 +297,7 @@ def main():
 
     # sample an alignment according to model and save to file
     if opt.sample_alnfile or opt.plot_alnstats:
-        ccm.write_sampled_alignment(opt.sample_alnfile, opt.plot_alnstats_file)
+        ccm.write_sampled_alignment(opt.sample_alnfile, opt.sample_burnin, opt.sample_decorr, opt.plot_alnstats_file)
 
     #specify meta data, and write (corrected) contact matrices to files
     ccm.write_matrix()
