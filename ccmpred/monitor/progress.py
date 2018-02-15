@@ -70,7 +70,7 @@ class Progress():
         for name, metric in self.optimization_log.items():
             data.append(
                 go.Scatter(
-                    x=range(1, len(self.optimization_log[name]) + 1),
+                    x=list(range(1, len(self.optimization_log[name]) + 1)),
                     y=metric,
                     mode='lines',
                     visible="legendonly",
