@@ -77,6 +77,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Recover direct couplings from a multiple sequence alignment", epilog=EPILOG)
 
     parser.add_argument("alnfile", help="Input alignment file to use")
+    parser.add_argument("pdbfile", help="Input PDB file used to mask noncontacts")
     parser.add_argument("matfile", help="Output matrix file to write")
 
     parser.add_argument("-i", "--init-from-raw",        dest="initrawfile", default=None, help="Init single and pair potentials from a binary raw file")
@@ -84,6 +85,9 @@ def parse_args():
     parser.add_argument("--aln-format",                 dest="aln_format", default="psicov", help="File format for MSAs [default: \"%(default)s\"]")
     parser.add_argument("--no-logo",                    dest="logo", default=True, action="store_false", help="Disable showing the CCMpred logo [default: %(default)s]")
     parser.add_argument("--do-not-optimize", dest="optimize", action="store_false", default=True, help="Do not optimize potentials. Only available when providing raw couplings file with -i.")
+
+    grp_struc = parser.add_argument_group("Structure Settings")
+    grp_struc.add_argument("--contact-threshold", dest="contact_threshold", type=int, default=8, help="Definition of a contact.")
 
     grp_contact_score = parser.add_argument_group("Contact Score")
     grp_contact_score.add_argument("--frobenius",         dest="frob",     action="store_true", default=True,  help="Map 20x20 dimensional coupling matrices to Frobenius norm. [default: %(default)s]")
@@ -224,10 +228,13 @@ def main():
     print("Using {0} threads for OMP parallelization.".format(os.environ["OMP_NUM_THREADS"]))
 
     # instantiate CCMpred
-    ccm = CCMpred(opt.alnfile, opt.matfile)
+    ccm = CCMpred(opt.alnfile, opt.matfile, opt.pdbfile)
 
     # read alignment and possible remove gapped sequences and positions
     ccm.read_alignment(opt.aln_format, opt.max_gap_pos, opt.max_gap_seq)
+
+    #read pdb file
+    ccm.read_pdb(opt.contact_threshold)
 
     # compute sequence weights (in order to reduce sampling bias)
     ccm.compute_sequence_weights(opt.weight, opt.wt_ignore_gaps, opt.wt_cutoff)
