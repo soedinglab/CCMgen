@@ -568,8 +568,14 @@ class CCMpred():
 
         # initialize markov chains with original sequences (at max 1000 sequences from original MSA)
         sample_size_per_it = np.min([self.N, 1000])
+
+        # randomly select new sequences from alignment
         sample_seq_id = np.random.choice(self.N, sample_size_per_it, replace=False)
         msa_sampled = self.msa[sample_seq_id]
+        #random sequences
+        # msa_sampled = np.array([np.random.choice(list(range(20)), size=self.L) for _ in range(sample_size_per_it)],
+        #                        dtype="uint8")
+
 
         # burn in phase to move away from initial sequences
         msa_sampled = ccmpred.sampling.gibbs_sample_sequences(x, msa_sampled, gibbs_steps=burn_in)
@@ -578,16 +584,17 @@ class CCMpred():
 
         ##repeat sampling until 10k sequences are obtained
         repeat = int(np.ceil(size / sample_size_per_it))
-        for i in range(repeat):
+        for i in range(1, repeat):
 
-            # sample_size_per_it = np.min([self.N, 1000])
-            # sample_seq_id = np.random.choice(self.N, sample_size_per_it, replace=False)
-            # msa_sampled = self.msa[sample_seq_id]
-            # # burn in phase to move away from initial sequences
-            # msa_sampled = ccmpred.sampling.gibbs_sample_sequences(x, msa_sampled, gibbs_steps=burn_in)
+            #randomly select new sequences from alignment
+            sample_seq_id = np.random.choice(self.N, sample_size_per_it, replace=False)
+            msa_sampled = self.msa[sample_seq_id]
+            # random sequences
+            # msa_sampled = np.array([np.random.choice(list(range(20)), size=self.L) for _ in range(sample_size_per_it)],
+            #                        dtype="uint8")
 
-            # Gibbs Sampling of sequences (each position of each sequence will be sampled this often: GIBBS_STEPS)
-            msa_sampled = ccmpred.sampling.gibbs_sample_sequences(x, msa_sampled, gibbs_steps=decorrelation_time)
+            # burn in phase to move away from initial sequences
+            msa_sampled = ccmpred.sampling.gibbs_sample_sequences(x, msa_sampled, gibbs_steps=burn_in)
 
             # append newly sampled sequences
             sample_out = np.concatenate((sample_out, msa_sampled), axis=0)
