@@ -628,12 +628,7 @@ class CCMpred():
         x = parameter_handling.structured_to_linear(self.x_single, self.x_pair, nogapstate=True, padding=False)
         msa_sampled = self.generate_sample(x, size=10000, burn_in=burn_in, decorrelation_time=decorrelation_time)
 
-        if sample_alnfile is not None:
-            self.sample_alnfile = sample_alnfile
-            print("\nWriting sampled alignment to {0}".format(sample_alnfile))
 
-            with open(sample_alnfile, "w") as f:
-                io.alignment.write_msa_psicov(f, msa_sampled)
 
         if plot_alnstats_file is not None:
             print("\nWriting plot of observed vs model alignment stats to {0}".format(plot_alnstats_file))
@@ -669,6 +664,20 @@ class CCMpred():
                 single_freq_observed, single_freq_sampled,
                 pairwise_freq_observed, pairwise_freq_sampled,
                 title, plot_alnstats_file, log=False)
+
+        if sample_alnfile is not None:
+            self.sample_alnfile = sample_alnfile
+            print("\nWriting sampled alignment to {0}".format(sample_alnfile))
+
+            if self.max_gap_pos < 100:
+                #if gappy positions have been removed
+                #insert columns with gaps at that position
+                msa_sampled = gaps.backinsert_gapped_positions_aln(
+                    msa_sampled, self.gapped_positions
+                )
+
+            with open(sample_alnfile, "w") as f:
+                io.alignment.write_msa_psicov(f, msa_sampled)
 
     def write_matrix(self):
         """
