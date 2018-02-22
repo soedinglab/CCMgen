@@ -578,16 +578,16 @@ class CCMpred():
 
         ##repeat sampling until 10k sequences are obtained
         repeat = int(np.ceil(size / sample_size_per_it))
-        for i in range(repeat):
+        for i in range(1,repeat):
 
-            # sample_size_per_it = np.min([self.N, 1000])
-            # sample_seq_id = np.random.choice(self.N, sample_size_per_it, replace=False)
-            # msa_sampled = self.msa[sample_seq_id]
-            # # burn in phase to move away from initial sequences
-            # msa_sampled = ccmpred.sampling.gibbs_sample_sequences(x, msa_sampled, gibbs_steps=burn_in)
+            sample_size_per_it = np.min([self.N, 1000])
+            sample_seq_id = np.random.choice(self.N, sample_size_per_it, replace=False)
+            msa_sampled = self.msa[sample_seq_id]
+            # burn in phase to move away from initial sequences
+            msa_sampled = ccmpred.sampling.gibbs_sample_sequences(x, msa_sampled, gibbs_steps=burn_in)
 
             # Gibbs Sampling of sequences (each position of each sequence will be sampled this often: GIBBS_STEPS)
-            msa_sampled = ccmpred.sampling.gibbs_sample_sequences(x, msa_sampled, gibbs_steps=decorrelation_time)
+            # msa_sampled = ccmpred.sampling.gibbs_sample_sequences(x, msa_sampled, gibbs_steps=decorrelation_time)
 
             # append newly sampled sequences
             sample_out = np.concatenate((sample_out, msa_sampled), axis=0)
