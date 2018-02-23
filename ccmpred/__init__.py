@@ -572,7 +572,7 @@ class CCMpred():
 
         ##repeat sampling until 10k sequences are obtained
         repeat = int(np.ceil(size / sample_size_per_it))
-        samples = np.empty([repeat * sample_size_per_it , self.L])
+        samples = np.empty([repeat * sample_size_per_it , self.L], dtype="uint8")
         for i in range(repeat):
 
             if sample_type == "original":
