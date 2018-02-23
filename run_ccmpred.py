@@ -99,7 +99,7 @@ def parse_args():
     grp_out = parser.add_argument_group("Output Options")
     grp_out.add_argument("--write-sample-alignment", dest="sample_alnfile",   default=None, metavar="ALNFILE", help="Write PSICOV-formatted sampled alignment to ALNFILE")
     grp_out.add_argument("--burn-in",                dest="sample_burnin",    default=500, type=int, help="Burnin-phase for starting to write out sequences [default: %(default)s]")
-    grp_out.add_argument("--sample-type",            dest="sample_type",      default="original", type=str, choices=["original", "random", "random-gap"],  help="Sample sequences starting from original sequences, "
+    grp_out.add_argument("--sample-type",            dest="sample_type",      default="original", type=str, choices=["original", "random", "random-gapped"],  help="Sample sequences starting from original sequences, "
                                                                                                                                                                   "random sequences, or random sequences but with original gap structures "
                                                                                                                                                                   "[default: %(default)s]")
     grp_out.add_argument("-b", "--write-binary-raw", dest="out_binary_raw_file", default=None, help="Write potentials as binary MessagePack file. [default: %(default)s]")
