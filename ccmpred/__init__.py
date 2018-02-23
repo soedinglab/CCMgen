@@ -580,12 +580,12 @@ class CCMpred():
                 msa_sampled = self.msa[sample_seq_id]
             elif sample_type == "random":
                 msa_sampled = np.ascontiguousarray(
-                    [np.random.choice(20, self.L, replace=True) for _ in range(sample_size_per_it)])
+                    [np.random.choice(20, self.L, replace=True) for _ in range(sample_size_per_it)], dtype="uint8")
             elif sample_type == "random-gapped":
                 sample_seq_id = np.random.choice(self.N, sample_size_per_it, replace=False)
                 msa_sampled_orig = self.msa[sample_seq_id]
                 msa_sampled = np.ascontiguousarray(
-                    [np.random.choice(20, self.L, replace=True) for _ in range(sample_size_per_it)])
+                    [np.random.choice(20, self.L, replace=True) for _ in range(sample_size_per_it)], dtype="uint8")
                 gap_indices = np.where(msa_sampled_orig == 20)
                 msa_sampled[gap_indices] = 20
 
