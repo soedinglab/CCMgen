@@ -564,7 +564,7 @@ class CCMpred():
                     'log': log.__name__
                 }
 
-    def generate_sample(self, x, size=10000, burn_in=500, type="original"):
+    def generate_sample(self, x, size=10000, burn_in=500, sample_type="original"):
 
         #sample at max 1000 sequences per iteration
         sample_size_per_it = np.min([self.N, 1000])
@@ -575,13 +575,13 @@ class CCMpred():
         samples = np.empty([repeat * sample_size_per_it , self.L])
         for i in range(repeat):
 
-            if type == "original":
+            if sample_type == "original":
                 sample_seq_id = np.random.choice(self.N, sample_size_per_it, replace=False)
                 msa_sampled = self.msa[sample_seq_id]
-            elif type == "random":
+            elif sample_type == "random":
                 msa_sampled = np.ascontiguousarray(
                     [np.random.choice(20, self.L, replace=True) for _ in range(sample_size_per_it)])
-            elif type == "random-gapped":
+            elif sample_type == "random-gapped":
                 sample_seq_id = np.random.choice(self.N, sample_size_per_it, replace=False)
                 msa_sampled_orig = self.msa[sample_seq_id]
                 msa_sampled = np.ascontiguousarray(
@@ -598,11 +598,11 @@ class CCMpred():
 
         return samples
 
-    def write_sampled_alignment(self, sample_alnfile=None, burn_in=500, decorrelation_time=100, plot_alnstats_file=None):
+    def write_sampled_alignment(self, sample_alnfile=None, burn_in=500, sample_type="original", plot_alnstats_file=None):
 
 
         x = parameter_handling.structured_to_linear(self.x_single, self.x_pair, nogapstate=True, padding=False)
-        msa_sampled = self.generate_sample(x, size=10000, burn_in=burn_in, decorrelation_time=decorrelation_time)
+        msa_sampled = self.generate_sample(x, size=10000, burn_in=burn_in, sample_type=sample_type)
 
         if plot_alnstats_file is not None:
             print("\nWriting plot of observed vs model alignment stats to {0}".format(plot_alnstats_file))

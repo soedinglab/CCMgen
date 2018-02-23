@@ -301,7 +301,7 @@ def main():
 
     # sample an alignment according to model and save to file
     if opt.sample_alnfile or opt.plot_alnstats:
-        ccm.write_sampled_alignment(opt.sample_alnfile, opt.sample_burnin, opt.sample_decorr, opt.plot_alnstats_file)
+        ccm.write_sampled_alignment(opt.sample_alnfile, opt.sample_burnin, opt.sample_type, opt.plot_alnstats_file)
 
     #specify meta data, and write (corrected) contact matrices to files
     ccm.write_matrix()
