@@ -564,36 +564,39 @@ class CCMpred():
                     'log': log.__name__
                 }
 
-    def generate_sample(self, x, size=10000, burn_in=500, decorrelation_time=100):
+    def generate_sample(self, x, size=10000, burn_in=500, type="original"):
 
-        # initialize markov chains with original sequences (at max 1000 sequences from original MSA)
+        #sample at max 1000 sequences per iteration
         sample_size_per_it = np.min([self.N, 1000])
-        sample_seq_id = np.random.choice(self.N, sample_size_per_it, replace=False)
-        msa_sampled = self.msa[sample_seq_id]
 
-        # burn in phase to move away from initial sequences
-        msa_sampled = ccmpred.sampling.gibbs_sample_sequences(x, msa_sampled, gibbs_steps=burn_in)
-        sample_out = np.copy(msa_sampled)
-        print("sampled alignment has {0} sequences...".format(sample_out.shape[0]))
 
         ##repeat sampling until 10k sequences are obtained
         repeat = int(np.ceil(size / sample_size_per_it))
-        for i in range(1,repeat):
+        samples = np.empty([repeat * sample_size_per_it , self.L])
+        for i in range(repeat):
 
-            sample_size_per_it = np.min([self.N, 1000])
-            sample_seq_id = np.random.choice(self.N, sample_size_per_it, replace=False)
-            msa_sampled = self.msa[sample_seq_id]
+            if type == "original":
+                sample_seq_id = np.random.choice(self.N, sample_size_per_it, replace=False)
+                msa_sampled = self.msa[sample_seq_id]
+            elif type == "random":
+                msa_sampled = np.ascontiguousarray(
+                    [np.random.choice(20, self.L, replace=True) for _ in range(sample_size_per_it)])
+            elif type == "random-gapped":
+                sample_seq_id = np.random.choice(self.N, sample_size_per_it, replace=False)
+                msa_sampled_orig = self.msa[sample_seq_id]
+                msa_sampled = np.ascontiguousarray(
+                    [np.random.choice(20, self.L, replace=True) for _ in range(sample_size_per_it)])
+                gap_indices = np.where(msa_sampled_orig == 20)
+                msa_sampled[gap_indices] = 20
+
             # burn in phase to move away from initial sequences
             msa_sampled = ccmpred.sampling.gibbs_sample_sequences(x, msa_sampled, gibbs_steps=burn_in)
 
-            # Gibbs Sampling of sequences (each position of each sequence will be sampled this often: GIBBS_STEPS)
-            # msa_sampled = ccmpred.sampling.gibbs_sample_sequences(x, msa_sampled, gibbs_steps=decorrelation_time)
+            # add newly sampled sequences
+            samples[i*sample_size_per_it : (i+1)*sample_size_per_it] =  msa_sampled
+            print("sampled alignment has {0} sequences...".format((i+1)*sample_size_per_it))
 
-            # append newly sampled sequences
-            sample_out = np.concatenate((sample_out, msa_sampled), axis=0)
-
-            print("sampled alignment has {0} sequences...".format(sample_out.shape[0]))
-        return sample_out
+        return samples
 
     def write_sampled_alignment(self, sample_alnfile=None, burn_in=500, decorrelation_time=100, plot_alnstats_file=None):
 

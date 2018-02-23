@@ -97,9 +97,11 @@ def parse_args():
 
 
     grp_out = parser.add_argument_group("Output Options")
-    grp_out.add_argument("--write-sample-alignment", dest="sample_alnfile",      default=None, metavar="ALNFILE", help="Write PSICOV-formatted sampled alignment to ALNFILE")
-    grp_out.add_argument("--burn-in",                dest="sample_burnin",       default=500, type=int, help="Burnin-phase for starting to write out sequences [default: %(default)s]")
-    grp_out.add_argument("--decorrelation-time",     dest="sample_decorr",       default=100, type=int,  help="Decorrelation time, interavl for keeping next sample [default: %(default)s]")
+    grp_out.add_argument("--write-sample-alignment", dest="sample_alnfile",   default=None, metavar="ALNFILE", help="Write PSICOV-formatted sampled alignment to ALNFILE")
+    grp_out.add_argument("--burn-in",                dest="sample_burnin",    default=500, type=int, help="Burnin-phase for starting to write out sequences [default: %(default)s]")
+    grp_out.add_argument("--sample-type",            dest="sample_type",      default="original", type=str, choices=["original", "random", "random-gap"],  help="Sample sequences starting from original sequences, "
+                                                                                                                                                                  "random sequences, or random sequences but with original gap structures "
+                                                                                                                                                                  "[default: %(default)s]")
     grp_out.add_argument("-b", "--write-binary-raw", dest="out_binary_raw_file", default=None, help="Write potentials as binary MessagePack file. [default: %(default)s]")
 
 
@@ -107,7 +109,8 @@ def parse_args():
     grp_of.add_argument("--ofn-pll",             dest="objfun",         action="store_const",   const="pll", default="pll", help="Use pseudo-log-likelihood(pLL) [default: %(default)s]")
     grp_of.add_argument("--ofn-cd",              dest="objfun",         action="store_const",   const="cd", help="Use contrastive divergence (CD)")
     grp_of.add_argument("--cd-sample_size",      dest="sample_size",    type=float,             default=10.0,   help="Setting for CD: multiplier X for sampling at max X * SAMPLE_REF sequences per iteration. [default: %(default)s] ")
-    grp_of.add_argument("--cd-sample_ref",       dest="sample_ref",     type=str,               default="L",    choices=['L', 'Neff'], help="Setting for CD: Sample at max SAMPLE_SIZE * [L|Neff] sequences per iteration. Reduces runtime. [default: %(default)s] ")
+    grp_of.add_argument("--cd-sample_ref",       dest="sample_ref",     type=str,               default="L",    choices=['L', 'Neff'], help="Setting for CD: Sample at max SAMPLE_SIZE * [L|Neff] sequences per iteration. "
+                                                                                                                                            "Reduces runtime. [default: %(default)s] ")
     grp_of.add_argument("--cd-gibbs_steps",      dest="cd_gibbs_steps", type=int,               default=1,      help="Setting for CD: Perform this many steps of Gibbs sampling per sequence. [default: %(default)s]")
     grp_of.add_argument("--cd-fix-v",            dest="fix_v",          action="store_true",    default=False,  help="Set single potentials v=v* and do not optimize single potentials v. [default: %(default)s]")
     grp_of.add_argument("--cd-persistent",       dest="cd_persistent",  action="store_true",    default=False,  help="Switch on PERSISTENT CD once the learning rate is small enough (< alpha_0 / 10) [default: %(default)s]")
@@ -130,7 +133,8 @@ def parse_args():
     grp_als.add_argument("--decay",             dest="decay",           action="store_true", default=False, help="ADAM and GD: Use decaying learnign rate. Start decay when convergence criteria < START_DECAY. [default: %(default)s]")
     grp_als.add_argument("--decay-start",       dest="decay_start",     default=1e-4,       type=float,     help="ADAM and GD: Start decay when convergence criteria < START_DECAY. Only when --decay. [default: %(default)s]")
     grp_als.add_argument("--decay-rate",        dest="decay_rate",      default=1e1,        type=float,     help="ADAM and GD: Set rate of decay for learning rate. Only when --decay. [default: %(default)s]")
-    grp_als.add_argument("--decay-type",        dest="decay_type",      default="step",     type=str,       choices=['sig', 'step', 'sqrt', 'power', 'exp', 'lin', 'keras'], help="ADAM and GD: Decay type. One of: step, sqrt, exp, power, lin. Only when --decay. [default: %(default)s]")
+    grp_als.add_argument("--decay-type",        dest="decay_type",      default="step",     type=str,       choices=['sig', 'step', 'sqrt', 'power', 'exp', 'lin', 'keras'], help="ADAM and GD: Decay type. One of: step, sqrt, exp, power, lin. "
+                                                                                                                                                                                  "Only when --decay. [default: %(default)s]")
 
 
     grp_con = parser.add_argument_group("Convergence Settings")
