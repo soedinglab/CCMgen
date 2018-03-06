@@ -9,7 +9,7 @@ import ccmpred.gaps
 import ccmpred.counts
 from ccmpred.weighting import SequenceWeights
 from ccmpred.pseudocounts import PseudoCounts
-import ccmpred.local_methods
+import ccmpred.locmeth
 import ccmpred.centering
 import ccmpred.raw
 import ccmpred.parameter_handling
@@ -275,7 +275,7 @@ class CCMpred():
         if omes_fodoraldrich:
             print("Will compute Observed Minus Expected Squared (OMES) Covariance score (acc to Fodor & Aldrich).")
             self.mats["omes_fodoraldrich"] = {
-                'mat': local_methods.compute_omes_freq(self.pseudocounts.counts, self.pseudocounts.freqs, True),
+                'mat': locmeth.compute_omes_freq(self.pseudocounts.counts, self.pseudocounts.freqs, True),
                 'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + ".omes_fa." + mat_name.split(".")[-1],
                 'score': "omes_fodoraldrich",
                 'correction': "no"
@@ -283,7 +283,7 @@ class CCMpred():
         else:
             print("Will compute Observed Minus Expected Squared (OMES) Covariance score (acc to Kass & Horovitz).")
             self.mats["omes"] = {
-                'mat': local_methods.compute_omes_freq(self.pseudocounts.counts, self.pseudocounts.freqs, False),
+                'mat': locmeth.compute_omes_freq(self.pseudocounts.counts, self.pseudocounts.freqs, False),
                 'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + ".omes." + mat_name.split(".")[-1],
                 'score': "omes",
                 'correction': "no"
@@ -303,7 +303,7 @@ class CCMpred():
         if mi_pseudocounts:
             print("\nComputing mutual information score with pseudocounts")
             self.mats["mutual information (pseudo counts)"] = {
-                'mat' : local_methods.compute_mi_pseudocounts(self.pseudocounts.freqs),
+                'mat' : locmeth.compute_mi_pseudocounts(self.pseudocounts.freqs),
                 'mat_file':  mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + ".mi_pc." + mat_name.split(".")[-1],
                 'score': "mutual information with pseudo counts",
                 'correction': "no"
@@ -311,7 +311,7 @@ class CCMpred():
         if mi_normalized:
             print("\nComputing normalized mutual information score")
             self.mats["normalized mutual information"] = {
-                'mat': local_methods.compute_mi(self.pseudocounts.counts, normalized=True),
+                'mat': locmeth.compute_mi(self.pseudocounts.counts, normalized=True),
                 'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + ".nmi." + mat_name.split(".")[-1],
                 'score': "normalized mutual information",
                 'correction': "no"
@@ -319,7 +319,7 @@ class CCMpred():
 
         print("\nComputing mutual information score")
         self.mats["mutual information"] = {
-            'mat': local_methods.compute_mi(self.pseudocounts.counts),
+            'mat': locmeth.compute_mi(self.pseudocounts.counts),
             'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + ".mi." + mat_name.split(".")[-1],
             'score': "mutual information",
             'correction': "no"
