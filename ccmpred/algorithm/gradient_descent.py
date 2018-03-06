@@ -28,6 +28,8 @@ class gradientDescent():
         self.epsilon = epsilon
         self.convergence_prev=convergence_prev
 
+        self.non_contact_indices = ccm.non_contact_indices
+
 
         plot_title = "L={0} N={1} Neff={2} Diversity={3}<br>".format(
             ccm.L, ccm.N, np.round(ccm.neff, decimals=3),
@@ -87,6 +89,9 @@ class gradientDescent():
             gx_single, gx_pair = objfun.linear_to_structured(gx)
             g_reg_single, g_reg_pair = objfun.linear_to_structured(greg)
 
+            #cheating: set coupling gradients for all pairs (i,j) with d_ij > contact_thr = 0
+            g_pair[self.non_contact_indices[0], self.non_contact_indices[1], :, :] = 0
+
             #flattened
             #print g_pair[0,10,3,5], "==", g_pair[10,0,5,3] #yes it is identical
             g_pair_flat = g_pair[upper_triangular_indices[0], upper_triangular_indices[1],:20,:20].flatten()
@@ -140,6 +145,7 @@ class gradientDescent():
                 log_metrics['||g_v||'] = np.sqrt(np.sum(gx_single * gx_single))
                 log_metrics['||g||'] = np.sqrt(np.sum(gx * gx))
                 log_metrics['||g_reg_v||'] = np.sqrt(np.sum(g_reg_single * g_reg_single))
+
 
             self.progress.log_progress(i + 1, **log_metrics)
 

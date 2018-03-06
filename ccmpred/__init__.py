@@ -23,11 +23,15 @@ class CCMpred():
     CCMpred is a fast python implementation of the maximum pseudo-likelihood class of contact prediction methods. From an alignment given as alnfile, it will maximize the likelihood of the pseudo-likelihood of a Potts model with 21 states for amino acids and gaps. The L2 norms of the pairwise coupling potentials will be written to the output matfile.
     """
 
-    def __init__(self, alignment_file, mat_file):
+    def __init__(self, alignment_file, mat_file, pdb_file):
 
         self.alignment_file = alignment_file
         self.mat_file       = mat_file
+        self.pdb_file       = pdb_file
         self.protein        = os.path.basename(self.alignment_file).split(".")[0]
+
+        self.contact_threshold = 8
+        self.non_contact_indices = None
 
         self.msa            = None
         self.gapped_positions = None
@@ -210,6 +214,22 @@ class CCMpred():
 
         print("{0} is of length L={1}. Alignment has {2} sequences.".format(
             self.protein, self.L, self.N))
+
+    def read_pdb(self, contact_threshold=8):
+        self.contact_threshold = contact_threshold
+
+
+        if self.max_gap_pos < 100:
+            L = self.L + len(self.gapped_positions)
+            distance_map = io.distance_map(self.pdb_file, L=L)
+
+            indices = [i for i in range(L) if i not in self.gapped_positions]
+            distance_map = distance_map[indices, :]
+            distance_map = distance_map[:, indices]
+        else:
+            distance_map = io.distance_map(self.pdb_file, L=self.L)
+
+        self.non_contact_indices = np.where(distance_map > contact_threshold)
 
     def compute_sequence_weights(self, weighting_type, ignore_gaps=False, cutoff=0.8):
 
@@ -569,7 +589,6 @@ class CCMpred():
         #sample at max 1000 sequences per iteration
         sample_size_per_it = np.min([self.N, 1000])
 
-
         ##repeat sampling until 10k sequences are obtained
         repeat = int(np.ceil(size / sample_size_per_it))
         samples = np.empty([repeat * sample_size_per_it , self.L], dtype="uint8")
@@ -588,7 +607,7 @@ class CCMpred():
                     [np.random.choice(20, self.L, replace=True) for _ in range(sample_size_per_it)], dtype="uint8")
                 gap_indices = np.where(msa_sampled_orig == 20)
                 msa_sampled[gap_indices] = 20
-
+        
             # burn in phase to move away from initial sequences
             msa_sampled = ccmpred.sampling.gibbs_sample_sequences(x, msa_sampled, gibbs_steps=burn_in)
 
