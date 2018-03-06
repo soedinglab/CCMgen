@@ -1,11 +1,8 @@
 ### https://raw.github.com/github/gitignore/master/Python.gitignore
 
-# Byte-compiled / optimized / DLL files
+# Byte-compiled / optimized
 __pycache__/
 *.py[cod]
-
-# C extensions
-*.so
 
 # Distribution / packaging
 .Python
@@ -95,6 +92,3 @@ target/
 Session.vim
 .netrwhist
 *~
-
-### Project-specific
-data
