@@ -118,8 +118,8 @@ def main():
         opt.nseq = ccm.N
 
     #prepare tree topology
-    tree = ccmpred.trees.CCMTree(opt.nseq)
-    tree.specify_tree(tree_file=opt.tree_file, tree_source=opt.tree_source)
+    tree = ccmpred.trees.CCMTree()
+    tree.specify_tree(opt.nseq, tree_file=opt.tree_file, tree_source=opt.tree_source)
 
     #start sampling along tree
     if tree is not None and opt.mutation_rate_neff:
