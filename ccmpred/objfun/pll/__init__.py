@@ -8,35 +8,30 @@ import ccmpred.counts
 import ccmpred.parameter_handling
 
 class PseudoLikelihood():
-    def __init__(self, ccm):
+    def __init__(self, msa, weights, regularization, pseudocounts, x_single, x_pair):
 
-        self.nrow, self.ncol = ccm.msa.shape
-        self.msa = ccm.msa
-        self.weights = ccm.weights
-        self.neff = ccm.neff
-        self.regularization = ccm.regularization
+        self.msa = msa
+        self.nrow, self.ncol = msa.shape
+        self.weights = weights
+        self.neff = np.sum(weights)
+        self.regularization = regularization
 
         self.structured_to_linear = lambda x_single, x_pair: \
-            ccmpred.parameter_handling.structured_to_linear(x_single,
-                                                            x_pair,
-                                                            nogapstate=False,
-                                                            padding=True)
+            ccmpred.parameter_handling.structured_to_linear(
+                x_single, x_pair, nogapstate=False, padding=True)
         self.linear_to_structured = lambda x: \
-            ccmpred.parameter_handling.linear_to_structured(x,
-                                                            self.ncol,
-                                                            nogapstate=False,
-                                                            add_gap_state=False,
-                                                            padding=True)
+            ccmpred.parameter_handling.linear_to_structured(
+                x, self.ncol, nogapstate=False, add_gap_state=False, padding=True)
 
-        self.x_single = ccm.x_single
-        self.x_pair = ccm.x_pair
+        self.x_single = x_single
+        self.x_pair = x_pair
         self.x = self.structured_to_linear(self.x_single, self.x_pair)
 
         #use msa counts with pseudo counts - numerically more stable?? but gradient does not fit ll fct!!
         #self.freqs_single, self.freqs_pair = ccm.pseudocounts.freqs
         #msa_counts_single, msa_counts_pair = neff * freqs_single, neff * freqs_pair
         #use msa counts without pseudo counts
-        msa_counts_single, msa_counts_pair = ccm.pseudocounts.counts
+        msa_counts_single, msa_counts_pair = pseudocounts.counts
 
         msa_counts_single[:, 20] = 0
         msa_counts_pair[:, :, 20, :] = 0
