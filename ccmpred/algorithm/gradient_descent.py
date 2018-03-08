@@ -6,14 +6,17 @@ import ccmpred.monitor.progress as pr
 class gradientDescent():
     """Optimize objective function using gradient descent"""
 
-    def __init__(
-            self, ccm, maxit=100, alpha0=5e-3,
-            decay=True,  decay_start=1e-3, decay_rate=10, decay_type="lin",
-            fix_v=False, epsilon=1e-5, convergence_prev=5, early_stopping=False, plotfile=None):
+    def __init__(self, ccm, maxit=100, alpha0=5e-3,
+                 decay=True,  decay_start=1e-3, decay_rate=10, decay_type="lin",
+                 fix_v=False, epsilon=1e-5, convergence_prev=5, early_stopping=False):
 
 
         self.maxit = maxit
         self.alpha0 = alpha0
+
+        #initial learning rate defined wrt to effective number of sequences
+        if self.alpha0 == 0:
+                self.alpha0 = 5e-2 / np.sqrt(ccm.neff)
 
         #decay settings
         self.decay=decay
@@ -22,23 +25,21 @@ class gradientDescent():
         self.decay_type = decay_type
         self.it_succesfull_stop_condition=-1
 
+        #single potentials will not be optimized if fix_v=True
         self.fix_v=fix_v
 
+        #convergence settings for optimization
         self.early_stopping = early_stopping
         self.epsilon = epsilon
         self.convergence_prev=convergence_prev
 
+        #whether optimization is run with constraints (non-contacts are masked)
         self.non_contact_indices = ccm.non_contact_indices
 
+        #optimization progress logger
+        self.progress = ccm.progress
 
-        plot_title = "L={0} N={1} Neff={2} Diversity={3}<br>".format(
-            ccm.L, ccm.N, np.round(ccm.neff, decimals=3),
-            np.round(ccm.diversity, decimals=3)
-        )
-        self.progress = pr.Progress(plotfile, plot_title)
 
-        if self.alpha0 == 0:
-                self.alpha0 = 5e-2 / np.sqrt(ccm.neff)
 
     def __repr__(self):
         rep_str="Gradient descent optimization (alpha0={0})\n".format( np.round(self.alpha0, decimals=8))
@@ -47,11 +48,11 @@ class gradientDescent():
             self.maxit, self.early_stopping, self.epsilon, self.convergence_prev)
 
         if self.decay:
-            rep_str+="\tdecay: decay={0} decay_rate={1} decay_start={2} \n".format(
+            rep_str+="\t\t\tdecay: decay={0} decay_rate={1} decay_start={2} \n".format(
                self.decay, np.round(self.decay_rate, decimals=8), self.decay_start
             )
         else:
-            rep_str+="\tdecay: decay={0}\n".format(
+            rep_str+="\t\t\tdecay: decay={0}\n".format(
               self.decay
             )
 
@@ -89,8 +90,9 @@ class gradientDescent():
             gx_single, gx_pair = objfun.linear_to_structured(gx)
             g_reg_single, g_reg_pair = objfun.linear_to_structured(greg)
 
-            #cheating: set coupling gradients for all pairs (i,j) with d_ij > contact_thr = 0
-            g_pair[self.non_contact_indices[0], self.non_contact_indices[1], :, :] = 0
+            #masking: set coupling gradients for all pairs (i,j) with d_ij > contact_thr = 0
+            if self.non_contact_indices is not None:
+                g_pair[self.non_contact_indices[0], self.non_contact_indices[1], :, :] = 0
 
             #flattened
             #print g_pair[0,10,3,5], "==", g_pair[10,0,5,3] #yes it is identical
@@ -98,7 +100,6 @@ class gradientDescent():
             gx_pair_flat = gx_pair[upper_triangular_indices[0], upper_triangular_indices[1],:20,:20].flatten()
             g_reg_pair_flat = g_reg_pair[upper_triangular_indices[0], upper_triangular_indices[1],:20,:20].flatten()
             x_pair_flat = x_pair[upper_triangular_indices[0], upper_triangular_indices[1],:20,:20].flatten()
-
 
             #compute norm of coupling parameters
             xnorm_pair      = np.sqrt(np.sum(x_pair_flat * x_pair_flat)) #np.sqrt(np.sum(x_pair * x_pair))
@@ -108,7 +109,6 @@ class gradientDescent():
                 xnorm_diff = np.abs((xnorm_prev - xnorm_pair)) / xnorm_prev
             else:
                 xnorm_diff = 1.0
-
 
             #start decay at iteration i
             if self.decay and xnorm_diff < self.decay_start and self.it_succesfull_stop_condition < 0:
@@ -145,7 +145,6 @@ class gradientDescent():
                 log_metrics['||g_v||'] = np.sqrt(np.sum(gx_single * gx_single))
                 log_metrics['||g||'] = np.sqrt(np.sum(gx * gx))
                 log_metrics['||g_reg_v||'] = np.sqrt(np.sum(g_reg_single * g_reg_single))
-
 
             self.progress.log_progress(i + 1, **log_metrics)
 
