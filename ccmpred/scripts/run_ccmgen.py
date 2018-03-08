@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import os
 from ccmpred import CCMpred
 import ccmpred.logo
 import ccmpred.io.alignment
@@ -46,8 +47,8 @@ def parse_args():
                         help="Set mutation rate to generate alignment with Neff comparable to original MSA")
     grp_tr_opt.add_argument("--burn-in", dest="burn_in", type=int, default=500,
                         help="Specify number of Gibbs steps for defining ancestor sequence [default: %(default)s]")
-    grp_tr_opt.add_argument("--num-sequences", dest="nseq", type=int, default=2**12,
-                        help="Set the number of sequences to generate to NSEQ [default: %(default)s]")
+    grp_tr_opt.add_argument("--num-sequences", dest="nseq", type=int, default=0,
+                        help="Set the number of sequences to generate to NSEQ [default: N]")
 
     grp_mcmc = parser.add_argument_group("MCMC Sampling Options")
     grp_mcmc.add_argument("--mcmc-sampling",      dest="mcmc", action="store_true", default=False,
@@ -69,6 +70,8 @@ def parse_args():
                         help="Ignore alignment positions with > MAX_GAP_POS percent gaps. [default: %(default)s == no removal of gaps]")
     grp_opt.add_argument("--aln-format", dest="aln_format", type=str, default="fasta",
                         help="Specify format for alignment files [default: %(default)s]")
+    grp_opt.add_argument("-t", "--num_threads", dest="num_threads", type=int, default=1,
+                        help="Specify the number of threads. [default: %(default)s]")
 
 
 
@@ -91,6 +94,10 @@ def main():
     opt = parse_args()
 
     ccmpred.logo.logo(what_for="ccmgen")
+
+    # set OMP environment variable for number of threads
+    os.environ['OMP_NUM_THREADS'] = str(opt.num_threads)
+    print("Using {0} threads for OMP parallelization.".format(os.environ["OMP_NUM_THREADS"]))
 
     # instantiate CCMpred
     ccm = CCMpred()
