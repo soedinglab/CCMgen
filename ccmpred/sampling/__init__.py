@@ -12,33 +12,46 @@ def gibbs_sample_sequences(x, msa_sampled, gibbs_steps):
 def generate_mcmc_sample(x, msa, size=10000, burn_in=500, sample_type="original"):
 
     print("Start sampling {0} sequences according to model starting with {1} sequences using burn-in={2}.".format(
-        size, sample_type, burn_in
-    ))
+        size, sample_type, burn_in))
+    sys.stdout.flush()
 
-    ncol = msa.shape[1]
     N = msa.shape[0]
+    L = msa.shape[1]
 
     # sample at max 1000 sequences per iteration
-    sample_size_per_it = np.min([ncol, 1000])
+    sample_size_per_it = np.min([N, 1000])
 
     ##repeat sampling until 10k sequences are obtained
     repeat = int(np.ceil(size / sample_size_per_it))
-    samples = np.empty([repeat * sample_size_per_it, ncol], dtype="uint8")
+    samples = np.empty([repeat * sample_size_per_it, L], dtype="uint8")
     for i in range(repeat):
 
         if sample_type == "original":
-            sample_seq_id = np.random.choice(ncol, sample_size_per_it, replace=False)
+
+            #random selection of sequences from original MSA
+            sample_seq_id = np.random.choice(L, sample_size_per_it, replace=False)
             msa_sampled = msa[sample_seq_id]
+
         elif sample_type == "random":
+
+            #generate random sequences of length L
             msa_sampled = np.ascontiguousarray(
-                [np.random.choice(20, ncol, replace=True) for _ in range(sample_size_per_it)], dtype="uint8")
+                [np.random.choice(20, L, replace=True) for _ in range(sample_size_per_it)], dtype="uint8")
+
         elif sample_type == "random-gapped":
+
+            #generate random sequences of length L
+            msa_sampled = np.ascontiguousarray(
+                [np.random.choice(20, L, replace=True) for _ in range(sample_size_per_it)], dtype="uint8")
+
+            #find gaps in randomly selected original sequences
             sample_seq_id = np.random.choice(N, sample_size_per_it, replace=False)
             msa_sampled_orig = msa[sample_seq_id]
-            msa_sampled = np.ascontiguousarray(
-                [np.random.choice(20, ncol, replace=True) for _ in range(sample_size_per_it)], dtype="uint8")
-            gap_indices = np.where(msa_sampled_orig == 20)
-            msa_sampled[gap_indices] = 20
+            gap_indices = np.where(msa_sampled_orig == AMINO_ACIDS.index('-'))
+
+            #assign gap states to random sequences
+            msa_sampled[gap_indices] = AMINO_ACIDS.index('-')
+
 
         # burn in phase to move away from initial sequences
         msa_sampled = ccmpred.sampling.gibbs_sample_sequences(x, msa_sampled, gibbs_steps=burn_in)
@@ -46,10 +59,12 @@ def generate_mcmc_sample(x, msa, size=10000, burn_in=500, sample_type="original"
         # add newly sampled sequences
         samples[i * sample_size_per_it: (i + 1) * sample_size_per_it] = msa_sampled
         print("sampled alignment has {0} sequences...".format((i + 1) * sample_size_per_it))
-
+        sys.stdout.flush()
 
     #compute neff of sampled sequences
     neff = ccmpred.weighting.get_HHsuite_neff(msa_sampled)
+
+    print("Sampled alignment has Neff {0:.6g}".format(neff))
 
     return samples, neff
 
