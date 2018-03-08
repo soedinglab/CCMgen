@@ -10,49 +10,39 @@ import ccmpred.sampling
 
 class ContrastiveDivergence():
 
-    def __init__(self, ccm, gibbs_steps=1, sample_size=0, sample_ref="L", persistent=False):
+    def __init__(self, msa, weights, regularization, pseudocounts, x_single, x_pair,
+                 gibbs_steps=1, nr_seq_sample=500, persistent=False):
 
 
-        self.msa = ccm.msa
+        self.msa = msa
         self.nrow, self.ncol = self.msa.shape
-        self.weights = ccm.weights
-        self.neff = ccm.neff
-        self.regularization = ccm.regularization
+        self.weights = weights
+        self.neff = np.sum(weights)
+        self.regularization = regularization
 
-        self.pseudocount_type       = ccm.pseudocounts.pseudocount_type
-        self.pseudocount_n_single   = ccm.pseudocounts.pseudocount_n_single
-        self.pseudocount_n_pair     = ccm.pseudocounts.pseudocount_n_pair
-
+        self.pseudocount_type       = pseudocounts.pseudocount_type
+        self.pseudocount_n_single   = pseudocounts.pseudocount_n_single
+        self.pseudocount_n_pair     = pseudocounts.pseudocount_n_pair
 
         self.structured_to_linear = lambda x_single, x_pair: \
-            ccmpred.parameter_handling.structured_to_linear(x_single,
-                                                            x_pair,
-                                                            nogapstate=True,
-                                                            padding=False)
+            ccmpred.parameter_handling.structured_to_linear(
+                x_single, x_pair, nogapstate=True, padding=False)
         self.linear_to_structured = lambda x: \
-            ccmpred.parameter_handling.linear_to_structured(x,
-                                                            self.ncol,
-                                                            nogapstate=True,
-                                                            add_gap_state=False,
-                                                            padding=False)
+            ccmpred.parameter_handling.linear_to_structured(
+                x, self.ncol, nogapstate=True, add_gap_state=False, padding=False)
 
 
-        self.x_single = ccm.x_single
-        self.x_pair = ccm.x_pair
+        self.x_single = x_single
+        self.x_pair = x_pair
         self.x = self.structured_to_linear(self.x_single, self.x_pair)
 
         self.nsingle = self.ncol * 20
         self.npair = self.ncol * self.ncol * 21 * 21
         self.nvar = self.nsingle + self.npair
 
-        #perform this many steps of Gibbs sampling per sequence
-        # 1 Gibbs step == sample every sequence position once
-        self.gibbs_steps = np.max([gibbs_steps, 1])
-
-
         # get constant alignment counts - INCLUDING PSEUDO COUNTS
         # important for small alignments
-        self.freqs_single, self.freqs_pair = ccm.pseudocounts.freqs
+        self.freqs_single, self.freqs_pair = pseudocounts.freqs
         self.msa_counts_single = self.freqs_single * self.neff
         self.msa_counts_pair = self.freqs_pair * self.neff
 
@@ -65,21 +55,19 @@ class ContrastiveDivergence():
         self.Ni = self.msa_counts_single.sum(1)
         self.Nij = self.msa_counts_pair.sum(3).sum(2)
 
+        ### Setting for (Persistent) Contrastive Divergence
 
-        #define how many markov chains are run in parallel ~ how many sequences are sampled at each iteration
-        self.sample_size = sample_size
-        self.sample_ref = sample_ref
-        #self.nr_seq_sample = self.nrow
-        self.nr_seq_sample = 500
-        # if (sample_size > 0):
-        #     if self.sample_ref == "L":
-        #         self.nr_seq_sample = int(sample_size * self.ncol)
-        #         if self.nr_seq_sample > self.nrow:
-        #            self.nr_seq_sample = self.nrow
-        #     else:
-        #         self.nr_seq_sample = np.max([10, int(sample_size * self.neff)])
+        #perform this many steps of Gibbs sampling per sequence
+        # 1 Gibbs step == sample every sequence position once
+        self.gibbs_steps = np.max([gibbs_steps, 1])
 
+        #define how many markov chains are run in parallel
+        # => how many sequences are sampled at each iteration
+        self.nr_seq_sample = nr_seq_sample
+
+        #prepare the persistent MSA (Markov chains are NOT reset after each iteration)
         self.persistent=persistent
+        #ensure that msa has at least NR_SEQ_SAMPLE sequences
         seq_id = list(range(self.nrow)) * int(np.ceil(self.nr_seq_sample / float(self.nrow)))
         self.msa_persistent = self.msa[seq_id]
         self.weights_persistent = self.weights[seq_id]
@@ -93,7 +81,7 @@ class ContrastiveDivergence():
 
         repr_str += "contrastive divergence: "
 
-        repr_str += "#sampled sequences={0} ({1}xN and {2}xNeff and {3}xL) Gibbs steps={4} ".format(
+        repr_str += "\nnr of sampled sequences={0} ({1}xN and {2}xNeff and {3}xL) Gibbs steps={4} ".format(
             self.nr_seq_sample,
             np.round(self.nr_seq_sample / float(self.nrow), decimals=3),
             np.round(self.nr_seq_sample / self.neff, decimals=3),
@@ -116,12 +104,14 @@ class ContrastiveDivergence():
         """
 
         if persistent:
-            # in case of PERSISTENT CD, continue the Markov chain
+            # in case of PERSISTENT CD, continue the Markov chain:
+            #randomly select NR_SEQ_SAMPLE sequences from persistent MSA
             self.sample_seq_id = np.random.choice(self.msa_persistent.shape[0], self.nr_seq_sample, replace=False)
             msa = self.msa_persistent[self.sample_seq_id]
             weights = self.weights_persistent[self.sample_seq_id]
         else:
-            # in case of plain CD, reinitialize the Markov chains from original sequences
+            # in case of plain CD, reinitialize the Markov chains from original sequences:
+            # randomly select NR_SEQ_SAMPLE sequences from original MSA
             self.sample_seq_id = np.random.choice(self.nrow, self.nr_seq_sample, replace=True)
             msa = self.msa[self.sample_seq_id]
             weights = self.weights[self.sample_seq_id]
@@ -193,7 +183,6 @@ class ContrastiveDivergence():
     def get_parameters(self):
         parameters = {}
         parameters['gibbs_steps'] = int(self.gibbs_steps)
-        parameters['sample_size'] = self.sample_size
         parameters['nr_seq_sample'] = self.nr_seq_sample
 
 
