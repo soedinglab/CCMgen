@@ -3,48 +3,40 @@ from ccmpred.weighting.cext import count_ids, calculate_weights_simple
 import ccmpred.counts
 
 
-class SequenceWeights( ):
-    """Compute weights for each sequence to reduce sampling bias"""
+def get_HHsuite_neff(msa):
+    single_counts = ccmpred.counts.single_counts(msa)
+    single_freqs = (single_counts + 1e-3) / np.sum(single_counts, axis=1)[:, np.newaxis]
 
-    def __init__(self, ignore_gaps=False, cutoff=0.8):
-        self.ignore_gaps = ignore_gaps
-        self.cutoff = cutoff
+    single_freqs = single_freqs[:20]
 
+    entropies = - np.sum(single_freqs * np.log2(single_freqs), axis=1)
 
-    def get_HHsuite_neff(self, msa):
-        single_counts = ccmpred.counts.single_counts(msa)
-        single_freqs = (single_counts + 1e-3) / np.sum(single_counts, axis=1)[:, np.newaxis]
+    neff = 2 ** np.mean(entropies)
 
-        single_freqs = single_freqs[:20]
+    return neff
 
-        entropies = - np.sum(single_freqs * np.log2(single_freqs), axis=1)
-
-        neff = 2 ** np.mean(entropies)
-
-        return neff
-
-    def weights_uniform(self, msa):
-        """Uniform weights"""
-        return np.ones((msa.shape[0],), dtype="float64")
+def weights_uniform(msa):
+    """Uniform weights"""
+    return np.ones((msa.shape[0],), dtype="float64")
 
 
-    def weights_simple(self, msa):
-        """Simple sequence reweighting from the Morcos et al. 2011 DCA paper"""
+def weights_simple(msa, cutoff=0.8, ignore_gaps=False):
+    """Simple sequence reweighting from the Morcos et al. 2011 DCA paper"""
 
-        if self.cutoff >= 1:
-            return self.weights_uniform(msa)
+    if cutoff >= 1:
+        return weights_uniform(msa)
 
-        return calculate_weights_simple(msa, self.cutoff, self.ignore_gaps)
+    return calculate_weights_simple(msa, cutoff, ignore_gaps)
 
 
-    def weights_henikoff(self, msa):
+def weights_henikoff(msa, ignore_gaps=False ):
         """
         Henikoff weighting according to Henikoff, S and Henikoff, JG. Position-based sequence weights. 1994
         Henikoff weights always sum up to ncol
         """
 
         single_counts   = ccmpred.counts.single_counts(msa, None)
-        if self.ignore_gaps:
+        if ignore_gaps:
             single_counts[:,0] = 0
 
         unique_aa       = (single_counts != 0).sum(1)
@@ -74,3 +66,8 @@ class SequenceWeights( ):
         return henikoff
 
 
+WEIGHTING_TYPE = {
+    'simple': lambda msa, cutoff, ignore_gaps: weights_simple(msa, cutoff, ignore_gaps),
+    'henikoff': lambda msa, cutoff, ignore_gaps: weights_henikoff(msa, ignore_gaps),
+    'uniform': lambda msa, cutoff, ignore_gaps: weights_uniform(msa)
+}
