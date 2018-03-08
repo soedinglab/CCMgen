@@ -5,21 +5,18 @@ from scipy.optimize import minimize as min
 class LBFGS(object):
     """Optimize objective function usign lbfgs"""
 
-    def __init__(
-            self, ccm,
-            maxit=100, ftol=1e-4, max_linesearch=20, maxcor=5,
-            plotfile=None):
+    def __init__(self, ccm, maxit=100, ftol=1e-4, max_linesearch=20, maxcor=5):
 
         self.max_linesearch=max_linesearch
         self.ftol = ftol
         self.maxit = maxit
         self.maxcor = maxcor
 
-        plot_title = "L={0} N={1} Neff={2} Diversity={3}<br>".format(
-            ccm.L, ccm.N, np.round(ccm.neff, decimals=3),
-            np.round(ccm.diversity, decimals=3)
-        )
-        self.progress = pr.Progress(plotfile, plot_title)
+        # whether optimization is run with constraints (non-contacts are masked)
+        self.non_contact_indices = ccm.non_contact_indices
+
+        # optimization progress logger
+        self.progress = ccm.progress
 
         self.g_x = None
         self.objfun=None
@@ -31,14 +28,20 @@ class LBFGS(object):
                "\tconvergence criteria: maxit={0} \n".format(
              self.maxit)
 
-    def lbfgs_f(self, x, *args):
+    def lbfgs_f(self, x):
 
         fx, g_x, g_reg = self.objfun.evaluate(x)
         g = g_x + g_reg
 
+        # masking: set coupling gradients for all pairs (i,j) with d_ij > contact_thr = 0
+        if self.non_contact_indices is not None:
+            g_single, g_pair = self.objfun.linear_to_structured(g)
+            g_pair[self.non_contact_indices[0], self.non_contact_indices[1], :, :] = 0
+            g = self.objfun.structured_to_linear(g_single, g_pair)
+
         return fx, g
 
-    def print_and_plot(self, x, ):
+    def print_and_plot(self, x):
 
         self.iteration += 1
 
@@ -57,10 +60,6 @@ class LBFGS(object):
         subtitle = self.progress.title + self.__repr__().replace("\n", "<br>")
         subtitle += objfun.__repr__().replace("\n", "<br>")
         self.progress.set_plot_title(subtitle)
-
-
-
-
 
         res = min(self.lbfgs_f,
             x,
@@ -87,8 +86,6 @@ class LBFGS(object):
         }
 
         return res.fun, res.x, ret
-
-
 
     def get_gradient_x(self):
 
