@@ -7,7 +7,6 @@ import numpy as np
 import io
 import ccmpred.gaps
 import ccmpred.counts
-from ccmpred.weighting import SequenceWeights
 from ccmpred.pseudocounts import PseudoCounts
 import ccmpred.locmeth
 import ccmpred.centering
@@ -17,18 +16,25 @@ import ccmpred.sanity_check
 from ccmpred.regularization import L1, L2
 import ccmpred.plotting
 import ccmpred.sampling
+import ccmpred.weighting
 
 class CCMpred():
     """
-    CCMpred is a fast python implementation of the maximum pseudo-likelihood class of contact prediction methods. From an alignment given as alnfile, it will maximize the likelihood of the pseudo-likelihood of a Potts model with 21 states for amino acids and gaps. The L2 norms of the pairwise coupling potentials will be written to the output matfile.
+    CCMpred is a fast python implementation of the maximum pseudo-likelihood class of contact prediction methods.
+    From an alignment given as alnfile, it will maximize the likelihood of the pseudo-likelihood of a Potts model
+    with 21 states for amino acids and gaps.
+
+    The L2 norms of the pairwise coupling potentials will be written to the output matfile.
+
     """
 
-    def __init__(self, alignment_file, mat_file, pdb_file):
+    def __init__(self):
 
-        self.alignment_file = alignment_file
-        self.mat_file       = mat_file
-        self.pdb_file       = pdb_file
-        self.protein        = os.path.basename(self.alignment_file).split(".")[0]
+        self.alignment_file = None
+        self.mat_file       = None
+        self.pdb_file       = None
+        self.init_raw_file  = None
+        self.protein        = None
 
         self.contact_threshold = 8
         self.non_contact_indices = None
@@ -40,13 +46,14 @@ class CCMpred():
         self.N              = None
         self.L              = None
         self.neff           = None
+        self.neff_entropy = None
         self.diversity      = None
 
         #sequence weighting
-        self.weighting = None
         self.weighting_type = None
         self.weights   = None
-
+        self.wt_cutoff  = None
+        self.wt_ignore_gaps  = None
 
         #counts and frequencies in class ccmpred.pseudocounts.PseudoCounts
         self.pseudocounts =  None
@@ -70,6 +77,9 @@ class CCMpred():
 
         #optimization algorithm (CG, LBFGS, GD, ADAM)
         self.alg = None
+
+        #optimization progress logger
+        self.progress = None
 
         #results of optimization
         self.fx = None
@@ -134,8 +144,8 @@ class CCMpred():
 
         meta['workflow'][0]['weighting'] = {}
         meta['workflow'][0]['weighting']['type'] = self.weighting_type
-        meta['workflow'][0]['weighting']['ignore_gaps'] = self.weighting.ignore_gaps
-        meta['workflow'][0]['weighting']['cutoff'] = self.weighting.cutoff
+        meta['workflow'][0]['weighting']['ignore_gaps'] = self.wt_ignore_gaps
+        meta['workflow'][0]['weighting']['cutoff'] = self.wt_cutoff
 
         if mat_name is not None:
             meta['workflow'][0]['contact_map'] = {}
@@ -198,6 +208,40 @@ class CCMpred():
 
         return meta
 
+    def set_alignment_file(self, alnfile=None):
+
+        if alnfile is not None:
+            if os.path.exists(alnfile):
+                self.alignment_file = alnfile
+            else:
+                print("Alignment file {0} does not exist!".format(alnfile))
+                sys.exit(0)
+
+            self.protein = os.path.basename(alnfile).split(".")[0]
+
+    def set_matfile(self, matfile=None):
+
+        if matfile is not None:
+            self.mat_file = matfile
+
+    def set_pdb_file(self, pdbfile=None):
+
+        if pdbfile is not None:
+            if os.path.exists(pdbfile):
+                self.pdb_file = pdbfile
+            else:
+                print("PDB file {0} does not exist!".format(pdbfile))
+                sys.exit(0)
+
+    def set_initraw_file(self, initrawfile=None):
+
+        if initrawfile is not None:
+            if os.path.exists(initrawfile):
+                self.init_raw_file = initrawfile
+            else:
+                print("Binary raw coupling file {0} does not exist!".format(initrawfile))
+                sys.exit(0)
+
     def read_alignment(self, aln_format="psicov", max_gap_pos=100, max_gap_seq=100):
         self.msa = io.read_msa(self.alignment_file, aln_format)
 
@@ -211,13 +255,15 @@ class CCMpred():
 
         self.N = self.msa.shape[0]
         self.L = self.msa.shape[1]
+        self.diversity = np.sqrt(self.N)/self.L
+        self.neff_entropy = ccmpred.weighting.get_HHsuite_neff(self.msa)
 
-        print("{0} is of length L={1}. Alignment has {2} sequences.".format(
+        print("{0} is of length L={1} and there are {2} sequences in the alignment.".format(
             self.protein, self.L, self.N))
+        print("Alignment has diversity [sqrt(Neff)/L]={0} and Neff(HHsuite-like)={1}.".format(np.round(self.diversity, decimals=3), np.round(self.neff_entropy, decimals=3)))
 
     def read_pdb(self, contact_threshold=8):
         self.contact_threshold = contact_threshold
-
 
         if self.max_gap_pos < 100:
             L = self.L + len(self.gapped_positions)
@@ -231,19 +277,29 @@ class CCMpred():
 
         self.non_contact_indices = np.where(distance_map > contact_threshold)
 
-    def compute_sequence_weights(self, weighting_type, ignore_gaps=False, cutoff=0.8):
+    def compute_sequence_weights(self, weighting_type, cutoff=0.8, ignore_gaps=False):
 
-        self.weighting = SequenceWeights(ignore_gaps, cutoff)
-        self.weights = getattr(self.weighting, weighting_type)(self.msa)
+        self.weights = ccmpred.weighting.WEIGHTING_TYPE[weighting_type](self.msa, cutoff, ignore_gaps)
+
+        print("Number of effective sequences after {0} reweighting (id-threshold={1}, ignore_gaps={2}): {3:g}.".format(
+            weighting_type, cutoff, ignore_gaps, np.sum(self.weights)))
+
+        # if weighting_type == "weights_simple":
+        #     self.weights = ccmpred.weighting.weights_simple(self.msa, cutoff, ignore_gaps)
+        #     print("Number of effective sequences after simple reweighting "
+        #           "(id-threshold={0}, ignore_gaps={1}): {2:g}. ".format(cutoff, ignore_gaps, np.sum(self.weights)))
+        # elif weighting_type == "weights_henikoff":
+        #     self.weights = ccmpred.weighting.weights_henikoff(self.msa, ignore_gaps)
+        #     print("Number of effective sequences after henikoff-type reweighting "
+        #           "(ignore_gaps={0}): {1:g}. ".format(ignore_gaps, np.sum(self.weights)))
+        # else:
+        #     self.weights = ccmpred.weighting.weights_uniform(self.msa)
+        #     print("Number of effective sequences without reweighting sequences: {0:g}. ".format(np.sum(self.weights)))
+
         self.weighting_type = weighting_type
-
+        self.wt_cutoff = cutoff
+        self.wt_ignore_gaps = ignore_gaps
         self.neff   = np.sum(self.weights)
-        self.diversity = np.sqrt(self.neff)/self.L
-
-        print("Number of effective sequences after reweighting ({0}, id-threshold={1}, ignore_gaps={2}): {3:g}. ".format(
-            self.weighting_type, self.weighting.cutoff, self.weighting.ignore_gaps, self.neff))
-        print("Neff(HHsuite-like)={0}".format(self.weighting.get_HHsuite_neff(self.msa)))
-        print("Alignment has diversity (sqrt(Neff)/L) = {0}.".format(np.round(self.diversity, decimals=3)))
 
     def compute_frequencies(self, pseudocount_type, pseudocount_n_single=1,  pseudocount_n_pair=1):
 
@@ -360,20 +416,17 @@ class CCMpred():
 
         print(self.regularization)
 
-    def intialise_potentials(self, initrawfile=None):
+    def intialise_potentials(self):
 
-        if initrawfile:
-            if not os.path.exists(initrawfile):
-                print("Init file {0} does not exist! Exit".format(initrawfile))
-                sys.exit(0)
+        if self.init_raw_file is not None:
 
             try:
-                raw_potentials = raw.parse_msgpack(initrawfile)
+                raw_potentials = raw.parse_msgpack(self.init_raw_file)
             except:
-                print("Unexpected error whil reading binary raw file {0}: {1}".format(initrawfile, sys.exc_info()[0]))
+                print("Unexpected error whil reading binary raw file {0}: {1}".format(self.init_raw_file, sys.exc_info()[0]))
                 sys.exit(0)
 
-            print("\nSuccessfully loaded model parameters from {0}.".format(initrawfile))
+            print("\nSuccessfully loaded model parameters from {0}.".format(self.init_raw_file))
             self.x_single, self.x_pair = raw_potentials.x_single, raw_potentials.x_pair
 
             #in case positions with many gaps should be removed
@@ -385,8 +438,8 @@ class CCMpred():
                 print("Removed parameters for positions with >{0}% gaps.".format(self.max_gap_pos))
 
             #save setting for meta data
-            self.single_potential_init  = initrawfile
-            self.pair_potential_init    = initrawfile
+            self.single_potential_init  = self.init_raw_file
+            self.pair_potential_init    = self.init_raw_file
 
         else:
             # default initialisation of parameters:
@@ -411,7 +464,8 @@ class CCMpred():
         self.alg = alg
 
 
-        print("\n Will optimize {0} {1} variables wrt {2} and {3}".format(self.f.x.size, self.f.x.dtype, self.f, self.regularization))
+        print("\nWill optimize {0} {1} variables wrt {2} \nand {3}".format(
+            self.f.x.size, self.f.x.dtype, self.f, self.regularization))
         print("Optimizer: {0}".format(self.alg))
 
         if plotfile:
@@ -423,27 +477,8 @@ class CCMpred():
 
         self.x_single, self.x_pair      = self.f.finalize(self.x)
 
-        ###experimental - only for pll with cg
-        #g_x = self.alg.get_gradient_x()
-        #self.g_x_single, self.g_x_pair = self.f.finalize(g_x)
-
-
         condition = "Finished" if self.algret['code'] >= 0 else "Exited"
         print("\n{0} with code {code} -- {message}\n".format(condition, **self.algret))
-
-
-
-        # #Refine with persistent CD
-        # refine=False
-        # if refine:
-        #     if opt.alpha0 == 0:
-        #         alg.alpha0 = 1e-3 * (np.log(protein['Neff']) / protein['L'])
-        #     if opt.decay_rate == 0:
-        #         alg.decay_rate = 1e-6 / (np.log(protein['Neff']) / protein['L'])
-        #     opt.cd_persistent=True
-        #     opt.minibatch_size=0
-        #     f = OBJ_FUNC[opt.objfun](opt, msa, freqs, weights, raw_init, regularization)
-        #     fx, x, algret = alg.minimize(f, x)
 
     def recenter_potentials(self):
         """
@@ -583,94 +618,6 @@ class CCMpred():
                     'nr_states': nr_states,
                     'log': log.__name__
                 }
-
-    def generate_sample(self, x, size=10000, burn_in=500, sample_type="original"):
-
-        #sample at max 1000 sequences per iteration
-        sample_size_per_it = np.min([self.N, 1000])
-
-        ##repeat sampling until 10k sequences are obtained
-        repeat = int(np.ceil(size / sample_size_per_it))
-        samples = np.empty([repeat * sample_size_per_it , self.L], dtype="uint8")
-        for i in range(repeat):
-
-            if sample_type == "original":
-                sample_seq_id = np.random.choice(self.N, sample_size_per_it, replace=False)
-                msa_sampled = self.msa[sample_seq_id]
-            elif sample_type == "random":
-                msa_sampled = np.ascontiguousarray(
-                    [np.random.choice(20, self.L, replace=True) for _ in range(sample_size_per_it)], dtype="uint8")
-            elif sample_type == "random-gapped":
-                sample_seq_id = np.random.choice(self.N, sample_size_per_it, replace=False)
-                msa_sampled_orig = self.msa[sample_seq_id]
-                msa_sampled = np.ascontiguousarray(
-                    [np.random.choice(20, self.L, replace=True) for _ in range(sample_size_per_it)], dtype="uint8")
-                gap_indices = np.where(msa_sampled_orig == 20)
-                msa_sampled[gap_indices] = 20
-        
-            # burn in phase to move away from initial sequences
-            msa_sampled = ccmpred.sampling.gibbs_sample_sequences(x, msa_sampled, gibbs_steps=burn_in)
-
-            # add newly sampled sequences
-            samples[i*sample_size_per_it : (i+1)*sample_size_per_it] =  msa_sampled
-            print("sampled alignment has {0} sequences...".format((i+1)*sample_size_per_it))
-
-        return samples
-
-    def write_sampled_alignment(self, sample_alnfile=None, burn_in=500, sample_type="original", plot_alnstats_file=None):
-
-
-        x = parameter_handling.structured_to_linear(self.x_single, self.x_pair, nogapstate=True, padding=False)
-        msa_sampled = self.generate_sample(x, size=10000, burn_in=burn_in, sample_type=sample_type)
-
-        if plot_alnstats_file is not None:
-            print("\nWriting plot of observed vs model alignment stats to {0}".format(plot_alnstats_file))
-
-            #get original amino acid frequencies
-            single_freq_observed, pairwise_freq_observed = self.pseudocounts.freqs
-
-            #compute sequence weights of sampled alignment
-            weighting = SequenceWeights(ignore_gaps=False, cutoff=0.8)
-            msa_sampled_weights = getattr(weighting, self.weighting_type)(msa_sampled)
-
-            #compute amino acid frequencies (inkl pseudocounts) for sampled alignment
-            pseudocounts = PseudoCounts(msa_sampled, msa_sampled_weights)
-            pseudocounts.calculate_frequencies(
-                self.pseudocounts.pseudocount_type,
-                self.pseudocounts.pseudocount_n_single,
-                self.pseudocounts.pseudocount_n_pair,
-                remove_gaps=False)
-
-            #degap the frequencies (ignore gap frequencies)
-            single_freq_observed = self.pseudocounts.degap(single_freq_observed, False)
-            single_freq_sampled = self.pseudocounts.degap(pseudocounts.freqs[0], False)
-            pairwise_freq_observed = self.pseudocounts.degap(pairwise_freq_observed, False)
-            pairwise_freq_sampled = self.pseudocounts.degap(pseudocounts.freqs[1], False)
-
-
-            #Define plot title
-            title="Observed and model alignment statistics<br>{0} N={1}, L={2}, div={3}".format(
-                self.protein, self.N, self.L, np.round(np.sqrt(self.N)/self.L, decimals=3))
-
-            #plot
-            plotting.plot_empirical_vs_model_statistics(
-                single_freq_observed, single_freq_sampled,
-                pairwise_freq_observed, pairwise_freq_sampled,
-                title, plot_alnstats_file, log=False)
-
-        if sample_alnfile is not None:
-            self.sample_alnfile = sample_alnfile
-            print("\nWriting sampled alignment to {0}".format(sample_alnfile))
-
-            if self.max_gap_pos < 100:
-                # if gappy positions have been removed
-                # insert columns with gaps at that position
-                msa_sampled = gaps.backinsert_gapped_positions_aln(
-                    msa_sampled, self.gapped_positions
-                )
-
-            with open(sample_alnfile, "w") as f:
-                io.alignment.write_msa_psicov(f, msa_sampled)
 
     def write_matrix(self):
         """
