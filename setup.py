@@ -1,4 +1,3 @@
-#import numpy.distutils.intelccompiler
 from setuptools import setup, Extension, find_packages
 
 def ext(name, sources=[], include_dirs=[], library_dirs=[], libraries=[], extra_compile_args=['-g', '-fopenmp', '-std=c99'], extra_link_args=['-g', '-fopenmp']):
@@ -41,7 +40,23 @@ setup(
         ext(
             'ccmpred.weighting.cext.libweighting',
             sources=['ccmpred/weighting/cext/weighting.c']
-        )
+        ),
+        ext(
+            'ccmpred.sampling.cext.libtreecd',
+            include_dirs=['ccmpred/objfun/cd/cext'],
+            sources=[
+                'ccmpred/objfun/cd/cext/cd.c',
+                'ccmpred/objfun/cd/cext/cdutil.c',
+                'ccmpred/sampling/cext/treecd.c',
+            ]
+        ),
     ],
-    scripts=['run_ccmpred.py', 'replace_gaps.py', 'plot_contact_map.py']
+    entry_points={
+        'console_scripts': [
+            'ccmpred=ccmpred.scripts.run_ccmpred:main',
+            'ccmgen=ccmpred.scripts.run_ccmgen:main',
+            'replace_gaps=ccmpred.scripts.replace_gaps:main',
+            'plot_ccmpred=ccmpred.scripts.plot_ccmpred:main'
+        ]
+    }
 )
