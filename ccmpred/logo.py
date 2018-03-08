@@ -7,26 +7,26 @@ is_tty = (sys.stdin.isatty()) and (sys.stdout.isatty())
 LOGOS = {}
 LOGOS['ccmpred', True] = """
   \x1b[32m┏━╸┏━╸┏┳┓\x1b[34m┏━┓┏━┓┏━╸╺┳┓\x1b[0m  version {0}
-  \x1b[32m┃  ┃  ┃┃┃\x1b[34m┣━┛┣┳┛┣╸  ┃┃\x1b[0m  Seemayer and Soeding (2016)
+  \x1b[32m┃  ┃  ┃┃┃\x1b[34m┣━┛┣┳┛┣╸  ┃┃\x1b[0m  Vorberg, Seemayer and Soeding (2018)
   \x1b[32m┗━╸┗━╸╹ ╹\x1b[34m╹  ╹┗╸┗━╸╺┻┛\x1b[0m  https://github.com/soedinglab
 """
 
 LOGOS['ccmpred', False] = """
   ┏━╸┏━╸┏┳┓┏━┓┏━┓┏━╸╺┳┓  version {0}
-  ┃  ┃  ┃┃┃┣━┛┣┳┛┣╸  ┃┃  Seemayer and Soeding (2016)
+  ┃  ┃  ┃┃┃┣━┛┣┳┛┣╸  ┃┃  Vorberg, Seemayer and Soeding (2018)
   ┗━╸┗━╸╹ ╹╹  ╹┗╸┗━╸╺┻┛  https://github.com/soedinglab
 """
 
 
 LOGOS['ccmgen', True] = """
   \x1b[32m┏━╸┏━╸┏┳┓\x1b[34m┏━╸┏━╸┏┓╻\x1b[0m  version {0}
-  \x1b[32m┃  ┃  ┃┃┃\x1b[34m┃╺┓┣╸ ┃┗┫\x1b[0m  Seemayer and Soeding (2016)
+  \x1b[32m┃  ┃  ┃┃┃\x1b[34m┃╺┓┣╸ ┃┗┫\x1b[0m  Vorberg, Seemayer and Soeding (2018)
   \x1b[32m┗━╸┗━╸╹ ╹\x1b[34m┗━┛┗━╸╹ ╹\x1b[0m  https://github.com/soedinglab
 """
 
 LOGOS['ccmgen', False] = """
   ┏━╸┏━╸┏┳┓┏━╸┏━╸┏┓╻  version {0}
-  ┃  ┃  ┃┃┃┃╺┓┣╸ ┃┗┫  Seemayer and Soeding (2016)
+  ┃  ┃  ┃┃┃┃╺┓┣╸ ┃┗┫  Vorberg, Seemayer and Soeding (2018)
   ┗━╸┗━╸╹ ╹┗━┛┗━╸╹ ╹  https://github.com/soedinglab
 """
 
