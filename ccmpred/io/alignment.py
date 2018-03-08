@@ -1,5 +1,6 @@
 import numpy as np
 import ccmpred.counts
+import Bio.AlignIO as aio
 
 AMINO_ACIDS = "ARNDCQEGHILKMFPSTWYV-"
 
@@ -9,9 +10,7 @@ def read_msa(f, format, return_indices=True, return_identifiers=False):
     else:
         return read_msa_biopython(f, format, return_indices, return_identifiers)
 
-
 def read_msa_biopython(f, format, return_indices=True, return_identifiers=False):
-    import Bio.AlignIO as aio
 
     records = list(aio.read(f, format))
 
@@ -26,7 +25,6 @@ def read_msa_biopython(f, format, return_indices=True, return_identifiers=False)
         return msa, identifiers
     else:
         return msa
-
 
 def read_msa_psicov(f, return_indices=True, return_identifiers=False):
 
@@ -52,8 +50,39 @@ def read_msa_psicov(f, return_indices=True, return_identifiers=False):
         return msa
 
 
+
+def write_msa(f, msa, ids, format, is_indices=True, descriptions=None):
+
+    if format == 'psicov':
+        write_msa_psicov(f, msa, is_indices=is_indices)
+    else:
+        write_msa_biopython(f, msa, ids, format, is_indices=is_indices, descriptions=descriptions)
+
+
 def write_msa_psicov(f, msa, is_indices=True):
+
     if is_indices:
         msa = ccmpred.counts.char_msa(msa)
 
     f.write("\n".join(["".join(chr(cell) for cell in row) for row in msa]))
+
+
+def write_msa_biopython(f, msa, ids, format, is_indices=True, descriptions=None):
+    import Bio.SeqIO
+    from Bio.SeqRecord import SeqRecord
+    from Bio.Seq import Seq
+
+    if is_indices:
+        msa = ccmpred.counts.char_msa(msa)
+
+    if descriptions is None:
+        descriptions = ["" for _ in range(msa.shape[0])]
+
+    msa = ["".join(chr(c) for c in row) for row in msa]
+
+    records = [
+        SeqRecord(Seq(seq, Bio.Alphabet.IUPAC.protein), id=id, description=desc)
+        for seq, id, desc in zip(msa, ids, descriptions)
+    ]
+
+    Bio.SeqIO.write(records, f, format)
