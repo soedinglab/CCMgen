@@ -41,9 +41,9 @@ def parse_args():
 
     grp_tr_opt = parser.add_argument_group("Phylogenetic Tree Sampling Options")
     grp_tr_opt_me = grp_tr_opt.add_mutually_exclusive_group()
-    grp_tr_opt_me.add_argument("--mutation-rate",          dest="mutation_rate",           type=float,
+    grp_tr_opt_me.add_argument("--mutation-rate", dest="mutation_rate", type=float, default=0.0,
                         help="Specify constant mutation rate")
-    grp_tr_opt_me.add_argument("--mutation-rate-neff",     dest="mutation_rate_neff",    action="store_true", default=False,
+    grp_tr_opt_me.add_argument("--mutation-rate-neff", dest="mutation_rate_neff", action="store_true", default=False,
                         help="Set mutation rate to generate alignment with Neff comparable to original MSA")
     grp_tr_opt.add_argument("--burn-in", dest="burn_in", type=int, default=500,
                         help="Specify number of Gibbs steps for defining ancestor sequence [default: %(default)s]")
@@ -125,7 +125,7 @@ def main():
     if tree is not None and opt.mutation_rate_neff:
         msa_sampled, neff = ccmpred.sampling.sample_to_neff(
             tree, ccm.neff_entropy, ccm.L, x, opt.burn_in)
-    elif tree is not None and opt.mutation_rate:
+    elif tree is not None and opt.mutation_rate > 0:
         msa_sampled, neff = ccmpred.sampling.sample_with_mutation_rate(
             tree, ccm.L, x, opt.burn_in, opt.mutation_rate)
     else:
