@@ -194,6 +194,8 @@ def plot_contact_map_someScore_plotly(plot_matrix, title, seqsep, gaps_percentag
         fig.append_trace(trace, 2, 1)
 
     fig['layout']['title'] = title
+    fig['layout']['width'] = 1000
+    fig['layout']['height'] = 850
     fig['layout']['legend'] = {'x': 1.02, 'y': 1}  # places legend to the right of plot
 
     fig['layout']['xaxis1']['title'] = 'j'
