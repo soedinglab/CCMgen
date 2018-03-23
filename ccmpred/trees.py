@@ -65,8 +65,8 @@ class CCMTree(object):
             self.ids = [l.name for l in tree_split.get_terminals()]
 
             depth_min, depth_max = get_child_depth_range(tree_split.clade)
-            print("Created {0} tree with {1} leaves, depth_min={2:.4e}, depth_max={3:.4e}\n".format(
-                tree_source, self.n_leaves, depth_min, depth_max))
+            print("Created {0} tree with {1} leaves, {2} nodes, avg branch length={3}, depth_min={4:.4e}, depth_max={5:.4e}\n".format(
+                tree_source, self.n_leaves, self.n_vertices, np.round(np.mean(self.branch_lengths[2:]), decimals=3), depth_min, depth_max))
 
         return True
 
