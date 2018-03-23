@@ -140,6 +140,22 @@ def sample_to_neff(tree, target_neff, ncol, x, gibbs_steps):
         seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, gibbs_steps)
         print("Ancestor sequence: {0}".format("".join([AMINO_ACIDS[c] for c in seq0[0]])))
 
+        # how many substitutions per sequence will be performed
+        nmut = [0] * (len(branch_lengths) - 2)
+        for i, bl in enumerate(branch_lengths[2:]):
+            nmut[i] = bl * mutation_rate * ncol
+        print("number of amino acid substitutions (parent -> child): {0}".format(int(np.mean(nmut))))
+
+        # binary topology
+        if n_leaves > nseq:
+            number_splits = np.log2(nseq)
+        else:
+            number_splits = 1
+        depth_per_clade = 1.0 / np.ceil(number_splits)
+        print(
+        "number of amino acid substitutions (root -> leave): {0}".format(int(1 / depth_per_clade * np.mean(nmut))))
+
+
         #sample sequences according to tree topology
         msa_sampled = np.empty((n_leaves, ncol), dtype="uint8")
         msa_sampled = ccmpred.sampling.cext.mutate_along_tree(
