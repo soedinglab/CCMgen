@@ -169,11 +169,12 @@ void mutate_along_tree(
 		#pragma omp parallel for
 		for(uint64_t i = 0; i < pos; i++) {
 			int nmut = bl[i] * mutation_rate * ncol;
-			//printf("nmut = %i.\n", nmut);
+			//printf("nn = %i, i = %i, nmut = %i, bl[i]=%f\n", nn, i, nmut, bl[i]);
 			mutate_sequence(&seqs_out[i * ncol], x, nmut, ncol);
 		}
 
 		nn = pos;
+		//printf("nn = %i.\n", nn);
 		swap((void **)&nc_in, (void **)&nc_out);
 		swap((void **)&ni_in, (void **)&ni_out);
 		swap((void **)&seqs_in, (void **)&seqs_out);
