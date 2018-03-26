@@ -143,7 +143,11 @@ def main():
 
     print("\nWriting sampled alignment to {0}".format(opt.outalnfile))
     with open(opt.outalnfile, "w") as f:
-        descs=["synthetic sequence generated with CCMgen" for _ in range(tree.n_leaves)]
+        descs=["synthetic sequence generated with CCMgen" for _ in range(msa_sampled.shape[0])]
+        if tree is not None:
+            ids = tree.ids
+        else:
+            ids = ["seq {0}".format(i) for i in range(msa_sampled.shape[0])]
         ccmpred.io.alignment.write_msa(f, msa_sampled, tree.ids, is_indices=True, format=opt.aln_format, descriptions=descs)
 
 
