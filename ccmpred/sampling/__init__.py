@@ -9,6 +9,38 @@ from ccmpred.io.alignment import AMINO_ACIDS
 def gibbs_sample_sequences(x, msa_sampled, gibbs_steps):
     return ccmpred.objfun.cd.cext.gibbs_sample_sequences(msa_sampled, x, gibbs_steps)
 
+def all_parents(tree):
+    parents = {}
+    for clade in tree.find_clades(order='level'):
+        for child in clade:
+            parents[child] = clade
+    return parents
+
+def mutate_along_phylogeny(tree, seq0, mutation_rate, x):
+
+    ncol = len(seq0)
+
+    #assign ancestor sequence to root
+    tree.clade.seq = seq0
+
+    #get all parents
+    parents = all_parents(tree)
+
+    #iterate breadth first over tree and mutate sequences
+    for clade in tree.find_clades(order="level"):
+        if clade.name != "root":
+            #print("parent name: {0} parent seq: {1}".format( parents[clade], parents[clade].seq))
+            nmut = int(clade.branch_length * mutation_rate * ncol)
+            clade.seq =ccmpred.sampling.cext.mutate_sequence(parents[clade].seq, x, nmut, ncol)
+            #print("clade name: {0} clade seq:  {1}".format(clade.name, clade.seq))
+            #print("---")
+
+    #get sequences of all leave nodes
+    msa_sampled = np.array([clade.seq for clade in tree.get_terminals()])
+
+    return msa_sampled
+
+
 def generate_mcmc_sample(x, msa, size=10000, burn_in=500, sample_type="original"):
 
     print("Start sampling {0} sequences according to model starting with {1} sequences using burn-in={2}.".format(
@@ -95,15 +127,14 @@ def sample_with_mutation_rate(tree, ncol, x, gibbs_steps, mutation_rate):
     print("Ancestor sequence: {0}".format("".join([AMINO_ACIDS[c] for c in seq0[0]])))
 
     #sample sequences according to tree topology
-    msa_sampled = np.empty((n_leaves, ncol), dtype="uint8")
-    msa_sampled = ccmpred.sampling.cext.mutate_along_tree(
-        msa_sampled, n_children, branch_lengths, x, n_vertices, seq0, mutation_rate)
-
-
+    msa_sampled = mutate_along_phylogeny(tree.tree, seq0[0], mutation_rate, x)
+    # msa_sampled = np.empty((n_leaves, ncol), dtype="uint8")
+    # msa_sampled = ccmpred.sampling.cext.mutate_along_tree(
+    #      msa_sampled, n_children, branch_lengths, x, n_vertices, seq0, mutation_rate)
 
     #usually the case for binary trees
     if n_leaves > nseq:
-        print(int(np.floor(nseq/2)), n_leaves-int(np.ceil(nseq/2)))
+        #print(int(np.floor(nseq/2)), n_leaves-int(np.ceil(nseq/2)))
         first_half = msa_sampled[:int(np.floor(nseq/2))]
         second_half = msa_sampled[n_leaves-int(np.ceil(nseq/2)):]
         msa_sampled = np.array(list(first_half) + list(second_half))
@@ -157,9 +188,10 @@ def sample_to_neff(tree, target_neff, ncol, x, gibbs_steps):
 
 
         #sample sequences according to tree topology
-        msa_sampled = np.empty((n_leaves, ncol), dtype="uint8")
-        msa_sampled = ccmpred.sampling.cext.mutate_along_tree(
-            msa_sampled, n_children, branch_lengths, x, n_vertices, seq0, mutation_rate)
+        msa_sampled = mutate_along_phylogeny(tree.tree, seq0[0], mutation_rate, x)
+        # msa_sampled = np.empty((n_leaves, ncol), dtype="uint8")
+        # msa_sampled = ccmpred.sampling.cext.mutate_along_tree(
+        #     msa_sampled, n_children, branch_lengths, x, n_vertices, seq0, mutation_rate)
 
         # usually the case for binary trees
         if n_leaves > nseq:
