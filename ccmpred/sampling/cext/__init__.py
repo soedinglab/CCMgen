@@ -4,6 +4,7 @@ import ctypes
 import os.path
 
 array_1d_float = npct.ndpointer(dtype=np.dtype('float64'), ndim=1, flags='CONTIGUOUS')
+array_1d_uint8 = npct.ndpointer(dtype=np.dtype('uint8'), ndim=1, flags='CONTIGUOUS')
 array_1d_uint32 = npct.ndpointer(dtype=np.dtype('uint32'), ndim=1, flags='CONTIGUOUS')
 array_1d_uint64 = npct.ndpointer(dtype=np.dtype('uint64'), ndim=1, flags='CONTIGUOUS')
 array_2d_char = npct.ndpointer(dtype=np.dtype('uint8'), ndim=2, flags='CONTIGUOUS')
@@ -21,6 +22,19 @@ libtreecd.mutate_along_tree.argtypes = [
     ctypes.c_double   # flt mutation_rate
 ]
 
+libtreecd.mutate_sequence.restype = None
+libtreecd.mutate_sequence.argtypes = [
+    array_1d_uint8,    # int32_t  seq,
+    array_1d_float,   # flt *x,
+    ctypes.c_uint16,    # uint32_t nmut,
+    ctypes.c_uint32     # uint32_t ncol,
+]
+
+def mutate_sequence(parent_seq, x, nmut, ncol):
+    seq = parent_seq.copy()
+    libtreecd.mutate_sequence(seq, x, nmut, ncol)
+
+    return seq
 
 def mutate_along_tree(msa_sampled, n_children, branch_lengths, x, nvert, seq0, mutation_rate):
     msa_sampled[:, :] = 0
