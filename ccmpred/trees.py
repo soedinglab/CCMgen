@@ -70,7 +70,6 @@ class CCMTree(object):
 
         return True
 
-
 def split_tree(tree, id0):
     """Reroot tree so that the clades in id0 are direct descendants of the root node"""
 
@@ -85,7 +84,6 @@ def split_tree(tree, id0):
     new_tree.clade.branch_length = 0
 
     return new_tree
-
 
 def bfs_iterator(clade):
         """Breadth-first iterator along a tree clade"""
@@ -102,7 +100,6 @@ def bfs_iterator(clade):
 
         for ci in inner(clade):
             yield ci
-
 
 def get_child_depth_range(clade):
         """Return the minimum and maximum child depth"""
@@ -126,7 +123,6 @@ def get_child_depth_range(clade):
             level = new_level
 
         return mn, mx
-
 
 def get_seq0_mrf(x, ncol, gibbs_steps):
     """
@@ -160,8 +156,7 @@ def get_seq0_mrf(x, ncol, gibbs_steps):
 
     return seq0
 
-
-def create_binary_tree(nseqs, depth=1, root_name=""):
+def create_binary_tree(nseqs, depth=1, root_name="root"):
     """
         Create a binary tree topology.
 
@@ -201,14 +196,14 @@ def create_binary_tree(nseqs, depth=1, root_name=""):
         parent.clades = [c1, c2]
 
     t = Bio.Phylo.BaseTree.Tree(rooted=False)
+    t.name="binary"
     t.clade.name = root_name
     t.clade.branch_length = 0
     fill_tree_rec(t.clade, splits)
 
     return t
 
-
-def create_star_tree(nseqs, depth=1, root_name=""):
+def create_star_tree(nseqs, depth=1, root_name="root"):
     """
         Create a star tree topology.
 
@@ -232,6 +227,7 @@ def create_star_tree(nseqs, depth=1, root_name=""):
         """
 
     t = Bio.Phylo.BaseTree.Tree(rooted=False)
+    t.name="star"
     t.clade.name = root_name
     t.clade.branch_length = 0
 
