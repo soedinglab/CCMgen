@@ -11,7 +11,7 @@ import ccmpred.sampling
 import ccmpred.gaps
 import ccmpred.trees
 import ccmpred.parameter_handling
-
+import numpy as np
 
 EPILOG = """
 Generate a multiple sequence alignment of protein sequences generated from a Markov Random Field model.
@@ -65,6 +65,12 @@ def parse_args():
     grp_mcmc.add_argument("--mcmc-nseq", dest="mcmc_nseq", type=int, default=10000,
                           help="Set the number of sequences to generate to MCMC_NSEQ [default: %(default)s]")
 
+    grp_constraints = parser.add_argument_group("Use with Contraints (couplings for non-contacts will be set to zero)")
+    grp_constraints.add_argument("--pdb-file", dest="pdbfile", help="Input PDB file")
+    grp_constraints.add_argument("--contact-threshold", dest="contact_threshold", type=int, default=8,
+                           help="Definition of residue pairs forming a contact wrt distance of their Cbeta atoms in "
+                                "angstrom. [default: %(default)s]")
+
     grp_opt = parser.add_argument_group("General Options")
     grp_opt.add_argument("--max-gap-pos",  dest="max_gap_pos", default=100, type=int,
                         help="Ignore alignment positions with > MAX_GAP_POS percent gaps. [default: %(default)s == no removal of gaps]")
@@ -105,12 +111,36 @@ def main():
     # specify possible file paths
     ccm.set_alignment_file(opt.alnfile)
     ccm.set_initraw_file(opt.rawfile)
+    ccm.set_pdb_file(opt.pdbfile)
 
     # read alignment and possible remove gapped sequences and positions
     ccm.read_alignment(opt.aln_format, opt.max_gap_pos, 100)
 
     #read potentials from binary raw file
     ccm.intialise_potentials()
+
+    # read pdb file if CCMpred is a constrained run
+    if opt.pdbfile:
+        ccm.read_pdb(opt.contact_threshold)
+        print("Couplings for pairs with Cbeta distances > {0} will be set to zero!".format(opt.contact_threshold))
+        ccm.x_pair[ccm.non_contact_indices[0], ccm.non_contact_indices[1], :, :] = 0
+
+
+        ##############################################################
+    # ccm.x_pair = np.zeros((ccm.L, ccm.L, 21, 21))
+    # print("summe x_pair: {0}".format(np.sum(ccm.x_pair)))
+    #
+    # ccm.compute_frequencies("uniform_pseudocounts", pseudocount_n_single=1, pseudocount_n_pair=1)
+    # single_freq = ccm.pseudocounts.freqs[0]
+    # id_inf = np.sum(single_freq[:,:20]*single_freq[:,:20]) / ccm.L
+    # print("id_inf (freq norm with gaps) = {0}".format(id_inf))
+    # single_freq = ccm.pseudocounts.degap(single_freq)
+    # id_inf = np.sum(single_freq[:,:20]*single_freq[:,:20]) / ccm.L
+    # print("id_inf (freq degapped)= {0}".format(id_inf))
+    # p = np.exp(ccm.x_single) / np.sum(np.exp(ccm.x_single), axis=1)[:, np.newaxis]
+    # id_inf = np.sum(p[:,:20]*p[:,:20]) / ccm.L
+    # print("id_inf (model prob)= {0}".format(id_inf))
+        ##############################################################
     x = ccmpred.parameter_handling.structured_to_linear(ccm.x_single, ccm.x_pair, nogapstate=True, padding=False)
 
     #determine number of sequences of sample
