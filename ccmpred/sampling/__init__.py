@@ -103,28 +103,28 @@ def generate_mcmc_sample(x, msa, size=10000, burn_in=500, sample_type="original"
 def sample_with_mutation_rate(tree, ncol, x, gibbs_steps, mutation_rate):
 
     branch_lengths = tree.branch_lengths
-    n_children = tree.n_children
-    n_vertices = tree.n_vertices
-    n_leaves = tree.n_leaves
     nseq = tree.nseq
 
     #how many substitutions per sequence will be performed
     nmut = [0]*(len(branch_lengths)-2)
     for i, bl in enumerate(branch_lengths[2:]):
         nmut[i] = bl * mutation_rate * ncol
-    print("number of amino acid substitutions (parent -> child): {0}".format(int(np.mean(nmut))))
+    print("avg number of amino acid substitutions (parent -> child): {0}".format(
+        np.round(np.mean(nmut), decimals=0)))
 
-    #binary topology
-    if n_leaves > nseq:
-        number_splits = np.log2(nseq)
-    else:
+    #get the average number of amino acid substitution from root --> leave
+    if tree.type == "binary" or tree.type == "star":
         number_splits = 1
-    depth_per_clade = 1.0 /np.ceil(number_splits)
-    print("number of amino acid substitutions (root -> leave): {0}".format(int(1 / depth_per_clade * np.mean(nmut))))
+        if tree.type == "binary":
+            number_splits = np.log2(nseq)
+        depth_per_clade = 1.0 /np.ceil(number_splits)
+        print("avg number of amino acid substitutions (root -> leave): {0}".format(
+            np.round(1 / depth_per_clade * np.mean(nmut), decimals=0)))
 
     #sample a new start sequence
     seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, gibbs_steps)
-    print("Ancestor sequence: {0}".format("".join([AMINO_ACIDS[c] for c in seq0[0]])))
+    print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) : {1}".format(
+        gibbs_steps, "".join([AMINO_ACIDS[c] for c in seq0[0]])))
 
     #sample sequences according to tree topology
     msa_sampled = mutate_along_phylogeny(tree.tree, seq0[0], mutation_rate, x)
@@ -133,12 +133,10 @@ def sample_with_mutation_rate(tree, ncol, x, gibbs_steps, mutation_rate):
     #      msa_sampled, n_children, branch_lengths, x, n_vertices, seq0, mutation_rate)
 
     #usually the case for binary trees
-    if n_leaves > nseq:
-        #print(int(np.floor(nseq/2)), n_leaves-int(np.ceil(nseq/2)))
+    if msa_sampled.shape[0] > nseq:
         first_half = msa_sampled[:int(np.floor(nseq/2))]
-        second_half = msa_sampled[n_leaves-int(np.ceil(nseq/2)):]
+        second_half = msa_sampled[-int(np.ceil(nseq/2)):]
         msa_sampled = np.array(list(first_half) + list(second_half))
-    # msa_sampled = msa_sampled[:nseq]
 
     #compute neff of sampled sequences
     neff = ccmpred.weighting.get_HHsuite_neff(msa_sampled)
@@ -151,12 +149,10 @@ def sample_with_mutation_rate(tree, ncol, x, gibbs_steps, mutation_rate):
 def sample_to_neff(tree, target_neff, ncol, x, gibbs_steps):
 
     branch_lengths = tree.branch_lengths
-    n_children = tree.n_children
-    n_vertices = tree.n_vertices
-    n_leaves = tree.n_leaves
     nseq = tree.nseq
 
-    print("\nSample sequences to generate alignment with target Neff={0:.6g} similar to original MSA...".format(target_neff))
+    print("\nSample sequences to generate alignment with target Neff={0:.6g} similar to original MSA...".format(
+        target_neff))
 
     mr_min = 0.0
     mr_max = 10.0
@@ -164,27 +160,29 @@ def sample_to_neff(tree, target_neff, ncol, x, gibbs_steps):
 
     # keep trying until we are within 1% of target neff
     neff = -np.inf
-    msa_sampled = np.empty((n_leaves, ncol), dtype="uint8")
+    msa_sampled = np.empty((nseq, ncol), dtype="uint8")
     while np.abs(neff - target_neff) > 1e-2 * target_neff and mr_min < (0.999 * mr_max):
 
         #sample a new start sequence
         seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, gibbs_steps)
-        print("Ancestor sequence: {0}".format("".join([AMINO_ACIDS[c] for c in seq0[0]])))
+        print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) : {1}".format(gibbs_steps, "".join(
+            [AMINO_ACIDS[c] for c in seq0[0]])))
 
         # how many substitutions per sequence will be performed
         nmut = [0] * (len(branch_lengths) - 2)
         for i, bl in enumerate(branch_lengths[2:]):
             nmut[i] = bl * mutation_rate * ncol
-        print("number of amino acid substitutions (parent -> child): {0}".format(int(np.mean(nmut))))
+        print("avg number of amino acid substitutions (parent -> child): {0}".format(
+            np.round(np.mean(nmut), decimals=0)))
 
-        # binary topology
-        if n_leaves > nseq:
-            number_splits = np.log2(nseq)
-        else:
+        # get the average number of amino acid substitution from root --> leave
+        if tree.type == "binary" or tree.type == "star":
             number_splits = 1
-        depth_per_clade = 1.0 / np.ceil(number_splits)
-        print(
-        "number of amino acid substitutions (root -> leave): {0}".format(int(1 / depth_per_clade * np.mean(nmut))))
+            if tree.type == "binary":
+                number_splits = np.log2(nseq)
+            depth_per_clade = 1.0 / np.ceil(number_splits)
+            print("avg number of amino acid substitutions (root -> leave): {0}".format(
+                np.round(1 / depth_per_clade * np.mean(nmut), decimals=0)))
 
 
         #sample sequences according to tree topology
@@ -194,9 +192,9 @@ def sample_to_neff(tree, target_neff, ncol, x, gibbs_steps):
         #     msa_sampled, n_children, branch_lengths, x, n_vertices, seq0, mutation_rate)
 
         # usually the case for binary trees
-        if n_leaves > nseq:
+        if msa_sampled.shape[0] > nseq:
             first_half = msa_sampled[:int(np.floor(nseq / 2))]
-            second_half = msa_sampled[n_leaves - int(np.ceil(nseq / 2)):]
+            second_half = msa_sampled[-int(np.ceil(nseq / 2)):]
             msa_sampled = np.array(list(first_half) + list(second_half))
 
         #compute neff of sampled sequences
