@@ -13,11 +13,11 @@ class CCMTree(object):
         self.nseq = None
         self.id0 = ["root"]
         self.ids = None
-        self.n_children = None
         self.branch_lengths = None
         self.n_vertices = None
         self.n_leaves = None
         self.tree = None
+        self.type = None
 
     def specify_tree(self, nseq, tree_file=None, tree_source=None):
         """
@@ -40,10 +40,13 @@ class CCMTree(object):
         self.nseq = nseq
 
         if tree_source == "binary":
+            self.type = "binary"
             self.tree = create_binary_tree(self.nseq, root_name=self.id0[0])
         elif tree_source == "star":
+            self.type = "star"
             self.tree = create_star_tree(self.nseq, root_name=self.id0[0])
         elif tree_file is not None:
+            self.type = "newick"
             try:
                 self.tree = Bio.Phylo.read(tree_file, "newick")
             except ValueError as e:
@@ -53,7 +56,9 @@ class CCMTree(object):
                 print("Error while reading tree file {0} : {1}".format(tree_file, e))
                 return False
 
-        if self.tree is not None:
+
+        if self.type is not None:
+
             # prepare tree topology
             tree_split = split_tree(self.tree, self.id0)
             tree_bfs = [c for c in bfs_iterator(tree_split.clade)]
@@ -196,7 +201,6 @@ def create_binary_tree(nseqs, depth=1, root_name="root"):
         parent.clades = [c1, c2]
 
     t = Bio.Phylo.BaseTree.Tree(rooted=False)
-    t.name="binary"
     t.clade.name = root_name
     t.clade.branch_length = 0
     fill_tree_rec(t.clade, splits)
@@ -227,7 +231,6 @@ def create_star_tree(nseqs, depth=1, root_name="root"):
         """
 
     t = Bio.Phylo.BaseTree.Tree(rooted=False)
-    t.name="star"
     t.clade.name = root_name
     t.clade.branch_length = 0
 
