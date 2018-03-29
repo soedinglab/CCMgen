@@ -25,9 +25,9 @@ void mutate_sequence(uint8_t *seq, flt *x, uint16_t nmut, int ncol) {
 
 		compute_conditional_probs(i, pcond, x, seq, ncol);
 		seq[i] = pick_random_weighted(pcond, N_ALPHA - 1);
-		//sample gaps as well:
-		//compute_conditional_probs_gaps(i, pcond, x, seq, ncol);
-		//seq[i] = pick_random_weighted(pcond, N_ALPHA);
+//		sample gaps as well (need to adjust E2 and X1 in cd.h but single potentials only have dim 20:
+//		compute_conditional_probs_gaps(i, pcond, x, seq, ncol);
+//		seq[i] = pick_random_weighted(pcond, N_ALPHA);
 	}
 
 	fl_free(pcond);
