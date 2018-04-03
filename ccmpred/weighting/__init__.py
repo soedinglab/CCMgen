@@ -4,10 +4,27 @@ import ccmpred.counts
 
 
 def get_HHsuite_neff(msa):
+    """
+    Adapted from the HHsuite manual:
+
+    The number of effective sequences is exp of the average sequence entropy over all columns of the alignment.
+    Hence, Neff is bounded by 0 from below and 20 from above.
+    In practice, it is bounded by the entropy of a column with background amino acid distribution f_a:
+    Neff < sum_a=1^20 f_a log f_a approx 16
+
+    Parameters
+    ----------
+    msa
+
+    Returns
+    -------
+
+    """
+
     single_counts = ccmpred.counts.single_counts(msa)
     single_freqs = (single_counts + 1e-3) / np.sum(single_counts, axis=1)[:, np.newaxis]
 
-    single_freqs = single_freqs[:20]
+    single_freqs = single_freqs[:, :20]
 
     entropies = - np.sum(single_freqs * np.log2(single_freqs), axis=1)
 
