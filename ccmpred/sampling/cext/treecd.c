@@ -19,11 +19,17 @@
 void mutate_sequence(uint8_t *seq, flt *x, uint16_t nmut, int ncol) {
 
 	flt* pcond = fl_malloc(N_ALPHA);
+    int i;
 
 	for(int m = 0; m < nmut; m++) {
-		int i = pick_random_uniform(ncol - 1);
+
+	    //ignore gap positions for sampling
+		do {
+			i = pick_random_uniform(ncol - 1);
+		} while(seq[i] == GAP);
 
 		compute_conditional_probs(i, pcond, x, seq, ncol);
+
 		seq[i] = pick_random_weighted(pcond, N_ALPHA - 1);
 //		sample gaps as well (need to adjust E2 and X1 in cd.h but single potentials only have dim 20:
 //		compute_conditional_probs_gaps(i, pcond, x, seq, ncol);
