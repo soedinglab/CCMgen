@@ -168,11 +168,11 @@ def sample_to_neff(tree, target_neff, ncol, x, gibbs_steps):
     branch_lengths = tree.branch_lengths
     nseq = tree.nseq
 
-    print("\nSample sequences to generate alignment with target Neff={0:.6g} similar to original MSA...".format(
+    print("\nSample sequences to generate alignment with target Neff={0:.6g} similar to original MSA...\n".format(
         target_neff))
 
     mr_min = 0.0
-    mr_max = 10.0
+    mr_max = 20.0
     mutation_rate = (mr_min + mr_max) / 2
 
     # keep trying until we are within 1% of target neff
@@ -214,7 +214,7 @@ def sample_to_neff(tree, target_neff, ncol, x, gibbs_steps):
         #compute neff of sampled sequences
         neff = ccmpred.weighting.get_HHsuite_neff(msa_sampled)
 
-        print("\nAlignment was sampled with mutation rate {0:.3g} (mr_min={1:.3g}, mr_max={2:.3g}) and has Neff {3:.6g}".format(
+        print("Alignment was sampled with mutation rate {0:.3g} (mr_min={1:.3g}, mr_max={2:.3g}) and has Neff {3:.6g}\n".format(
             mutation_rate, mr_min, mr_max, neff))
         sys.stdout.flush()
 
