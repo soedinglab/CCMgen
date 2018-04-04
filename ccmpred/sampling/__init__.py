@@ -100,7 +100,7 @@ def generate_mcmc_sample(x, msa, size=10000, burn_in=500, sample_type="original"
 
     return samples, neff
 
-def sample_with_mutation_rate(tree, ncol, x, gibbs_steps, mutation_rate):
+def sample_with_mutation_rate(tree, ncol, x, gibbs_steps, mutation_rate ):
 
     branch_lengths = tree.branch_lengths
     nseq = tree.nseq
@@ -123,6 +123,23 @@ def sample_with_mutation_rate(tree, ncol, x, gibbs_steps, mutation_rate):
 
     #sample a new start sequence
     seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, gibbs_steps)
+
+
+
+
+
+    #copy over gaps from a randomly selected original sequence
+    # N = msa.shape[0]
+    # random_original_sequence = msa[np.random.choice(N)]
+    # # find gaps in randomly selected original sequences
+    # gap_indices = np.array(np.where(random_original_sequence == AMINO_ACIDS.index('-'))[0])
+    # print("number of gaps that will be added: {0}".format(len(gap_indices)))
+    # # assign gap states to random sequences
+    # seq0[0, gap_indices] = AMINO_ACIDS.index('-')
+
+
+
+
     print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) : {1}".format(
         gibbs_steps, "".join([AMINO_ACIDS[c] for c in seq0[0]])))
 
@@ -187,9 +204,6 @@ def sample_to_neff(tree, target_neff, ncol, x, gibbs_steps):
 
         #sample sequences according to tree topology
         msa_sampled = mutate_along_phylogeny(tree.tree, seq0[0], mutation_rate, x)
-        # msa_sampled = np.empty((n_leaves, ncol), dtype="uint8")
-        # msa_sampled = ccmpred.sampling.cext.mutate_along_tree(
-        #     msa_sampled, n_children, branch_lengths, x, n_vertices, seq0, mutation_rate)
 
         # usually the case for binary trees
         if msa_sampled.shape[0] > nseq:
