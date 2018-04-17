@@ -30,12 +30,14 @@ class numDiff():
         temp = copy.deepcopy(x0_pair)
         temp = np.swapaxes(temp,0,1)
         temp = np.swapaxes(temp,2,3)
-        x0_pair = x0_pair + temp
+        x0_pair = x0_pair + temp    #to obtain symmetry
 
         x = objfun.structured_to_linear(x0_single, x0_pair)
 
-        _, g0 = objfun.evaluate(x)
-        g0_single, g0_pair = objfun.linear_to_structured(g0)
+        _, g0, g_reg = objfun.evaluate(x)
+        g = g0 + g_reg
+
+        g_single, g_pair = objfun.linear_to_structured(g)
 
 
 
@@ -60,10 +62,10 @@ class numDiff():
                 xA[i, a] -= self.epsilon
                 xB[i, a] += self.epsilon
 
-                fxA, _ = objfun.evaluate(objfun.structured_to_linear(xA, x0_pair))
-                fxB, _ = objfun.evaluate(objfun.structured_to_linear(xB, x0_pair))
+                fxA, _, _ = objfun.evaluate(objfun.structured_to_linear(xA, x0_pair))
+                fxB, _, _ = objfun.evaluate(objfun.structured_to_linear(xB, x0_pair))
 
-                symdiff = g0_single[i, a]
+                symdiff = g_single[i, a]
                 symdiff2 = None
                 numdiff = (fxB - fxA) / (2 * self.epsilon)
 
@@ -87,16 +89,16 @@ class numDiff():
                 xB[j, i, b, a] += self.epsilon
 
                 #numerical differentiation for value at x+eps and x-eps
-                fxA, _ = objfun.evaluate(objfun.structured_to_linear(x0_single, xA))
-                fxB, _ = objfun.evaluate(objfun.structured_to_linear(x0_single, xB))
+                fxA, _, _ = objfun.evaluate(objfun.structured_to_linear(x0_single, xA))
+                fxB, _, _ = objfun.evaluate(objfun.structured_to_linear(x0_single, xB))
                 numdiff = (fxB - fxA) / (2 * self.epsilon)
 
                 #actual value (and its symmetric counterpart)
                 xval = x0_pair[i, j, a, b]
                 symmval = x0_pair[j, i, b, a]
                 #analytical gradient
-                symdiff = g0_pair[i, j, a, b]
-                symdiff2 = g0_pair[j, i, b, a]
+                symdiff = g_pair[i, j, a, b]
+                symdiff2 = g_pair[j, i, b, a]
 
                 posstr = "w[{i:3d}, {j:3d}, {a:2d}, {b:2d}]".format(i=i, j=j, a=a, b=b)
                 posstr2 = "w[{j:3d}, {i:3d}, {b:2d}, {a:2d}]".format(i=i, j=j, a=a, b=b)
