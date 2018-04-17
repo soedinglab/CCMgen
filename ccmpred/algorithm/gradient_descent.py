@@ -70,7 +70,6 @@ class gradientDescent():
             "num_iterations": self.maxit
         }
 
-        upper_triangular_indices = np.triu_indices(objfun.ncol, k = 1)
         fx = -1
         alpha = self.alpha0
         persistent=False
@@ -94,15 +93,9 @@ class gradientDescent():
             if self.non_contact_indices is not None:
                 g_pair[self.non_contact_indices[0], self.non_contact_indices[1], :, :] = 0
 
-            #flattened
-            #print g_pair[0,10,3,5], "==", g_pair[10,0,5,3] #yes it is identical
-            g_pair_flat = g_pair[upper_triangular_indices[0], upper_triangular_indices[1],:20,:20].flatten()
-            gx_pair_flat = gx_pair[upper_triangular_indices[0], upper_triangular_indices[1],:20,:20].flatten()
-            g_reg_pair_flat = g_reg_pair[upper_triangular_indices[0], upper_triangular_indices[1],:20,:20].flatten()
-            x_pair_flat = x_pair[upper_triangular_indices[0], upper_triangular_indices[1],:20,:20].flatten()
 
             #compute norm of coupling parameters
-            xnorm_pair      = np.sqrt(np.sum(x_pair_flat * x_pair_flat)) #np.sqrt(np.sum(x_pair * x_pair))
+            xnorm_pair = np.sqrt(np.sum(x_pair * x_pair)/2) #np.sqrt(np.sum(x_pair * x_pair))
 
             if i > self.convergence_prev:
                 xnorm_prev = self.progress.optimization_log['||w||'][-self.convergence_prev]
@@ -130,10 +123,9 @@ class gradientDescent():
             #print out progress
             log_metrics={}
             log_metrics['||w||'] = xnorm_pair
-            log_metrics['||g||'] = np.sqrt(np.sum(g_pair_flat * g_pair_flat))
-            log_metrics['||g_w||'] = np.sqrt(np.sum(gx_pair_flat * gx_pair_flat))
-            log_metrics['||g_w||norm'] = log_metrics['||g_w||'] / len(gx_pair_flat)
-            log_metrics['||greg_w||'] = np.sqrt(np.sum(g_reg_pair_flat * g_reg_pair_flat))
+            log_metrics['||g||'] = np.sqrt(np.sum(g_pair * g_pair)/2)
+            log_metrics['||g_w||'] = np.sqrt(np.sum(gx_pair * gx_pair)/2)
+            log_metrics['||greg_w||'] = np.sqrt(np.sum(g_reg_pair * g_reg_pair)/2)
             log_metrics['xnorm_diff'] = xnorm_diff
             log_metrics['max_g'] = np.max(np.abs(gx))
             log_metrics['alpha'] = alpha
