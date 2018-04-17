@@ -31,7 +31,11 @@ class LBFGS(object):
     def lbfgs_f(self, x):
 
         fx, g_x, g_reg = self.objfun.evaluate(x)
-        g = g_x + g_reg
+
+        #gradient is computed x 2 in pll.evaluate because of compatibility with conjugate gradient optimization!!
+        g_x_single, g_x_pair = self.objfun.linear_to_structured(g_x)
+        g_reg_single, g_reg_pair = self.objfun.linear_to_structured(g_reg)
+        g = self.objfun.structured_to_linear(g_x_single+g_reg_single, (g_x_pair+g_reg_pair)/2)
 
         # masking: set coupling gradients for all pairs (i,j) with d_ij > contact_thr = 0
         if self.non_contact_indices is not None:
@@ -39,16 +43,22 @@ class LBFGS(object):
             g_pair[self.non_contact_indices[0], self.non_contact_indices[1], :, :] = 0
             g = self.objfun.structured_to_linear(g_single, g_pair)
 
+        print(len(x), len(g))
+
         return fx, g
 
     def print_and_plot(self, x):
 
         self.iteration += 1
 
-        x_single, x_pair = self.objfun.linear_to_structured(x)
+        x_single, x_pair = self.objfun.finalize(x)
+
+        #because w is symmetric and we want i<j
+        upper_triangular_i, upper_triangular_j = np.triu_indices(self.objfun.ncol, k=1)
+        x_pair = x_pair[upper_triangular_i, upper_triangular_j, :20, :20]
 
         log_metrics={}
-        log_metrics['||v+w||'] = np.sqrt(np.sum(x * x))
+        log_metrics['||v+w||'] = np.sqrt(np.sum(x_single * x_single) + np.sum(x_pair * x_pair))
         log_metrics['||v||'] = np.sqrt(np.sum(x_single * x_single))
         log_metrics['||w||'] = np.sqrt(np.sum(x_pair * x_pair))
         self.progress.log_progress(self.iteration, **log_metrics)
