@@ -167,6 +167,7 @@ class ContrastiveDivergence():
         g_pair[:, :, :, 20] = 0
         g_pair[:, :, 20, :] = 0
 
+        # set diagonal elements to 0
         for i in range(self.ncol):
             g_pair[i, i, :, :] = 0
 
