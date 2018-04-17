@@ -337,7 +337,7 @@ def main():
     if opt.optimize:
 
         #setup progress logging
-        plotfile = ".".join(opt.matfile.split(".")[:-1]) + ".opt_progress.html"
+        plotfile = ccm.protein + ".opt_progress.html"
         plot_title = "L={0} N={1} Neff={2} Diversity={3}<br>".format(
             ccm.L, ccm.N, np.round(ccm.neff, decimals=3), np.round(ccm.diversity, decimals=3))
         if not opt.plot_opt_progress:
@@ -361,20 +361,21 @@ def main():
     ### Post Processing
     ##############################
 
-    # Compute contact score (frobenius norm) by possibly recentering potentials
-    # TODO: other scores can be added ...
-    ccm.compute_contact_matrix(recenter_potentials=opt.centering_potentials, frob=opt.frob)
-
-    # compute corrected contact maps (removing entropy/phylogenetic biases)
-    ccm.compute_correction(
-        apc=opt.apc,
-        entropy_correction=opt.entropy_correction,
-        joint_entropy=opt.joint_entropy_correction,
-        sergeys_jec=opt.sergeys_joint_entropy_correction
-    )
-
     #specify meta data, and write (corrected) contact matrices to files
     if opt.matfile:
+
+        # Compute contact score (frobenius norm) by possibly recentering potentials
+        # TODO: other scores can be added ...
+        ccm.compute_contact_matrix(recenter_potentials=opt.centering_potentials, frob=opt.frob)
+
+        # compute corrected contact maps (removing entropy/phylogenetic biases)
+        ccm.compute_correction(
+            apc=opt.apc,
+            entropy_correction=opt.entropy_correction,
+            joint_entropy=opt.joint_entropy_correction,
+            sergeys_jec=opt.sergeys_joint_entropy_correction
+        )
+
         ccm.write_matrix()
 
     # write model parameters in binary format

@@ -510,6 +510,7 @@ class CCMpred():
         if recenter_potentials:
             self.recenter_potentials()
 
+
         mat_path, mat_name = os.path.split(self.mat_file)
 
         if frob:
