@@ -66,16 +66,20 @@ class PseudoLikelihood():
 
     def evaluate(self, x):
 
+        #fx is function value of objective function over w_ijab with i=j=1 < L
+        #--> potentials are symmetric and counted twice!!
+        #w_ijab will later be updated by gradient for i=1<j< L
+        #--> therefore gradient for w_ijab is multiplied by 2!!
+
         #pointer to g == self.g
-        #pairwise gradient is two-fold  because auf symmetrization
         fx, g = ccmpred.objfun.pll.cext.evaluate(x, self.g, self.g2, self.weights, self.msa)
         g -= self.g_init
 
         x_single, x_pair = self.linear_to_structured(x)
 
-        #pairwise gradient is two-fold !
+        #compute regularizer
         fx_reg, g_single_reg, g_pair_reg = self.regularization(x_single, x_pair)
-        g_pair_reg *= 2
+        g_pair_reg *= 2 #gradient is multiplied by 2 because of issue mentioned above
         g_reg = self.structured_to_linear(g_single_reg, g_pair_reg)
         fx += fx_reg
 
