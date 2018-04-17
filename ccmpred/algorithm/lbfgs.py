@@ -43,8 +43,6 @@ class LBFGS(object):
             g_pair[self.non_contact_indices[0], self.non_contact_indices[1], :, :] = 0
             g = self.objfun.structured_to_linear(g_single, g_pair)
 
-        print(len(x), len(g))
-
         return fx, g
 
     def print_and_plot(self, x):
