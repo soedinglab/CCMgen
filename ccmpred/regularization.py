@@ -16,8 +16,9 @@ class L2(object):
         x_ofs = x_single - self.center_x_single[:, :x_single.shape[1]]
 
         # log likelihood uses:
-        #   - lambda_single sum_i sum_a (v_ia - center_x_single)^2
-        #   - lambda_pair / 2 sum_i sum_j sum_a sum_b (w_ijab)^2
+        #   - lambda_single    * sum_i sum_a (v_ia - center_x_single)^2
+        #   - lambda_pair / 2  * sum_i sum_j sum_a sum_b (w_ijab)^2
+        #   w_ijab == w_jiba --> potentials are symmetric
         # gradient computes as:
         #   - 2 * lambda_single * (v_ia - center_x_single)
         #   - lambda_pair * w_ijab
