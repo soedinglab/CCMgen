@@ -95,7 +95,7 @@ class gradientDescent():
 
 
             #compute norm of coupling parameters
-            xnorm_pair = np.sqrt(np.sum(x_pair * x_pair)/2) #np.sqrt(np.sum(x_pair * x_pair))
+            xnorm_pair = np.sqrt(np.sum(x_pair * x_pair)/2)
 
             if i > self.convergence_prev:
                 xnorm_prev = self.progress.optimization_log['||w||'][-self.convergence_prev]
