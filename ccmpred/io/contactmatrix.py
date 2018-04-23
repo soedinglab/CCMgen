@@ -30,7 +30,7 @@ def apc(cmat):
 
     return cmat - apc_term
 
-def compute_scaling_factor_eta(x_pair, uij, nr_states, squared=True):
+def compute_scaling_factor(x_pair, uij, nr_states, squared=True):
     """
     Set the strength of the entropy correction by optimization eta with least squares
 
@@ -48,10 +48,10 @@ def compute_scaling_factor_eta(x_pair, uij, nr_states, squared=True):
     if squared:
 
         squared_sum_entropy = np.sum(uij[:,:,:nr_states,:nr_states], axis=(3,2))
-        scaling_factor_eta = np.sum(squared_sum_couplings * squared_sum_entropy)
+        scaling_factor = np.sum(squared_sum_couplings * squared_sum_entropy)
 
         denominator = np.sum(uij * uij)
-        scaling_factor_eta /= denominator
+        scaling_factor /= denominator
 
     else:
 
@@ -60,11 +60,11 @@ def compute_scaling_factor_eta(x_pair, uij, nr_states, squared=True):
         c_ij =  np.sqrt(squared_sum_couplings)
         e_ij =  np.sqrt(np.sum(uij[:,:,:nr_states,:nr_states], axis=(3,2)))
 
-        scaling_factor_eta = np.sum(c_ij  * e_ij)
+        scaling_factor = np.sum(c_ij  * e_ij)
         denominator = np.sum(uij[:,:,:nr_states,:nr_states])
-        scaling_factor_eta /= denominator
+        scaling_factor /= denominator
 
-    return scaling_factor_eta
+    return scaling_factor
 
 def compute_local_correction(
         single_freq, x_pair, Neff, lambda_w, squared=True,
@@ -73,27 +73,27 @@ def compute_local_correction(
     print("\nApply entropy correction (using {0} states and {1}).".format(nr_states, log.__name__))
 
 
-    #correct for fractional counts
-    N_factor = np.sqrt(Neff) * (1.0 / lambda_w)
-    N_factor =1
 
     if entropy:
+        N_factor =1
         ui = N_factor * single_freq[:, :nr_states] * log(single_freq[:, :nr_states])
     else:
+        #correct for fractional counts
+        N_factor = np.sqrt(Neff) * (1.0 / lambda_w)
         ui = N_factor * single_freq[:, :nr_states] * (1 - single_freq[:, :nr_states])
     uij = np.transpose(np.multiply.outer(ui, ui), (0,2,1,3))
 
-    ### compute scaling factor eta
-    scaling_factor_eta = compute_scaling_factor_eta(x_pair, uij, nr_states, squared=squared)
+    ### compute optimal scaling factor
+    scaling_factor = compute_scaling_factor(x_pair, uij, nr_states, squared=squared)
 
     if not squared:
         mat = frobenius_score(x_pair)
-        correction = scaling_factor_eta * np.sqrt(np.sum(uij, axis=(3, 2)))
+        correction = scaling_factor * np.sqrt(np.sum(uij, axis=(3, 2)))
     else:
         mat = np.sum(x_pair * x_pair, axis=(2, 3))
-        correction = scaling_factor_eta * np.sum(uij, axis=(3, 2))
+        correction = scaling_factor * np.sum(uij, axis=(3, 2))
 
-    return scaling_factor_eta, mat - correction
+    return scaling_factor, mat - correction
 
 def compute_joint_entropy_correction(pair_freq, neff, lambda_w, x_pair, nr_states = 21, log=np.log2):
 
