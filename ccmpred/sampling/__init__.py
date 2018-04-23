@@ -169,7 +169,7 @@ def sample_to_neff(tree, target_neff, ncol, x, gibbs_steps):
         target_neff))
 
     mr_min = 0.0
-    mr_max = 10.0
+    mr_max = 20.0
     mutation_rate = (mr_min + mr_max) / 2
 
     # keep trying until we are within 1% of target neff
