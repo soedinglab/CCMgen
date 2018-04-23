@@ -75,6 +75,7 @@ def compute_local_correction(
 
     #correct for fractional counts
     N_factor = np.sqrt(Neff) * (1.0 / lambda_w)
+    N_factor =1
 
     if entropy:
         ui = N_factor * single_freq[:, :nr_states] * log(single_freq[:, :nr_states])
