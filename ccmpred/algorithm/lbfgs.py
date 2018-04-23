@@ -51,14 +51,10 @@ class LBFGS(object):
 
         x_single, x_pair = self.objfun.finalize(x)
 
-        #because w is symmetric and we want i<j
-        upper_triangular_i, upper_triangular_j = np.triu_indices(self.objfun.ncol, k=1)
-        x_pair = x_pair[upper_triangular_i, upper_triangular_j, :20, :20]
-
         log_metrics={}
-        log_metrics['||v+w||'] = np.sqrt(np.sum(x_single * x_single) + np.sum(x_pair * x_pair))
+        log_metrics['||v+w||'] = np.sqrt(np.sum(x_single * x_single) + np.sum(x_pair * x_pair)/2)
         log_metrics['||v||'] = np.sqrt(np.sum(x_single * x_single))
-        log_metrics['||w||'] = np.sqrt(np.sum(x_pair * x_pair))
+        log_metrics['||w||'] = np.sqrt(np.sum(x_pair * x_pair)/2)
         self.progress.log_progress(self.iteration, **log_metrics)
 
     def minimize(self, objfun, x):
