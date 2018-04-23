@@ -145,9 +145,6 @@ def sample_with_mutation_rate(tree, ncol, x, gibbs_steps, mutation_rate ):
 
     #sample sequences according to tree topology
     msa_sampled = mutate_along_phylogeny(tree.tree, seq0[0], mutation_rate, x)
-    # msa_sampled = np.empty((n_leaves, ncol), dtype="uint8")
-    # msa_sampled = ccmpred.sampling.cext.mutate_along_tree(
-    #      msa_sampled, n_children, branch_lengths, x, n_vertices, seq0, mutation_rate)
 
     #usually the case for binary trees
     if msa_sampled.shape[0] > nseq:
@@ -172,7 +169,7 @@ def sample_to_neff(tree, target_neff, ncol, x, gibbs_steps):
         target_neff))
 
     mr_min = 0.0
-    mr_max = 20.0
+    mr_max = 10.0
     mutation_rate = (mr_min + mr_max) / 2
 
     # keep trying until we are within 1% of target neff
