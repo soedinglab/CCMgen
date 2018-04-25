@@ -177,7 +177,7 @@ def sample_to_neff_increasingly(tree, target_neff, ncol, x, gibbs_steps):
     # keep increasing MR until we are within 1% of target neff
     neff = -np.inf
     msa_sampled = np.empty((nseq, ncol), dtype="uint8")
-    while np.abs(neff - target_neff) > 1e-2 * target_neff:
+    while target_neff - neff > 1e-2 * target_neff:
 
         # how many substitutions per sequence will be performed
         nmut = [0] * (len(branch_lengths) - 2)
