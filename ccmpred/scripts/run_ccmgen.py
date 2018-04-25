@@ -131,12 +131,15 @@ def main():
     # print("summe x_pair: {0}".format(np.sum(ccm.x_pair)))
     #
     # ccm.compute_frequencies("uniform_pseudocounts", pseudocount_n_single=1, pseudocount_n_pair=1)
+    #
     # single_freq = ccm.pseudocounts.freqs[0]
     # id_inf = np.sum(single_freq[:,:20]*single_freq[:,:20]) / ccm.L
     # print("id_inf (freq norm with gaps) = {0}".format(id_inf))
+    #
     # single_freq = ccm.pseudocounts.degap(single_freq)
     # id_inf = np.sum(single_freq[:,:20]*single_freq[:,:20]) / ccm.L
     # print("id_inf (freq degapped)= {0}".format(id_inf))
+    #
     # p = np.exp(ccm.x_single) / np.sum(np.exp(ccm.x_single), axis=1)[:, np.newaxis]
     # id_inf = np.sum(p[:,:20]*p[:,:20]) / ccm.L
     # print("id_inf (model prob)= {0}".format(id_inf))
@@ -153,7 +156,7 @@ def main():
 
     #start sampling along tree
     if tree is not None and opt.mutation_rate_neff:
-        msa_sampled, neff = ccmpred.sampling.sample_to_neff(
+        msa_sampled, neff = ccmpred.sampling.sample_to_neff_increasingly(
             tree, ccm.neff_entropy, ccm.L, x, opt.burn_in)
     elif tree is not None and opt.mutation_rate > 0:
         msa_sampled, neff = ccmpred.sampling.sample_with_mutation_rate(
