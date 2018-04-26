@@ -1,7 +1,7 @@
 import numpy as np
 from ccmpred.weighting.cext import count_ids, calculate_weights_simple
 import ccmpred.counts
-
+from ccmpred.pseudocounts import PseudoCounts
 
 def get_HHsuite_neff(msa):
     """
@@ -21,6 +21,18 @@ def get_HHsuite_neff(msa):
 
     """
 
+    # weights = calculate_weights_simple(msa, cutoff=0.8, ignore_gaps=False)
+    # pseudocounts = PseudoCounts(msa, weights)
+    #
+    # pseudocounts.calculate_frequencies(
+    #     "uniform_pseudocounts",
+    #     1,
+    #     1,
+    #     remove_gaps=False
+    # )
+    # single_freqs = pseudocounts.degap(pseudocounts.freqs[1])
+
+    # frequencies including gaps
     single_counts = ccmpred.counts.single_counts(msa)
     single_freqs = (single_counts + 1e-3) / np.sum(single_counts, axis=1)[:, np.newaxis]
 
