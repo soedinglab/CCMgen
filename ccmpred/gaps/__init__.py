@@ -46,7 +46,7 @@ def remove_gapped_sequences(msa, max_gap_seq):
     msa_gap_count_per_sequence = (msa == 20).sum(1)
 
     #how many positions per sequence are allowed to contain gaps?
-    max_gap_percentage_per_sequence = (max_gap_seq / 100.0 * msa.shape[1])
+    max_gap_percentage_per_sequence = ((max_gap_seq / 100.0) * msa.shape[1])
 
     high_coverage = np.where(msa_gap_count_per_sequence <  max_gap_percentage_per_sequence)
 
@@ -62,7 +62,7 @@ def remove_gapped_positions(msa, max_gap_percentage):
 
     msa_gap_counts = (msa == 20).sum(0)
 
-    max_gap_count = (max_gap_percentage/100.0 * msa.shape[0])
+    max_gap_count = ((max_gap_percentage/100.0) * msa.shape[0])
 
     ungapped_positions  = np.where(msa_gap_counts <  max_gap_count)
     gapped_positions    = np.where(msa_gap_counts >=  max_gap_count)
