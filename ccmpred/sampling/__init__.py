@@ -163,6 +163,100 @@ def sample_with_mutation_rate(tree, ncol, x, gibbs_steps, mutation_rate ):
 
     return msa_sampled, neff
 
+def sample_to_pair_correlation(tree, target_neff, ncol, x, gibbs_steps, single_freq_observed, pair_freq_observed):
+    branch_lengths = tree.branch_lengths
+    nseq = tree.nseq
+
+    indices_upper_i, indices_upper_j = np.triu_indices(ncol, k=1)
+    single_freq_observed_flat = single_freq_observed.flatten().tolist()
+    pair_freq_observed_flat = pair_freq_observed[indices_upper_i, indices_upper_j, :, :].flatten().tolist()
+    cov_observed = [pair_freq_observed[i, j, a, b] - (single_freq_observed[i, a] * single_freq_observed[j, b])
+                    for i in range(ncol - 1) for j in range(i + 1, ncol) for a in range(20) for b in range(20)]
+
+    print("\nSample sequences to generate alignment with Pearson correlation coefficient > 0.9 "
+             "between observed and sampled pair frequencies...\n")
+
+    # sample a new start sequence
+    seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, gibbs_steps)
+    print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) : {1}".format(gibbs_steps, "".join(
+        [AMINO_ACIDS[c] for c in seq0[0]])))
+
+    mutation_rate = 1.0
+    pearson_corr_pair = 0.0
+    msa_sampled = np.empty((nseq, ncol), dtype="uint8")
+    neff = 0
+    while pearson_corr_pair < 0.9:
+
+        # how many substitutions per sequence will be performed
+        nmut = [0] * (len(branch_lengths) - 2)
+        for i, bl in enumerate(branch_lengths[2:]):
+            nmut[i] = bl * mutation_rate * ncol
+        print("avg number of amino acid substitutions (parent -> child): {0}".format(
+            np.round(np.mean(nmut), decimals=0)))
+
+        # get the average number of amino acid substitution from root --> leave
+        if tree.type == "binary" or tree.type == "star":
+            number_splits = 1
+            if tree.type == "binary":
+                number_splits = np.log2(nseq)
+            depth_per_clade = 1.0 / np.ceil(number_splits)
+            print("avg number of amino acid substitutions (root -> leave): {0}".format(
+                np.round(1 / depth_per_clade * np.mean(nmut), decimals=0)))
+
+        # sample sequences according to tree topology
+        msa_sampled = mutate_along_phylogeny(tree.tree, seq0[0], mutation_rate, x)
+
+        # usually the case for binary trees
+        if msa_sampled.shape[0] > nseq:
+            first_half = msa_sampled[:int(np.floor(nseq / 2))]
+            second_half = msa_sampled[-int(np.ceil(nseq / 2)):]
+            msa_sampled = np.array(list(first_half) + list(second_half))
+
+        # compute neff of sampled sequences
+        neff = ccmpred.weighting.get_HHsuite_neff(msa_sampled)
+        print("Alignment was sampled with mutation rate {0:.3g} and has Neff {1:.5g}\n".format(mutation_rate, neff))
+
+        # compute amino acid frequencies
+        weights = calculate_weights_simple(msa_sampled, cutoff=0.8, ignore_gaps=False)
+        pseudocounts = PseudoCounts(msa_sampled, weights)
+        pseudocounts.calculate_frequencies(
+            "uniform_pseudocounts",
+            1,
+            1,
+            remove_gaps=False
+        )
+        single_freqs_sampled = pseudocounts.degap(pseudocounts.freqs[0], False)
+        single_freqs_sampled_flat = single_freqs_sampled.flatten().tolist()
+
+        pair_freqs_sampled = pseudocounts.degap(pseudocounts.freqs[1], False)
+        pair_freq_sampled_flat = pair_freqs_sampled[indices_upper_i, indices_upper_j, :, :].flatten().tolist()
+
+        cov_sampled = [pair_freqs_sampled[i, j, a, b] - (single_freqs_sampled[i, a] * single_freqs_sampled[j, b])
+                       for i in range(ncol - 1) for j in range(i + 1, ncol) for a in range(20) for b in range(20)]
+
+        pearson_corr_single = np.corrcoef(single_freq_observed_flat, single_freqs_sampled_flat)[0, 1]
+        pearson_corr_pair = np.corrcoef(pair_freq_observed_flat, pair_freq_sampled_flat)[0, 1]
+        pearson_corr_cov = np.corrcoef(cov_observed, cov_sampled)[0, 1]
+
+        print("Neff difference is {0:.5g}%, correlation with observed single freq: {1:.5g} "
+              "and pair freq: {2:.5g} and covariances: {3:.5g}\n".format((target_neff - neff) / target_neff * 100,
+                                                                         pearson_corr_single, pearson_corr_pair,
+                                                                         pearson_corr_cov))
+        sys.stdout.flush()
+
+        #increase mutation rate
+        mutation_rate += 0.3
+
+        # prevent mutation rate from becoming too high
+        if mutation_rate > 10:
+            # sample a new start sequence and begin anew
+            seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, gibbs_steps)
+            print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) : {1}".format(gibbs_steps, "".join(
+                [AMINO_ACIDS[c] for c in seq0[0]])))
+            mutation_rate = 1
+
+    return msa_sampled, neff
+
 def sample_to_neff_increasingly(tree, target_neff, ncol, x, gibbs_steps, single_freq_observed, pair_freq_observed):
 
     branch_lengths = tree.branch_lengths
@@ -181,7 +275,7 @@ def sample_to_neff_increasingly(tree, target_neff, ncol, x, gibbs_steps, single_
 
 
 
-    print("\nSample sequences to generate alignment with target Neff={0:.6g} similar to original MSA...\n".format(
+    print("\nSample sequences to generate alignment with target Neff~{0:.6g}...\n".format(
         target_neff))
 
     # sample a new start sequence
@@ -250,8 +344,8 @@ def sample_to_neff_increasingly(tree, target_neff, ncol, x, gibbs_steps, single_
         pearson_corr_cov = np.corrcoef(cov_observed, cov_sampled)[0, 1]
 
 
-        print("Difference to target Neff is {0:.5g}, correlation with observed single freq: {1:.5g} "
-              "and pair freq: {2:.5g} and covariances: {3:.5g}\n".format(target_neff - neff, pearson_corr_single, pearson_corr_pair, pearson_corr_cov))
+        print("Neff difference is {0:.5g}%, correlation with observed single freq: {1:.5g} "
+              "and pair freq: {2:.5g} and covariances: {3:.5g}\n".format((target_neff - neff)/target_neff*100, pearson_corr_single, pearson_corr_pair, pearson_corr_cov))
         sys.stdout.flush()
 
 
@@ -281,7 +375,7 @@ def sample_to_neff(tree, target_neff, ncol, x, gibbs_steps):
     branch_lengths = tree.branch_lengths
     nseq = tree.nseq
 
-    print("\nSample sequences to generate alignment with target Neff={0:.6g} similar to original MSA...\n".format(
+    print("\nSample sequences to generate alignment with target Neff~{0:.6g}...\n".format(
         target_neff))
 
     mr_min = 0.0

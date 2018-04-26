@@ -74,6 +74,8 @@ def parse_args():
     grp_opt = parser.add_argument_group("General Options")
     grp_opt.add_argument("--max-gap-pos",  dest="max_gap_pos", default=100, type=int,
                         help="Ignore alignment positions with > MAX_GAP_POS percent gaps. [default: %(default)s == no removal of gaps]")
+    grp_opt.add_argument("--max-gap-seq",  dest="max_gap_seq",  default=100, type=int,
+                        help="Remove sequences with >X percent gaps. [default: %(default)s == no removal of sequences]")
     grp_opt.add_argument("--aln-format", dest="aln_format", type=str, default="fasta",
                         help="Specify format for alignment files [default: %(default)s]")
     grp_opt.add_argument("-t", "--num_threads", dest="num_threads", type=int, default=1,
@@ -114,7 +116,7 @@ def main():
     ccm.set_pdb_file(opt.pdbfile)
 
     # read alignment and possible remove gapped sequences and positions
-    ccm.read_alignment(opt.aln_format, opt.max_gap_pos, 100)
+    ccm.read_alignment(opt.aln_format, opt.max_gap_pos, opt.max_gap_seq)
 
     #read potentials from binary raw file
     ccm.intialise_potentials()
@@ -165,7 +167,7 @@ def main():
         pairwise_freq_observed = ccm.pseudocounts.degap(pairwise_freq_observed, False)
 
 
-        msa_sampled, neff = ccmpred.sampling.sample_to_neff_increasingly(
+        msa_sampled, neff = ccmpred.sampling.sample_to_pair_correlation(
             tree, ccm.neff_entropy, ccm.L, x, opt.burn_in, single_freq_observed, pairwise_freq_observed)
     elif tree is not None and opt.mutation_rate > 0:
         msa_sampled, neff = ccmpred.sampling.sample_with_mutation_rate(
