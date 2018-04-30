@@ -1,3 +1,4 @@
+# coding=utf-8
 import ccmpred.objfun.cd.cext
 import ccmpred.weighting
 import ccmpred.trees
@@ -257,22 +258,10 @@ def sample_to_pair_correlation(tree, target_neff, ncol, x, gibbs_steps, single_f
 
     return msa_sampled, neff
 
-def sample_to_neff_increasingly(tree, target_neff, ncol, x, gibbs_steps, single_freq_observed, pair_freq_observed):
+def sample_to_neff_increasingly(tree, target_neff, ncol, x, gibbs_steps):
 
     branch_lengths = tree.branch_lengths
     nseq = tree.nseq
-
-
-
-
-    indices_upper_i, indices_upper_j = np.triu_indices(ncol, k=1)
-    single_freq_observed_flat = single_freq_observed.flatten().tolist()
-    pair_freq_observed_flat = pair_freq_observed[indices_upper_i, indices_upper_j, :, :].flatten().tolist()
-    cov_observed = [pair_freq_observed[i, j, a, b] - (single_freq_observed[i, a] * single_freq_observed[j, b])
-                    for i in range(ncol - 1) for j in range(i + 1, ncol) for a in range(20) for b in range(20)]
-
-
-
 
 
     print("\nSample sequences to generate alignment with target Neff~{0:.6g}...\n".format(
@@ -316,49 +305,17 @@ def sample_to_neff_increasingly(tree, target_neff, ncol, x, gibbs_steps, single_
 
         # compute neff of sampled sequences
         neff = ccmpred.weighting.get_HHsuite_neff(msa_sampled)
-        print("Alignment was sampled with mutation rate {0:.3g} and has Neff {1:.5g}\n".format(mutation_rate, neff))
-
-
-
-
-        #compute amino acid frequencies
-        weights = calculate_weights_simple(msa_sampled, cutoff=0.8, ignore_gaps=False)
-        pseudocounts = PseudoCounts(msa_sampled, weights)
-        pseudocounts.calculate_frequencies(
-            "uniform_pseudocounts",
-            1,
-            1,
-            remove_gaps=False
-        )
-        single_freqs_sampled = pseudocounts.degap(pseudocounts.freqs[0], False)
-        single_freqs_sampled_flat = single_freqs_sampled.flatten().tolist()
-
-        pair_freqs_sampled = pseudocounts.degap(pseudocounts.freqs[1], False)
-        pair_freq_sampled_flat = pair_freqs_sampled[indices_upper_i, indices_upper_j, :, :].flatten().tolist()
-
-        cov_sampled  = [pair_freqs_sampled[i,j,a,b] - (single_freqs_sampled[i,a] * single_freqs_sampled[j,b])
-                        for i in range(ncol-1) for j in range(i+1, ncol) for a in range(20) for b in range(20)]
-
-        pearson_corr_single = np.corrcoef(single_freq_observed_flat, single_freqs_sampled_flat)[0, 1]
-        pearson_corr_pair = np.corrcoef(pair_freq_observed_flat, pair_freq_sampled_flat)[0, 1]
-        pearson_corr_cov = np.corrcoef(cov_observed, cov_sampled)[0, 1]
-
-
-        print("Neff difference is {0:.5g}%, correlation with observed single freq: {1:.5g} "
-              "and pair freq: {2:.5g} and covariances: {3:.5g}\n".format((target_neff - neff)/target_neff*100, pearson_corr_single, pearson_corr_pair, pearson_corr_cov))
+        print("Alignment was sampled with mutation rate {0:.3g} and has Neff {1:.5g} (ΔNeff [%] = {2:.5g})\n".format(
+            mutation_rate, neff, (target_neff - neff)/target_neff*100))
         sys.stdout.flush()
-
-
-
-
 
         if target_neff > neff:
             # inrease mutation rate
-            mutation_rate += 0.3
+            mutation_rate += np.random.random()
 
         if target_neff < neff:
             #decrease mutation rate
-            mutation_rate -= 0.1
+            mutation_rate -= np.random.random()
 
         #prevent mutation rate from becoming too high
         if mutation_rate > 10:
