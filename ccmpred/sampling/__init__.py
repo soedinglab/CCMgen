@@ -318,7 +318,7 @@ def sample_to_neff_increasingly(tree, target_neff, ncol, x, gibbs_steps):
             mutation_rate -= np.random.random()
 
         #prevent mutation rate from becoming too high
-        if mutation_rate > 10:
+        if mutation_rate > 10 or mutation_rate < 0:
             # sample a new start sequence and begin anew
             seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, gibbs_steps)
             print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) : {1}".format(gibbs_steps, "".join(
