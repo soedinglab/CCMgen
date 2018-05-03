@@ -267,16 +267,16 @@ def sample_to_neff_increasingly(tree, target_neff, ncol, x, gibbs_steps):
     print("\nSample sequences to generate alignment with target Neff~{0:.6g}...\n".format(
         target_neff))
 
-    # sample a new start sequence
-    seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, gibbs_steps)
-    print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) : {1}".format(gibbs_steps, "".join(
-        [AMINO_ACIDS[c] for c in seq0[0]])))
-
-    mutation_rate = 1.0
     # keep increasing MR until we are within 1% of target neff
+    mutation_rate = 1.0
     neff = -np.inf
     msa_sampled = np.empty((nseq, ncol), dtype="uint8")
     while np.abs(target_neff - neff) > 1e-2 * target_neff:
+
+        # sample a new start sequence
+        seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, gibbs_steps)
+        print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) : {1}".format(gibbs_steps, "".join(
+            [AMINO_ACIDS[c] for c in seq0[0]])))
 
         # how many substitutions per sequence will be performed
         nmut = [0] * (len(branch_lengths) - 2)
@@ -309,20 +309,16 @@ def sample_to_neff_increasingly(tree, target_neff, ncol, x, gibbs_steps):
             mutation_rate, neff, (target_neff - neff)/target_neff*100))
         sys.stdout.flush()
 
+        # inrease mutation rate
         if target_neff > neff:
-            # inrease mutation rate
             mutation_rate += np.random.random()
 
+        # decrease mutation rate
         if target_neff < neff:
-            #decrease mutation rate
             mutation_rate -= np.random.random()
 
-        #prevent mutation rate from becoming too high
-        if mutation_rate > 15 or mutation_rate < 0:
-            # sample a new start sequence and begin anew
-            seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, gibbs_steps)
-            print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) : {1}".format(gibbs_steps, "".join(
-                [AMINO_ACIDS[c] for c in seq0[0]])))
+        #reset mutation rate if it becomes negative
+        if mutation_rate < 0:
             mutation_rate = 1
 
     return msa_sampled, neff
