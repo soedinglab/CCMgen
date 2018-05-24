@@ -160,16 +160,16 @@ def main():
     if tree is not None and opt.mutation_rate_neff:
         msa_sampled, neff = ccmpred.sampling.sample_to_neff_increasingly(
             tree, ccm.neff_entropy, ccm.L, x, opt.burn_in)
-    elif tree is not None and opt.sample_aln_stat_correlation:
-        # compute amino acid counts and frequencies adding pseudo counts for non-observed amino acids
-        ccm.compute_frequencies("uniform_pseudocounts", 1, 1)
-
-        single_freq_observed, pairwise_freq_observed = ccm.pseudocounts.freqs
-        single_freq_observed = ccm.pseudocounts.degap(single_freq_observed, False)
-        pairwise_freq_observed = ccm.pseudocounts.degap(pairwise_freq_observed, False)
-
-        msa_sampled, neff = ccmpred.sampling.sample_to_pair_correlation(
-            tree, ccm.neff_entropy, ccm.L, x, opt.burn_in, single_freq_observed, pairwise_freq_observed)
+    # elif tree is not None and opt.sample_aln_stat_correlation:
+    #     # compute amino acid counts and frequencies adding pseudo counts for non-observed amino acids
+    #     ccm.compute_frequencies("uniform_pseudocounts", 1, 1)
+    #
+    #     single_freq_observed, pairwise_freq_observed = ccm.pseudocounts.freqs
+    #     single_freq_observed = ccm.pseudocounts.degap(single_freq_observed, False)
+    #     pairwise_freq_observed = ccm.pseudocounts.degap(pairwise_freq_observed, False)
+    #
+    #     msa_sampled, neff = ccmpred.sampling.sample_to_pair_correlation(
+    #         tree, ccm.neff_entropy, ccm.L, x, opt.burn_in, single_freq_observed, pairwise_freq_observed)
     elif tree is not None and opt.mutation_rate > 0:
         msa_sampled, neff = ccmpred.sampling.sample_with_mutation_rate(
             tree, ccm.L, x, opt.burn_in, opt.mutation_rate)
