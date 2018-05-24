@@ -260,7 +260,7 @@ class CCMpred():
 
         print("{0} is of length L={1} and there are {2} sequences in the alignment.".format(
             self.protein, self.L, self.N))
-        print("Alignment has diversity [sqrt(Neff)/L]={0} and Neff(HHsuite-like)={1}.".format(np.round(self.diversity, decimals=3), np.round(self.neff_entropy, decimals=3)))
+        print("Alignment has diversity [sqrt(N)/L]={0} and Neff(HHsuite-like)={1}.".format(np.round(self.diversity, decimals=3), np.round(self.neff_entropy, decimals=3)))
 
     def read_pdb(self, contact_threshold=8):
         self.contact_threshold = contact_threshold
@@ -281,25 +281,13 @@ class CCMpred():
 
         self.weights = ccmpred.weighting.WEIGHTING_TYPE[weighting_type](self.msa, cutoff, ignore_gaps)
 
-        print("Number of effective sequences after {0} reweighting (id-threshold={1}, ignore_gaps={2}): {3:g}.".format(
-            weighting_type, cutoff, ignore_gaps, np.sum(self.weights)))
-
-        # if weighting_type == "weights_simple":
-        #     self.weights = ccmpred.weighting.weights_simple(self.msa, cutoff, ignore_gaps)
-        #     print("Number of effective sequences after simple reweighting "
-        #           "(id-threshold={0}, ignore_gaps={1}): {2:g}. ".format(cutoff, ignore_gaps, np.sum(self.weights)))
-        # elif weighting_type == "weights_henikoff":
-        #     self.weights = ccmpred.weighting.weights_henikoff(self.msa, ignore_gaps)
-        #     print("Number of effective sequences after henikoff-type reweighting "
-        #           "(ignore_gaps={0}): {1:g}. ".format(ignore_gaps, np.sum(self.weights)))
-        # else:
-        #     self.weights = ccmpred.weighting.weights_uniform(self.msa)
-        #     print("Number of effective sequences without reweighting sequences: {0:g}. ".format(np.sum(self.weights)))
-
         self.weighting_type = weighting_type
         self.wt_cutoff = cutoff
         self.wt_ignore_gaps = ignore_gaps
         self.neff   = np.sum(self.weights)
+
+        print("Number of effective sequences after {0} reweighting (id-threshold={1}, ignore_gaps={2}): {3:g}.".format(
+            weighting_type, cutoff, ignore_gaps, self.neff))
 
     def compute_frequencies(self, pseudocount_type, pseudocount_n_single=1,  pseudocount_n_pair=1):
 
