@@ -63,7 +63,8 @@ class ContrastiveDivergence():
 
         #define how many markov chains are run in parallel
         # => how many sequences are sampled at each iteration
-        self.nr_seq_sample = nr_seq_sample
+        # at least 500 sequences or 10% of sequences in MSA
+        self.nr_seq_sample = np.max([int(self.nrow/10), nr_seq_sample])
 
         #prepare the persistent MSA (Markov chains are NOT reset after each iteration)
         self.persistent=persistent
