@@ -75,6 +75,7 @@ class CCMTree(object):
 
         return True
 
+
 def split_tree(tree, id0):
     """Reroot tree so that the clades in id0 are direct descendants of the root node"""
 
