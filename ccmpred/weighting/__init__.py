@@ -22,17 +22,17 @@ def get_HHsuite_neff(msa):
     """
 
     # weighted frequencies excluding gaps
-    weights = calculate_weights_simple(msa, cutoff=0.8, ignore_gaps=False)
-    pseudocounts = PseudoCounts(msa, weights)
-    pseudocounts.calculate_frequencies("uniform_pseudocounts", 1, 1, remove_gaps=False)
-    single_freqs = pseudocounts.degap(pseudocounts.freqs[0])
+    # weights = calculate_weights_simple(msa, cutoff=0.8, ignore_gaps=False)
+    # pseudocounts = PseudoCounts(msa, weights)
+    # pseudocounts.calculate_frequencies("uniform_pseudocounts", 1, 1, remove_gaps=False)
+    # single_freqs = pseudocounts.degap(pseudocounts.freqs[0])
 
     # frequencies including gaps
-    # single_counts = ccmpred.counts.single_counts(msa)
-    # single_freqs = (single_counts + 1e-3) / np.sum(single_counts, axis=1)[:, np.newaxis]
+    single_counts = ccmpred.counts.single_counts(msa)
+    single_freqs = (single_counts + 1e-3) / np.sum(single_counts, axis=1)[:, np.newaxis]
+
 
     single_freqs = single_freqs[:, :20]
-
     entropies = - np.sum(single_freqs * np.log2(single_freqs), axis=1)
 
     neff = 2 ** np.mean(entropies)
