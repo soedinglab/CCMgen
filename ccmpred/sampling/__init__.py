@@ -318,7 +318,7 @@ def sample_to_neff_increasingly(tree, target_neff, ncol, x, gibbs_steps):
             mutation_rate -= np.random.random()
 
         #reset mutation rate if it becomes negative
-        if mutation_rate < 0:
+        if mutation_rate < 0 or mutation_rate > 100:
             mutation_rate = 1
 
     return msa_sampled, neff
