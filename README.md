@@ -11,28 +11,30 @@ CCMgen and CCMpredPy are released under the GNU Affero GPL License, version 3.0 
 
 ## Requirements
 
-CCMgen requires Python 3.6 or later and the following Python packages installed on your system:
+CCMgen/CCMpredPy was developed and tested with Python 3.6 and requires the following Python packages installed on your system:
 
   * NumPy (`pip install numpy`)
   * SciPy (`pip install scipy`)
   * BioPython (`pip install biopython`)
   * MsgPack (`pip install msgpack-python`)
   * six (`pip install six`)
+  * plotly (`pip install plotly`) 
+  * colorlover (`pip install colorlover`)
 
 or, in one command:
 
 ```bash
-pip install numpy scipy biopython msgpack-python six
+pip install numpy scipy biopython msgpack-python six plotly colorlover
 ```
 
-## Downloading
+## Download
 
 ### Release Versions
-Please check out the [GitHub releases page for CCMgen](TODO TODO TODO) to download a stable CCMpred release. After you're done downloading and extracting, please follow the [installation instructions below](#user-content-installation-1)
+Please check out the [GitHub releases page for CCMgen](TODO TODO TODO) to download a stable CCMgen/CCMpredPy release. After you're done downloading and extracting, please follow the installation instructions below.
 
 ### Development Versions from Git
 
-To clone CCMgen directly from git, please use the following command line:
+To clone CCMgen/CCMpredPy directly from git, please use the following command line:
 
 ```bash
 git clone https://github.com/soedinglab/ccmgen.git
@@ -40,23 +42,36 @@ git clone https://github.com/soedinglab/ccmgen.git
 
 ## Installation
 
-There are some C libraries to speed up crucial parts of the calculations. To compile all C libraries for your system, from the main directory, please run:
+There are some C libraries to speed up crucial parts of the calculations that need to be compiled. 
+Change to the main directory and from there for a system-wide installation run:
 
+<!---
 ```bash
 python setup.py build_ext --inplace
 ```
+
+```bash
+pip install .
+```
+
+or for a local installation run (creates symlink to the repository in your environment):
+
+```bash
+pip install -e .
+```
+
   
-Alternatively, you can install CCMgen and CCMpredPy directly from the repository with pip by running:
+Alternatively, you can install the latest development version of CCMgen/CCMpredPy with pip directly from this repository without the need of cloning by running:
 
 ```bash
 pip install git+https://github.com/susannvorberg/CCmpredPy@master
 ```
-and keep updated with 
+and keep updated by running:
 
 ```bash
-	pip install git+https://github.com/susannvorberg/CCmpredPy@master --upgrade
+pip install git+https://github.com/susannvorberg/CCmpredPy@master --upgrade
 ```
-	
+
 Note: When installing on osx, make sure to use an appropriate gcc compiler and not clang, e.g. by setting `export CC=/usr/local/Cellar/gcc/X.X.X/bin/gcc-X` if gcc was installed via brew.
 
 ## Next Steps
