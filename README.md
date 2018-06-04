@@ -1,60 +1,63 @@
-# CCMpredPy
+# CCMgen and CCMpredPy
 
-This is the Python implementation of the [CCMpred](https://github.com/soedinglab/CCMpred) predictor of residue-residue contacts.
+CCMgen is a Python toolkit for sampling protein-like sequences from a second-order Markov Randon Field model. By using second-order interactions, sampled protein sequences are more realistic than what can be sampled from e.g. a model using only a PSSM representation.
 
-
-## Installing
-
-Clone this repository to your own computer using `git clone`. Then, you can compile the C extensions by running:
-
-	python setup.py build_ext --inplace
-  
-Alternatively, you can install CCMpredPy as a package directly from this repository using pip by running:
-
-	pip install git+https://github.com/susannvorberg/CCmpredPy@master
-
-and keep updated with 
-
-	pip install git+https://github.com/susannvorberg/CCmpredPy@master --upgrade
-
-	
-Note: When installing on osx, make sure to use an appropriate gcc compiler and not clang, e.g. by setting `export CC=/usr/local/Cellar/gcc/X.X.X/bin/gcc-X` if gcc was installed via brew.
-
-Note2: Tested with Python 3.6
-
-## Example Usage via Command Line
-
-Print available command line options:
-
-	python PATH/TO/LOCAL/INSTALL/ccmpred/scripts/run_ccmpred.py -h
-	
-or
-
-    ccmpred -h
-	
-
-Per default (`--ofn-pll`) CCMpredPy maximizes the pseudo-likelihood to obtain couplings. Results differ slightly from the C implementation of [CCMpred](https://github.com/soedinglab/CCMpred) due to the following modifications:
-- single potential regularization prior is centered at ML estimate of single potentials v*
-- single potentials are initialized at v*
-- regularization strength lambda_v = 10 in order to achieve comparable results to C implementation of [CCMpred](https://github.com/soedinglab/CCMpred)
-- slight modification in the conjugate gradient optimizer compared to [libconjugrad](https://bitbucket.org/soedinglab/libconjugrad.git) used in [CCMpred](https://github.com/soedinglab/CCMpred)
-
-This command will print the optimization progress to stdout and produce the file ./example/1mkcA00.frobenius.mat:
-
-	ccmpred ./example/1mkcA00.aln ./example/1mkcA00.mat
-
-The opimization progress can be visualized as an interactive plotly graph by additionaly specifying the `--plot_opt_progress flag`. The html file containing the graph is updated during optimization and will be written to ./example/1mkcA00.opt_progress.html.
-
-	ccmpred --plot_opt_progress ./example/1mkcA00.aln ./example/1mkcA00.mat
-
-Bias correction can be switched on by using the flags `--apc` and `--entropy-correction`. Using these two additional flags will generate three contact map files: `./example/1mkcA00.frobnenius.mat`, `./example/1mkcA00.frobnenius.apc.mat` and `./example/1mkcA00.frobnenius.ec.mat`:
-
-	ccmpred --apc --entropy-correction ./example/1mkcA00.aln ./example/1mkcA00.mat
-
-Contact maps can be visualized using the script `plot_contact_map.py`. By specifying a PDB file (numbering of amino acids starting at 1!), the distance matrix is plotted in the lower right triangle. By specifying an alignment file, the percentage of gaps and the entropy are plotted as subplot.
-
-	plot_contact_map --mat-file ./example/1mkcA00.frobenius.mat --alignment-file ./example/1mkcA00.aln --pdb-file ./example/1mkcA00.pdb --plot-out ./example/ --seq-sep 4 --contact-threshold 8 --apc
+CCMgen is accompanied by CCMpredPy, a fast Python implementation of an evolutionary coupling method for learning a Markov Randon Field Model from the multiple sequence alignment of a protein family by either state-of-the-art pseudo-likelihood maximization (less accurate) or persistent contrastive divergence (recommended for use with CCMgen).
+The coupling potentials encoded by the learned Markov Random Field model can be used with CCMgen to generate new sequences. 
 
 ## License
 
-GNU Affero General Public License, Version 3.0
+CCMgen and CCMpredPy are released under the GNU Affero GPL License, version 3.0 or later.
+
+## Requirements
+
+CCMgen requires Python 3.6 or later and the following Python packages installed on your system:
+
+  * NumPy (`pip install numpy`)
+  * SciPy (`pip install scipy`)
+  * BioPython (`pip install biopython`)
+  * MsgPack (`pip install msgpack-python`)
+  * six (`pip install six`)
+
+or, in one command:
+
+```bash
+pip install numpy scipy biopython msgpack-python six
+```
+
+## Downloading
+
+### Release Versions
+Please check out the [GitHub releases page for CCMgen](TODO TODO TODO) to download a stable CCMpred release. After you're done downloading and extracting, please follow the [installation instructions below](#user-content-installation-1)
+
+### Development Versions from Git
+
+To clone CCMgen directly from git, please use the following command line:
+
+```bash
+git clone https://github.com/soedinglab/ccmgen.git
+```
+
+## Installation
+
+There are some C libraries to speed up crucial parts of the calculations. To compile all C libraries for your system, from the main directory, please run:
+
+```bash
+python setup.py build_ext --inplace
+```
+  
+Alternatively, you can install CCMgen and CCMpredPy directly from the repository with pip by running:
+
+```bash
+pip install git+https://github.com/susannvorberg/CCmpredPy@master
+```
+and keep updated with 
+
+```bash
+	pip install git+https://github.com/susannvorberg/CCmpredPy@master --upgrade
+```
+	
+Note: When installing on osx, make sure to use an appropriate gcc compiler and not clang, e.g. by setting `export CC=/usr/local/Cellar/gcc/X.X.X/bin/gcc-X` if gcc was installed via brew.
+
+## Next Steps
+Now you're ready to use CCMgen and CCMpredPy! You can have a look at the [getting started guide](https://github.com/soedinglab/CCMgen/wiki/getting-started) to learn how to use both tools.
