@@ -49,6 +49,8 @@ Change to the main directory and from there for a system-wide installation run:
 ```bash
 python setup.py build_ext --inplace
 ```
+-->
+
 
 ```bash
 pip install .
