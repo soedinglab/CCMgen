@@ -62,6 +62,14 @@ and keep updated with:
 ```bash
 pip install git+https://github.com/soedinglab/ccmgen@master --upgrade
 ```
+## Uninstall
+
+The CCMgen/CCmpredPy toolkit can be uninstalled with:
+
+```bash
+pip uninstall CCMgen
+```
+
 
 
 ## Next Steps
