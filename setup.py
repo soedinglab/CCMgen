@@ -6,13 +6,13 @@ def ext(name, sources=[], include_dirs=[], library_dirs=[], libraries=[], extra_
 print(find_packages())
 
 setup(
-    name="CCMpredPy",
+    name="ccmgen",
     version="1.0.0",
     description="Residue-residue contact prediction from correlated mutations predicted quickly and precisely",
     license="AGPLv3",
-    author="Stefan Seemayer, Susann Vorberg",
+    author="Susann Vorberg, Stefan Seemayer, Johannes Soeding",
     author_email="Susann.Vorberg@gmail.com",
-    url="https://github.com/susannvorberg/CCmpredPy",
+    url="https://github.com/soedinglab/ccmgen",
     packages=find_packages(),
     install_requires=['msgpack-python', 'numpy', 'plotly', 'scipy', 'pandas', 'biopython', 'colorlover'],
     ext_modules=[
@@ -55,8 +55,9 @@ setup(
         'console_scripts': [
             'ccmpred=ccmpred.scripts.run_ccmpred:main',
             'ccmgen=ccmpred.scripts.run_ccmgen:main',
-            'replace_gaps=ccmpred.scripts.replace_gaps:main',
-            'plot_ccmpred=ccmpred.scripts.plot_ccmpred:main'
+            'ccm_replace_gaps=ccmpred.scripts.replace_gaps:main',
+            'ccm_plot=ccmpred.scripts.plot_ccmpred:main',
+            'ccm_convert_aln=ccmpred.scripts.convert:main'
         ]
     }
 )
