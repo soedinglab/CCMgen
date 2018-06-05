@@ -8,26 +8,26 @@ LOGOS = {}
 LOGOS['ccmpred', True] = """
   \x1b[32m┏━╸┏━╸┏┳┓\x1b[34m┏━┓┏━┓┏━╸╺┳┓\x1b[0m  version {0}
   \x1b[32m┃  ┃  ┃┃┃\x1b[34m┣━┛┣┳┛┣╸  ┃┃\x1b[0m  Vorberg, Seemayer and Soeding (2018)
-  \x1b[32m┗━╸┗━╸╹ ╹\x1b[34m╹  ╹┗╸┗━╸╺┻┛\x1b[0m  https://github.com/soedinglab
+  \x1b[32m┗━╸┗━╸╹ ╹\x1b[34m╹  ╹┗╸┗━╸╺┻┛\x1b[0m  https://github.com/soedinglab/ccmgen
 """
 
 LOGOS['ccmpred', False] = """
   ┏━╸┏━╸┏┳┓┏━┓┏━┓┏━╸╺┳┓  version {0}
   ┃  ┃  ┃┃┃┣━┛┣┳┛┣╸  ┃┃  Vorberg, Seemayer and Soeding (2018)
-  ┗━╸┗━╸╹ ╹╹  ╹┗╸┗━╸╺┻┛  https://github.com/soedinglab
+  ┗━╸┗━╸╹ ╹╹  ╹┗╸┗━╸╺┻┛  https://github.com/soedinglab/ccmgen
 """
 
 
 LOGOS['ccmgen', True] = """
   \x1b[32m┏━╸┏━╸┏┳┓\x1b[34m┏━╸┏━╸┏┓╻\x1b[0m  version {0}
   \x1b[32m┃  ┃  ┃┃┃\x1b[34m┃╺┓┣╸ ┃┗┫\x1b[0m  Vorberg, Seemayer and Soeding (2018)
-  \x1b[32m┗━╸┗━╸╹ ╹\x1b[34m┗━┛┗━╸╹ ╹\x1b[0m  https://github.com/soedinglab
+  \x1b[32m┗━╸┗━╸╹ ╹\x1b[34m┗━┛┗━╸╹ ╹\x1b[0m  https://github.com/soedinglab/ccmgen
 """
 
 LOGOS['ccmgen', False] = """
   ┏━╸┏━╸┏┳┓┏━╸┏━╸┏┓╻  version {0}
   ┃  ┃  ┃┃┃┃╺┓┣╸ ┃┗┫  Vorberg, Seemayer and Soeding (2018)
-  ┗━╸┗━╸╹ ╹┗━┛┗━╸╹ ╹  https://github.com/soedinglab
+  ┗━╸┗━╸╹ ╹┗━┛┗━╸╹ ╹  https://github.com/soedinglab/ccmgen
 """
 
 
