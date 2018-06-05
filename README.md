@@ -77,4 +77,4 @@ pip install git+https://github.com/susannvorberg/CCmpredPy@master --upgrade
 Note: When installing on osx, make sure to use an appropriate gcc compiler and not clang, e.g. by setting `export CC=/usr/local/Cellar/gcc/X.X.X/bin/gcc-X` if gcc was installed via brew.
 
 ## Next Steps
-Now you're ready to use CCMgen and CCMpredPy! You can have a look at the [getting started guide](https://github.com/susannvorberg/CCmpredPy/wiki/Getting-Started-with-CCMgen-and-CCMpredPy) to learn how to use both tools.
+Now you're ready to use CCMgen and CCMpredPy! You can have a look at the [getting started guide](https://github.com/soedinglab/CCMgen/wiki/Getting-Started-with-CCMgen-and-CCMpredPy) to learn how to use both tools.
