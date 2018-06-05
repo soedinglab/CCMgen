@@ -38,7 +38,6 @@ class Progress():
 
         self.print_header()
 
-
     def log_progress(self, n_iter, **kwargs):
 
         if len(self.optimization_log) == 0:
