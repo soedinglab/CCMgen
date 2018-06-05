@@ -12,7 +12,6 @@ def frobenius_score(x):
     :param squared:
     :return:
     """
-    print("\nCompute contact map using frobenius norm of couplings.")
 
     return np.sqrt(np.sum(x * x, axis=(2, 3)))
 
@@ -23,7 +22,7 @@ def apc(cmat):
     :param cmat: contact matrix
     :return:    corrected contact matrix
     """
-    print("\nApply Average Product Correction (APC).")
+    print("Apply Average Product Correction (APC)")
 
     mean = np.mean(cmat, axis=0)
     apc_term = mean[:, np.newaxis] * mean[np.newaxis, :] / np.mean(cmat)
@@ -70,12 +69,11 @@ def compute_local_correction(
         single_freq, x_pair, Neff, lambda_w, squared=True,
         entropy=False, nr_states=20, log=np.log2):
 
-    print("\nApply entropy correction (using {0} states and {1}).".format(nr_states, log.__name__))
-
+    print("Apply entropy correction (using {0} states and {1})".format(nr_states, log.__name__))
 
 
     if entropy:
-        N_factor =1
+        N_factor = 1
         ui = N_factor * single_freq[:, :nr_states] * log(single_freq[:, :nr_states])
     else:
         #correct for fractional counts
@@ -97,7 +95,7 @@ def compute_local_correction(
 
 def compute_joint_entropy_correction(pair_freq, neff, lambda_w, x_pair, nr_states = 21, log=np.log2):
 
-    print("\nApply joint entropy correction (using {0} states and {1}).".format(nr_states, log.__name__))
+    print("Apply joint entropy correction (using {0} states and {1})".format(nr_states, log.__name__))
 
     N_factor = neff / (lambda_w * lambda_w)
 
@@ -117,7 +115,7 @@ def compute_joint_entropy_correction(pair_freq, neff, lambda_w, x_pair, nr_state
 
 def compute_corrected_mat_sergey_style(pair_freq, x_pair, nr_states = 21, log=np.log2):
 
-    print("\nApply sergeys joint entropy correction (using {0} states and {1}).".format(nr_states, log.__name__))
+    print("Apply sergeys joint entropy correction (using {0} states and {1})".format(nr_states, log.__name__))
 
     joint_entropy = - np.sum(
         pair_freq[:, :, :nr_states, :nr_states] * log(pair_freq[:, :, :nr_states, :nr_states]),
@@ -132,8 +130,6 @@ def compute_corrected_mat_sergey_style(pair_freq, x_pair, nr_states = 21, log=np
     return(mat)
 
 def write_matrix(matfile, mat, meta):
-
-    print("\nWriting contact map to {0}".format(matfile))
 
     if matfile.endswith(".gz"):
         with gzip.open(matfile, 'wb') as f:
