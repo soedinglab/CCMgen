@@ -19,16 +19,45 @@ class CCMTree(object):
         self.tree = None
         self.type = None
 
-    def specify_tree(self, nseq, tree_file=None, tree_source=None):
+    def load_tree(self, tree_file):
+        """
+
+        Parameters
+        ----------
+        tree_file: str
+            path to a newick type tree topology file
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+
+        """
+
+        self.type = "newick"
+
+        try:
+            self.tree = Bio.Phylo.read(tree_file, "newick")
+        except ValueError as e:
+            print("Error while reading tree file {0} : {1}".format(tree_file, e))
+            return False
+        except OSError as e:
+            print("Error while reading tree file {0} : {1}".format(tree_file, e))
+            return False
+
+
+        self.determine_tree_properties()
+        self.nseq = self.n_leaves
+
+
+    def specify_tree(self, nseq, tree_source):
         """
         Parameters
         ----------
         nseq: int
             Specifies the number of leave nodes representing sequences
-        tree_file: str or None, optional
-            path to a newick type tree topology file
-        tree_source: str or None, optional
-            specifies a tree topology [star|binary]
+        tree_source: str
+            specifies the tree topology [star|binary]
 
         Returns
         -------
@@ -45,35 +74,29 @@ class CCMTree(object):
         elif tree_source == "star":
             self.type = "star"
             self.tree = create_star_tree(self.nseq, root_name=self.id0[0])
-        elif tree_file is not None:
-            self.type = "newick"
-            try:
-                self.tree = Bio.Phylo.read(tree_file, "newick")
-            except ValueError as e:
-                print("Error while reading tree file {0} : {1}".format(tree_file, e))
-                return False
-            except OSError as e:
-                print("Error while reading tree file {0} : {1}".format(tree_file, e))
-                return False
 
-
-        if self.type is not None:
-
-            # prepare tree topology
-            tree_split = split_tree(self.tree, self.id0)
-            tree_bfs = [c for c in bfs_iterator(tree_split.clade)]
-
-            self.n_children = np.array([len(c.clades) for c in tree_bfs], dtype='uint64')
-            self.branch_lengths = np.array([c.branch_length for c in tree_bfs], dtype=np.dtype('float64'))
-            self.n_vertices = len(tree_bfs)
-            self.n_leaves = len(tree_split.get_terminals())
-            self.ids = [l.name for l in tree_split.get_terminals()]
-
-            depth_min, depth_max = get_child_depth_range(tree_split.clade)
-            print("Created {0} tree with {1} leaves, {2} nodes, avg branch length={3}, depth_min={4:.4e}, depth_max={5:.4e}\n".format(
-                tree_source, self.n_leaves, self.n_vertices, np.round(np.mean(self.branch_lengths[2:]), decimals=3), depth_min, depth_max))
+        self.determine_tree_properties()
 
         return True
+
+
+    def determine_tree_properties(self):
+
+        tree_split = split_tree(self.tree, self.id0)
+        tree_bfs = [c for c in bfs_iterator(tree_split.clade)]
+
+        self.n_children = np.array([len(c.clades) for c in tree_bfs], dtype='uint64')
+        self.branch_lengths = np.array([c.branch_length for c in tree_bfs], dtype=np.dtype('float64'))
+        self.n_vertices = len(tree_bfs)
+        self.n_leaves = len(tree_split.get_terminals())
+        self.ids = [l.name for l in tree_split.get_terminals()]
+
+        depth_min, depth_max = get_child_depth_range(tree_split.clade)
+        print(
+        "Created {0} tree with {1} leaves, {2} nodes, avg branch length={3}, depth_min={4:.4e}, depth_max={5:.4e}\n".format(
+            self.type, self.n_leaves, self.n_vertices, np.round(np.mean(self.branch_lengths[2:]), decimals=3),
+            depth_min, depth_max))
+
 
 
 def split_tree(tree, id0):
