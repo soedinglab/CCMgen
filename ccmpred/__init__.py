@@ -13,11 +13,16 @@ import ccmpred.centering
 import ccmpred.raw
 import ccmpred.parameter_handling
 import ccmpred.sanity_check
-from ccmpred.regularization import L1, L2
+from ccmpred.regularization import L2
 import ccmpred.plotting
 import ccmpred.sampling
 import ccmpred.weighting
 import ccmpred.monitor.progress as pr
+import ccmpred.objfun.pll as pll
+import ccmpred.objfun.cd as cd
+import ccmpred.algorithm.gradient_descent as gd
+import ccmpred.algorithm.lbfgs as lbfgs
+
 
 class CCMpred():
     """
@@ -54,7 +59,7 @@ class CCMpred():
         self.weighting_type = None
         self.weights   = None
         self.wt_cutoff  = None
-        self.wt_ignore_gaps  = None
+
 
         #counts and frequencies in class ccmpred.pseudocounts.PseudoCounts
         self.pseudocounts =  None
@@ -119,7 +124,7 @@ class CCMpred():
         meta={}
 
         meta['version'] = __version__
-        meta['method'] = 'ccmpred-py'
+        meta['method'] = 'CCMpredPy'
 
         meta['workflow'] = []
         meta['workflow'].append({})
@@ -145,7 +150,6 @@ class CCMpred():
 
         meta['workflow'][0]['weighting'] = {}
         meta['workflow'][0]['weighting']['type'] = self.weighting_type
-        meta['workflow'][0]['weighting']['ignore_gaps'] = self.wt_ignore_gaps
         meta['workflow'][0]['weighting']['cutoff'] = self.wt_cutoff
 
         if mat_name is not None:
@@ -153,12 +157,12 @@ class CCMpred():
             meta['workflow'][0]['contact_map']['correction'] = self.mats[mat_name]['correction']
             meta['workflow'][0]['contact_map']['score'] = self.mats[mat_name]['score']
             meta['workflow'][0]['contact_map']['matfile'] = self.mats[mat_name]['mat_file']
-            if 'scaling_factor_eta' in self.mats[mat_name].keys():
-                meta['workflow'][0]['contact_map']['scaling_factor_eta'] = self.mats[mat_name]['scaling_factor_eta']
+            if 'scaling_factor' in self.mats[mat_name].keys():
+                meta['workflow'][0]['contact_map']['scaling_factor'] = self.mats[mat_name]['scaling_factor']
             if 'nr_states' in self.mats[mat_name].keys():
                 meta['workflow'][0]['contact_map']['nr_states'] = self.mats[mat_name]['nr_states']
             if 'log' in self.mats[mat_name].keys():
-                meta['workflow'][0]['contact_map']['nr_states'] = self.mats[mat_name]['log']
+                meta['workflow'][0]['contact_map']['log'] = self.mats[mat_name]['log']
 
 
 
@@ -278,17 +282,16 @@ class CCMpred():
 
         self.non_contact_indices = np.where(distance_map > contact_threshold)
 
-    def compute_sequence_weights(self, weighting_type, cutoff=0.8, ignore_gaps=False):
+    def compute_sequence_weights(self, weighting_type, cutoff=0.8):
 
-        self.weights = ccmpred.weighting.WEIGHTING_TYPE[weighting_type](self.msa, cutoff, ignore_gaps)
+        self.weights = ccmpred.weighting.WEIGHTING_TYPE[weighting_type](self.msa, cutoff)
 
         self.weighting_type = weighting_type
         self.wt_cutoff = cutoff
-        self.wt_ignore_gaps = ignore_gaps
         self.neff   = np.sum(self.weights)
 
-        print("Number of effective sequences after {0} reweighting (id-threshold={1}, ignore_gaps={2}): {3:g}.".format(
-            weighting_type, cutoff, ignore_gaps, self.neff))
+        print("Number of effective sequences after {0} reweighting (id-threshold={1}): {2:g}.".format(
+            weighting_type, cutoff, self.neff))
 
     def compute_frequencies(self, pseudocount_type, pseudocount_n_single=1,  pseudocount_n_pair=1):
 
@@ -459,15 +462,37 @@ class CCMpred():
             print("Plot with optimization statistics will be written to {0}".format(plot_file))
             self.progress.set_plot_file(plot_file)
 
-    def minimize(self, obj_fun, alg, plotfile=None):
+    def minimize(self, opt, plotfile=None):
 
+        OBJ_FUNC = {
+            "pll": lambda opt: pll.PseudoLikelihood(
+                self.msa, self.weights, self.regularization, self.pseudocounts, self.x_single, self.x_pair),
+            "cd": lambda opt: cd.ContrastiveDivergence(
+                self.msa, self.weights, self.regularization, self.pseudocounts, self.x_single, self.x_pair,
+                gibbs_steps=opt.cd_gibbs_steps,
+                nr_seq_sample=opt.nr_seq_sample,
+                persistent=opt.cd_persistent
+            )
+        }
+
+        ALGORITHMS = {
+            "pll": lambda opt: lbfgs.LBFGS(
+                self.progress, maxit=opt.maxit, ftol=opt.ftol, max_linesearch=opt.max_linesearch, maxcor=opt.max_cor,
+                non_contact_indices=self.non_contact_indices
+            ),
+            "cd": lambda opt: gd.gradientDescent(
+                self.progress, self.neff, maxit=opt.maxit, alpha0=opt.alpha0, decay=opt.decay, decay_start=opt.decay_start,
+                decay_rate=opt.decay_rate, decay_type=opt.decay_type, epsilon=opt.epsilon,
+                convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping,
+                non_contact_indices=self.non_contact_indices,
+            )
+        }
 
         #initialize objective function
-        self.f = obj_fun
+        self.f = OBJ_FUNC[opt.objfun](opt)
 
         #initialise optimizer
-        self.alg = alg
-
+        self.alg = ALGORITHMS[opt.objfun](opt)
 
         print("\nWill optimize {0} {1} variables wrt {2} \nand {3}".format(
             self.f.x.size, self.f.x.dtype, self.f, self.regularization))
@@ -526,8 +551,7 @@ class CCMpred():
                 'correction': "no correction"
             }
 
-    def compute_correction(self, apc_file=None, entropy_correction_file=None,
-                           joint_entropy_file=None, sergeys_jec_file=None):
+    def compute_correction(self, apc_file=None, entropy_correction_file=None):
 
         """
         Compute bias correction for raw contact maps
@@ -562,8 +586,7 @@ class CCMpred():
                 # use amino acid frequencies including gap states and with pseudo-counts
                 single_freq = self.pseudocounts.freqs[0]
 
-
-                scaling_factor_eta, mat_corrected = io.contactmatrix.compute_local_correction(
+                scaling_factor, mat_corrected = io.contactmatrix.compute_local_correction(
                     single_freq, self.x_pair, self.neff, self.regularization.lambda_pair,
                     squared=False, entropy=True, nr_states=nr_states, log=log
                 )
@@ -573,48 +596,7 @@ class CCMpred():
                     'mat_file': entropy_correction_file,
                     'score': score,
                     'correction': "entropy_correction",
-                    'scaling_factor_eta': scaling_factor_eta,
-                    'nr_states': nr_states,
-                    'log': log.__name__
-                }
-
-            if joint_entropy_file is not None and score == "frobenius":
-                nr_states = 21
-                log = np.log2
-
-                # use amino acid frequencies including gap states and with pseudo-counts
-                pair_freq = self.pseudocounts.freqs[1]
-
-                scaling_factor_eta, mat_corrected = io.contactmatrix.compute_joint_entropy_correction(
-                    pair_freq, self.neff, self.regularization.lambda_pair, self.x_pair,
-                    nr_states = nr_states, log=log
-                )
-
-                self.mats[score_mat + "-jec."+ str(nr_states) + "." + str(log.__name__)] = {
-                    'mat': mat_corrected,
-                    'mat_file': joint_entropy_file,
-                    'score': score,
-                    'correction': "joint_entropy_correction",
-                    'scaling_factor_eta': scaling_factor_eta,
-                    'nr_states': nr_states,
-                    'log': log.__name__
-                }
-
-            if sergeys_jec_file is not None and score == "frobenius":
-                nr_states = 21
-                log = np.log2
-
-                # use amino acid frequencies including gap states and with pseudo-counts
-                pair_freq = self.pseudocounts.freqs[1]
-
-                mat_corrected = io.contactmatrix.compute_corrected_mat_sergey_style(
-                    pair_freq, self.x_pair, nr_states = nr_states, log=log)
-
-                self.mats[score_mat + "-sjec."+ str(nr_states) + "." + str(log.__name__)] = {
-                    'mat': mat_corrected,
-                    'mat_file': sergeys_jec_file,
-                    'score': score,
-                    'correction': "sergeys joint entropy correction",
+                    'scaling_factor': scaling_factor,
                     'nr_states': nr_states,
                     'log': log.__name__
                 }
