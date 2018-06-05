@@ -10,11 +10,11 @@ class Progress():
     Plot the progress as plotly graph
     """
 
-    def __init__(self , plotfile, title):
+    def __init__(self):
 
         self.optimization_log={}
-        self.plotfile=plotfile
-        self.title=title
+        self.plotfile=None
+        self.title=""
 
     def print_header(self):
 
@@ -28,6 +28,9 @@ class Progress():
 
     def set_plot_title(self, title):
         self.title=title
+
+    def set_plot_file(self, file):
+        self.plotfile=file
 
     def init_log(self, **kwargs):
         for name in kwargs.keys():
@@ -60,41 +63,43 @@ class Progress():
         sys.stdout.flush()
 
 
-    def plot_progress(self, ):
+    def plot_progress(self ):
 
-        protein = os.path.basename(self.plotfile).split(".")[0]
-        title = "Optimization Log for {0} ".format(protein)
-        title += self.title
+        if self.plotfile is not None:
 
-        data = []
-        for name, metric in self.optimization_log.items():
-            data.append(
-                go.Scatter(
-                    x=list(range(1, len(self.optimization_log[name]) + 1)),
-                    y=metric,
-                    mode='lines',
-                    visible="legendonly",
-                    name=name
+            protein = os.path.basename(self.plotfile).split(".")[0]
+            title = "Optimization Log for {0} ".format(protein)
+            title += self.title
+
+            data = []
+            for name, metric in self.optimization_log.items():
+                data.append(
+                    go.Scatter(
+                        x=list(range(1, len(self.optimization_log[name]) + 1)),
+                        y=metric,
+                        mode='lines',
+                        visible="legendonly",
+                        name=name
+                    )
                 )
-            )
 
-        plot = {
-            "data": data,
-            "layout": go.Layout(
-                title=title,
-                xaxis1=dict(
-                    title="iteration",
-                    exponentformat="e",
-                    showexponent='All'
-                ),
-                yaxis1=dict(
-                    title="metric",
-                    exponentformat="e",
-                    showexponent='All'
-                ),
-                font=dict(size=18),
-                titlefont=dict(size=14)
-            )
-        }
+            plot = {
+                "data": data,
+                "layout": go.Layout(
+                    title=title,
+                    xaxis1=dict(
+                        title="iteration",
+                        exponentformat="e",
+                        showexponent='All'
+                    ),
+                    yaxis1=dict(
+                        title="metric",
+                        exponentformat="e",
+                        showexponent='All'
+                    ),
+                    font=dict(size=18),
+                    titlefont=dict(size=14)
+                )
+            }
 
-        plotly_plot(plot, filename=self.plotfile, auto_open=False)
+            plotly_plot(plot, filename=self.plotfile, auto_open=False)
