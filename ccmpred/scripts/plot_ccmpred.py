@@ -27,8 +27,8 @@ def parse_args():
     #parent parsers for common flags
     parent_parser_out = argparse.ArgumentParser(add_help=False)
     requiredNamed = parent_parser_out.add_argument_group('Required Output Arguments')
-    requiredNamed.add_argument('-o', '--plot-dir', dest='plot_dir', type=str, required=True,
-                               help='Output directory for plot')
+    requiredNamed.add_argument('-o', '--plot-file', dest='plot_file', type=str, required=True,
+                               help='Path to plot file')
 
 
 
@@ -45,7 +45,7 @@ def parse_args():
     cmap_in.add_argument('-p', '--pdb-file', dest='pdb_file', type=str,
                         help=' PDB file (renumbered starting from 1) for distance matrix.')
     cmap_in.add_argument('-a', '--alignment-file', dest='aln_file', type=str, help='path to alignment file')
-    cmap_in.add_argument("--aln-format", dest="aln_format", default="psicov",
+    cmap_in.add_argument("--aln-format", dest="aln_format", default="fasta",
                                    help="File format for MSAs [default: \"%(default)s\"]")
 
     cmap_options = parser_cmap.add_argument_group('Further Settings for Contact Map Plot')
@@ -92,7 +92,7 @@ def parse_args():
 
     return args
 
-def plot_contact_map(alignment_file, aln_format, braw_file, mat_file, pdb_file, plot_dir,
+def plot_contact_map(alignment_file, aln_format, braw_file, mat_file, pdb_file, plot_file,
                      entropy_correction, apc, seqsep, contact_threshold):
 
     pseudocounts = None
@@ -165,13 +165,11 @@ def plot_contact_map(alignment_file, aln_format, braw_file, mat_file, pdb_file, 
 
 
     plot_title="Contact Map for protein {0}".format(protein)
-    plot_file = plot_dir + "/contact_map_{0}_seqsep{1}_contacthr{2}.html".format(
-        protein, seqsep, contact_threshold)
 
     # Plot Contact Map
     plot.plot_contact_map_someScore_plotly(plot_matrix, plot_title, seqsep, gaps_percentage_plot, plot_file)
 
-def plot_aminoacid_distribution(alignment_file, aln_format, plot_dir):
+def plot_aminoacid_distribution(alignment_file, aln_format, plot_file):
 
     protein = os.path.basename(alignment_file).split(".")[0]
 
@@ -195,8 +193,6 @@ def plot_aminoacid_distribution(alignment_file, aln_format, plot_dir):
         'uniform_pseudocounts', 1, 1, remove_gaps=False
     )
 
-    plot_file = plot_dir + "/aln_aa_distribution_{0}.html".format(protein)
-
     #plot
     plot.plot_alignment(
         pseudocounts.counts[0],
@@ -204,7 +200,7 @@ def plot_aminoacid_distribution(alignment_file, aln_format, plot_dir):
             protein, N, L, np.round(diversity, decimals=3)), plot_file
     )
 
-def plot_alignment_statistics(alignment_file, sample_aln_file, aln_format, plot_dir):
+def plot_alignment_statistics(alignment_file, sample_aln_file, aln_format, plot_file):
 
     protein = os.path.basename(alignment_file).split(".")[0]
 
@@ -277,7 +273,6 @@ def plot_alignment_statistics(alignment_file, sample_aln_file, aln_format, plot_
 
 
     # plot
-    plot_file = plot_dir + "/empirical_vs_model_alignment_stats_{0}.html".format(protein)
     plot.plot_empirical_vs_model_statistics(
         single_freq_observed, single_freq_sampled,
         pairwise_freq_observed, pairwise_freq_sampled,
@@ -290,29 +285,29 @@ def main():
     args = parse_args()
 
     if args.plot_types == "cmap":
-        print("Plot contact map.")
+        print("Write plot for contact map to {0}".format(args.plot_file))
 
         plot_contact_map(
             args.aln_file, args.aln_format,
-            args.braw_file, args.mat_file, args.pdb_file, args.plot_dir,
+            args.braw_file, args.mat_file, args.pdb_file, args.plot_file,
             args.entropy_correction, args.apc,
             args.seqsep, args.contact_threshold
         )
 
     if args.plot_types == "aa-dist":
-        print("Plot amino acid distribution in alignment.")
+        print("Write plot for amino acid distribution in alignment to {0}".format(args.plot_file))
 
         plot_aminoacid_distribution(
             args.aln_file, args.aln_format,
-            args.plot_dir
+            args.plot_file
         )
 
     if args.plot_types == "aln-stats":
-        print("Plot alignment statistics.")
+        print("Write plot for alignment statistics to {0}".format(args.plot_file))
 
         plot_alignment_statistics(
             args.aln_file, args.sample_aln_file, args.aln_format,
-            args.plot_dir
+            args.plot_file
         )
 
 
