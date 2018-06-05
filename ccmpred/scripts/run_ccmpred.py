@@ -12,8 +12,7 @@ import ccmpred.algorithm.lbfgs as lbfgs
 import ccmpred.algorithm.conjugate_gradients as cg
 import ccmpred.algorithm.numdiff as nd
 import ccmpred.algorithm.adam as ad
-import numpy as np
-import ccmpred.monitor.progress as pr
+
 
 
 EPILOG = """
@@ -79,8 +78,8 @@ def parse_args():
                          help="Write contact score matrix to file. [default: %(default)s]")
     grp_out.add_argument("-b", "--write-binary-raw", dest="out_binary_raw_file", type=str, default=None,
                          help="Write single and pairwise potentials as binary MessagePack file. [default: %(default)s]")
-    grp_out.add_argument("--plot-opt-progress", dest="plot_opt_progress", default=False, action="store_true",
-                         help="Plot optimization progress as interactive html. [default: %(default)s]")
+    grp_out.add_argument("--plot-opt-progress", dest="plot_opt_progress", default=None, type=str,
+                         help="Path to plot file showing optimization progress. [default: %(default)s]")
 
     grp_in = parser.add_argument_group("Optional Input Options")
     grp_in.add_argument("-i", "--init-from-raw",        dest="initrawfile", default=None,
@@ -98,7 +97,7 @@ def parse_args():
     grp_general = parser.add_argument_group("General Options")
     grp_general.add_argument("-t", "--num_threads",          dest="num_threads", type=int, default=1,
                         help="Specify the number of threads. [default: %(default)s]")
-    grp_general.add_argument("--aln-format",                 dest="aln_format", default="psicov",
+    grp_general.add_argument("--aln-format",                 dest="aln_format", default="fasta",
                         help="File format for MSAs [default: \"%(default)s\"]")
     grp_general.add_argument("--no-logo",                    dest="logo", default=True, action="store_false",
                         help="Disable showing the CCMpred logo [default: %(default)s]")
@@ -113,15 +112,19 @@ def parse_args():
                                    help="Ensure sum(v_i)=0 and sum(wij)=0 by subtracting mean. [default: %(default)s]")
 
     grp_corr = parser.add_argument_group("Corrections applied to Contact Score")
-    grp_corr.add_argument("--apc",                  dest="apc",  action="store_true", default=False,
-                          help="Apply average product correction (APC). [default: %(default)s] ")
-    grp_corr.add_argument("--entropy-correction",   dest="entropy_correction", action="store_true", default=False,
-                          help="Apply entropy correction. [default: %(default)s]")
-    grp_corr.add_argument("--joint-entropy-correction", dest="joint_entropy_correction", action="store_true",
-                          default=False, help="Apply joint entropy correction. [default: %(default)s]")
-    grp_corr.add_argument("--sergeys-joint-entropy-correction", dest="sergeys_joint_entropy_correction",
-                          action="store_true", default=False,
-                          help="Apply sergeys joint entropy correction. [default: %(default)s]")
+    grp_corr.add_argument("--apc",                  dest="apc_file",  type=str, default=None,
+                          help="Path to contact matrix file corrected with average product correction (APC). "
+                               "[default: %(default)s] ")
+    grp_corr.add_argument("--entropy-correction",   dest="entropy_correction_file",  type=str, default=None,
+                          help="Path to contact matrix file corrected with entropy correction. "
+                               "[default: %(default)s]")
+    grp_corr.add_argument("--joint-entropy-correction", dest="joint_entropy_correction_file",  type=str, default=None,
+                          help="Path to contact matrix file corrected with joint entropy correction. "
+                               "[default: %(default)s]")
+    grp_corr.add_argument("--sergeys-joint-entropy-correction", dest="sergeys_joint_entropy_correction_file",
+                          type=str, default=None,
+                          help="Path to contact matrix file corrected with sergeys joint entropy correction. "
+                               "[default: %(default)s]")
 
 
     grp_pll = parser.add_argument_group("Pseudo-Likelihood Options")
@@ -269,11 +272,6 @@ def parse_args():
         parser.error("contrastive divergence (--ofn-cd) needs to be optimized with gradient descent (--alg-gd) or the ADAM optimizer (--alg-ad)!")
 
 
-    # args.plotfile=None
-    # if args.plot_opt_progress:
-    #     args.plotfile=".".join(args.matfile.split(".")[:-1])+".opt_progress.html"
-
-
     return args
 
 
@@ -336,13 +334,8 @@ def main():
     # optimize objective function (pLL or CD/PCD) with optimization algorithm (LBFGS, CG, GD or ADAM)
     if opt.optimize:
 
-        #setup progress logging
-        plotfile = ccm.protein + ".opt_progress.html"
-        plot_title = "L={0} N={1} Neff={2} Diversity={3}<br>".format(
-            ccm.L, ccm.N, np.round(ccm.neff, decimals=3), np.round(ccm.diversity, decimals=3))
-        if not opt.plot_opt_progress:
-            plotfile = None
-        ccm.progress = pr.Progress(plotfile, plot_title)
+        #initialize log object
+        ccm.initiate_logging(opt.plot_opt_progress)
 
         # specify objective function
         objfun = OBJ_FUNC[opt.objfun](opt, ccm)
@@ -370,10 +363,10 @@ def main():
 
         # compute corrected contact maps (removing entropy/phylogenetic biases)
         ccm.compute_correction(
-            apc=opt.apc,
-            entropy_correction=opt.entropy_correction,
-            joint_entropy=opt.joint_entropy_correction,
-            sergeys_jec=opt.sergeys_joint_entropy_correction
+            apc_file=opt.apc_file,
+            entropy_correction_file=opt.entropy_correction_file,
+            joint_entropy_file=opt.joint_entropy_correction_file,
+            sergeys_jec_file=opt.sergeys_joint_entropy_correction_file
         )
 
         ccm.write_matrix()
