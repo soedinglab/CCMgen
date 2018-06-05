@@ -1,9 +1,11 @@
 # CCMgen and CCMpredPy
 
-CCMgen is a Python toolkit for sampling protein-like sequences from a second-order Markov Randon Field model. By using second-order interactions, sampled protein sequences are more realistic than what can be sampled from e.g. a model using only a PSSM representation.
+This repository provides a Python toolkit for learning second-order Markov Random Field (MRF) models from multiple sequence alignments of a protein families and using these models for generating realistic synthetic protein sequences. 
 
-CCMgen is accompanied by CCMpredPy, a fast Python implementation of an evolutionary coupling method for learning a Markov Randon Field Model from the multiple sequence alignment of a protein family by either state-of-the-art pseudo-likelihood maximization (less accurate) or persistent contrastive divergence (recommended for use with CCMgen).
-The coupling potentials encoded by the learned Markov Random Field model can be used with CCMgen to generate new sequences. 
+CCMpredPy is a fast implementation of an evolutionary coupling method for learning a Markov Randon Field (MRF) Model for a protein family. The parameters of the MRF can either be ingerred by pseudo-likelihood maximization or with persistent contrastive divergence.
+While state-of-the-art pseudo-likelihood models have consistenly been found to work best for the purpose of predicting residue-residue contacts, models learned with persistent contrastive divergence are much more accurate in their fine statistics and are recommended for the use with CCMgen to generate realistic sequence samples.
+
+CCMgen is a tool for sampling protein-like sequences from a second-order Markov Randon Field (MRF) model, such as it can be learned with CCMpredPy. The residues of generated sequences will obey the selection pressures described by the MRF with pairwise statistical couplings between residue positions. Furthermore, CCMgen provides full control over the generation of the synthetic alignment by allowing to specify the evolutionary times and phylogeny along which the sequences are sampled.
 
 ## License
 
@@ -24,12 +26,6 @@ The following Python packages are required
   * six 
   * plotly 
   * colorlover 
-
-and can be installed manually with pip by running:
-
-```bash
-pip install numpy scipy biopython msgpack-python six plotly colorlover
-```
 
 ## Download
 
