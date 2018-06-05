@@ -1,5 +1,4 @@
 import numpy as np
-import ccmpred.logo
 import ccmpred.monitor.progress as pr
 
 
@@ -8,7 +7,7 @@ class conjugateGradient(object):
 
     def __init__(
             self, ccm, maxit=100, ftol=1e-4, max_linesearch=5, alpha_mul=0.5, wolfe=0.2,
-            epsilon=1e-3, convergence_prev=5, plotfile=None):
+            epsilon=1e-3, convergence_prev=5):
         self.maxit = maxit
         self.ftol = ftol
         self.max_linesearch = max_linesearch
@@ -17,11 +16,8 @@ class conjugateGradient(object):
         self.epsilon = epsilon
         self.convergence_prev = convergence_prev
 
-        plot_title = "L={0} N={1} Neff={2} Diversity={3}<br>".format(
-            ccm.L, ccm.N, np.round(ccm.neff, decimals=3),
-            np.round(ccm.diversity, decimals=3)
-        )
-        self.progress = pr.Progress(plotfile, plot_title)
+        #optimization progress logger
+        self.progress = ccm.progress
 
         self.g_x = None
 
