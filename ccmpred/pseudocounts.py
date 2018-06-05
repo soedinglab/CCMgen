@@ -75,64 +75,6 @@ class PseudoCounts(object):
 
         return np.mean(single_freq[:, :20], axis=0)[np.newaxis, :][0]
 
-    def calculate_frequencies_vanilla(self):
-
-        print("Calculating AA Frequencies as in C++ CCMpred vanilla: 1 pseudocount is added to single_counts")
-
-        self.pseudocount_type   = "ccmpred-vanilla"
-
-        #without sequence weights
-        single_counts, pair_counts = ccmpred.counts.both_counts(self.msa, None)
-
-        #add one pseudocunt to every single amino acid count
-        single_counts += 1
-
-        #normalized with gaps
-        single_freq = single_counts / (self.N + 21)
-        pair_freq = pair_counts / self.N
-
-        self.freqs = single_freq, pair_freq
-
-        #compute weighted non-gapped sequence counts
-        self.calculate_Ni(single_freq)
-        self.calculate_Nij(pair_freq)
-
-    def calculate_frequencies_dev_center_v(self):
-
-        self.pseudocount_type   = "constant_pseudocounts"
-
-        #with weights
-        single_counts, pair_counts = self.counts
-
-        self.pseudocount_ratio_single = 0.1
-        self.pseudocount_ratio_pair = 0.1
-
-        print("Calculating AA Frequencies as in dev-center-v: " +
-              str(np.round(pseudocount_ratio, decimals=5)) +
-              " percent pseudocounts for single freq (constant pseudocounts from global frequencies with gaps)")
-
-        #normalized with gaps
-        single_freq = single_counts / self.N
-        pair_freq = pair_counts / self.N
-
-        #pseudocounts from global aa frequencies with gaps
-        pcounts = self.constant_pseudocounts(single_freq)
-
-        #single freq counts normalized without gaps
-        single_freq = self.degap(single_freq, True)
-        pair_freq = self.degap(pair_freq, True)
-
-        single_freq_pc = (1 - self.pseudocount_ratio_single) * single_freq + self.pseudocount_ratio_single * pcounts
-        pair_freq_pc = ((1 - self.pseudocount_ratio_pair ) ** 2) * \
-                       (pair_freq - single_freq[:, np.newaxis, :, np.newaxis] * single_freq[np.newaxis, :, np.newaxis, :]) + \
-                       (single_freq_pc[:, np.newaxis, :, np.newaxis] * single_freq_pc[np.newaxis, :, np.newaxis, :])
-
-        self.freqs = single_freq_pc, pair_freq_pc
-
-        #compute weighted non-gapped sequence counts
-        self.calculate_Ni(single_freq_pc)
-        self.calculate_Nij(pair_freq_pc)
-
     def calculate_frequencies(self, pseudocount_type, pseudocount_n_single=1, pseudocount_n_pair=None, remove_gaps=False):
 
 
