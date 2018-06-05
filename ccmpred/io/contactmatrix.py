@@ -93,41 +93,6 @@ def compute_local_correction(
 
     return scaling_factor, mat - correction
 
-def compute_joint_entropy_correction(pair_freq, neff, lambda_w, x_pair, nr_states = 21, log=np.log2):
-
-    print("Apply joint entropy correction (using {0} states and {1})".format(nr_states, log.__name__))
-
-    N_factor = neff / (lambda_w * lambda_w)
-
-    joint_entropy = - np.sum(
-        pair_freq[:, :, :nr_states, :nr_states] * log(pair_freq[:, :, :nr_states, :nr_states]),
-        axis=(3, 2)
-    )
-    uij = N_factor * joint_entropy
-    c_ij = frobenius_score(x_pair)
-
-    ### compute scaling factor eta
-    scaling_factor = np.sum(c_ij * uij) / np.sum(uij * uij)
-
-    corrected_mat = c_ij - scaling_factor * uij
-
-    return scaling_factor, corrected_mat
-
-def compute_corrected_mat_sergey_style(pair_freq, x_pair, nr_states = 21, log=np.log2):
-
-    print("Apply sergeys joint entropy correction (using {0} states and {1})".format(nr_states, log.__name__))
-
-    joint_entropy = - np.sum(
-        pair_freq[:, :, :nr_states, :nr_states] * log(pair_freq[:, :, :nr_states, :nr_states]),
-        axis=(3, 2)
-    )
-    correction  = 1.0 + joint_entropy
-
-    #frobenius is computed on 20x20 (no gaps)
-    #whereas joint entropy might be normalized using 21 states
-    mat = frobenius_score(x_pair) /  correction
-
-    return(mat)
 
 def write_matrix(matfile, mat, meta):
 
