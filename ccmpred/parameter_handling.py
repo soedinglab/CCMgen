@@ -34,7 +34,6 @@ def linear_to_structured(x, ncol, clip=False, nogapstate=False, add_gap_state=Fa
 
     return x_single, x_pair
 
-
 def structured_to_linear(x_single, x_pair, nogapstate=False, padding=True):
     """
     Convert structured variables into linear array
