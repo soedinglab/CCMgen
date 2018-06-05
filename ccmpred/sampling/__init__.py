@@ -104,17 +104,19 @@ def generate_mcmc_sample(x, msa, size=10000, burn_in=500, sample_type="original"
 
     return samples, neff
 
-def sample_with_mutation_rate(tree, ncol, x, gibbs_steps, mutation_rate ):
+def sample_with_mutation_rate(tree, seq0, x, mutation_rate):
 
     branch_lengths = tree.branch_lengths
     nseq = tree.nseq
 
+
     #how many substitutions per sequence will be performed
     nmut = [0]*(len(branch_lengths)-2)
     for i, bl in enumerate(branch_lengths[2:]):
-        nmut[i] = bl * mutation_rate * ncol
+        nmut[i] = bl * mutation_rate * seq0.shape[1]
     print("avg number of amino acid substitutions (parent -> child): {0}".format(
         np.round(np.mean(nmut), decimals=0)))
+
 
     #get the average number of amino acid substitution from root --> leave
     if tree.type == "binary" or tree.type == "star":
@@ -125,27 +127,6 @@ def sample_with_mutation_rate(tree, ncol, x, gibbs_steps, mutation_rate ):
         print("avg number of amino acid substitutions (root -> leave): {0}".format(
             np.round(1 / depth_per_clade * np.mean(nmut), decimals=0)))
 
-    #sample a new start sequence
-    seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, gibbs_steps)
-
-
-
-
-
-    #copy over gaps from a randomly selected original sequence
-    # N = msa.shape[0]
-    # random_original_sequence = msa[np.random.choice(N)]
-    # # find gaps in randomly selected original sequences
-    # gap_indices = np.array(np.where(random_original_sequence == AMINO_ACIDS.index('-'))[0])
-    # print("number of gaps that will be added: {0}".format(len(gap_indices)))
-    # # assign gap states to random sequences
-    # seq0[0, gap_indices] = AMINO_ACIDS.index('-')
-
-
-
-
-    print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) : {1}".format(
-        gibbs_steps, "".join([AMINO_ACIDS[c] for c in seq0[0]])))
 
     #sample sequences according to tree topology
     msa_sampled = mutate_along_phylogeny(tree.tree, seq0[0], mutation_rate, x)
