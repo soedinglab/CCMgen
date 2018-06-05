@@ -7,21 +7,25 @@ The coupling potentials encoded by the learned Markov Random Field model can be 
 
 ## License
 
-CCMgen and CCMpredPy are released under the GNU Affero GPL License, version 3.0 or later.
+CCMgen and CCMpredPy are released under the [GNU AGPLv3](https://choosealicense.com/licenses/agpl-3.0/) license.
 
-## Requirements
+## Dependencies
 
-CCMgen/CCMpredPy was developed and tested with Python 3.6 and requires the following Python packages installed on your system:
+- CCMgen/CCMpredPy was developed and tested with Python 3.6
+- There are some C libraries to speed up crucial parts of the calculations that need to be compiled with a C compiler.
+  Note: When installing on osx, make sure to use an appropriate gcc compiler and not clang, e.g. by setting `export CC=/usr/local/Cellar/gcc/X.X.X/bin/gcc-X` if gcc was installed via brew.
 
-  * NumPy (`pip install numpy`)
-  * SciPy (`pip install scipy`)
-  * BioPython (`pip install biopython`)
-  * MsgPack (`pip install msgpack-python`)
-  * six (`pip install six`)
-  * plotly (`pip install plotly`) 
-  * colorlover (`pip install colorlover`)
+The following Python packages are required
 
-or, in one command:
+  * NumPy 
+  * SciPy
+  * BioPython 
+  * MsgPack 
+  * six 
+  * plotly 
+  * colorlover 
+
+and can be installed manually with pip by running:
 
 ```bash
 pip install numpy scipy biopython msgpack-python six plotly colorlover
@@ -34,7 +38,7 @@ Please check out the [GitHub releases page for CCMgen](TODO TODO TODO) to downlo
 
 ### Development Versions from Git
 
-To clone CCMgen/CCMpredPy directly from git, please use the following command line:
+To clone the latest development version of CCMgen/CCMpredPy, please use the following command line:
 
 ```bash
 git clone https://github.com/soedinglab/ccmgen.git
@@ -42,39 +46,27 @@ git clone https://github.com/soedinglab/ccmgen.git
 
 ## Installation
 
-There are some C libraries to speed up crucial parts of the calculations that need to be compiled. 
-Change to the main directory and from there for a system-wide installation run:
+### From cloned/downloaded repository
 
-<!---
-```bash
-python setup.py build_ext --inplace
-```
--->
-
+CCMgen/CCmpredPy can be installed from the main directory into your local Python environment via `pip`:
 
 ```bash
 pip install .
 ```
 
-or for a local installation run (creates symlink to the repository in your environment):
-
-```bash
-pip install -e .
-```
-
+### Directly from Github Repository
   
-Alternatively, you can install the latest development version of CCMgen/CCMpredPy with pip directly from this repository without the need of cloning by running:
+Alternatively, you can install the latest development version of CCMgen/CCMpredPy with `pip` directly from this repository:
 
 ```bash
-pip install git+https://github.com/susannvorberg/CCmpredPy@master
+pip install git+https://github.com/soedinglab/ccmgen@master
 ```
-and keep updated by running:
+and keep updated with:
 
 ```bash
-pip install git+https://github.com/susannvorberg/CCmpredPy@master --upgrade
+pip install git+https://github.com/soedinglab/ccmgen@master --upgrade
 ```
 
-Note: When installing on osx, make sure to use an appropriate gcc compiler and not clang, e.g. by setting `export CC=/usr/local/Cellar/gcc/X.X.X/bin/gcc-X` if gcc was installed via brew.
 
 ## Next Steps
 Now you're ready to use CCMgen and CCMpredPy! You can have a look at the [getting started guide](https://github.com/soedinglab/CCMgen/wiki/Getting-Started-with-CCMgen-and-CCMpredPy) to learn how to use both tools.
