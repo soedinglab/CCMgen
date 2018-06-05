@@ -44,7 +44,6 @@ def mutate_along_phylogeny(tree, seq0, mutation_rate, x):
 
     return msa_sampled
 
-
 def generate_mcmc_sample(x, msa, size=10000, burn_in=500, sample_type="original"):
 
     print("Start sampling {0} sequences according to model starting with {1} sequences using burn-in={2}.".format(
@@ -105,6 +104,19 @@ def generate_mcmc_sample(x, msa, size=10000, burn_in=500, sample_type="original"
     return samples, neff
 
 def sample_with_mutation_rate(tree, seq0, x, mutation_rate):
+    """
+
+    Parameters
+    ----------
+    tree: Tree object
+    seq0: 2dim array
+    x:
+    mutation_rate: float
+
+    Returns
+    -------
+
+    """
 
     branch_lengths = tree.branch_lengths
     nseq = tree.nseq
@@ -118,7 +130,7 @@ def sample_with_mutation_rate(tree, seq0, x, mutation_rate):
         np.round(np.mean(nmut), decimals=0)))
 
 
-    #get the average number of amino acid substitution from root --> leave
+    # get the average number of amino acid substitution from root --> leave
     if tree.type == "binary" or tree.type == "star":
         number_splits = 1
         if tree.type == "binary":
@@ -128,114 +140,18 @@ def sample_with_mutation_rate(tree, seq0, x, mutation_rate):
             np.round(1 / depth_per_clade * np.mean(nmut), decimals=0)))
 
 
-    #sample sequences according to tree topology
+    # sample sequences according to tree topology
     msa_sampled = mutate_along_phylogeny(tree.tree, seq0[0], mutation_rate, x)
 
-    #usually the case for binary trees
+    # randomly choose nseq sequences from sampled msa
     if msa_sampled.shape[0] > nseq:
-        first_half = msa_sampled[:int(np.floor(nseq/2))]
-        second_half = msa_sampled[-int(np.ceil(nseq/2)):]
-        msa_sampled = np.array(list(first_half) + list(second_half))
+        msa_sampled = msa_sampled[sorted(np.random.choice(msa_sampled.shape[0], size=nseq, replace=False))]
 
-    #compute neff of sampled sequences
+    # compute neff of sampled sequences
     neff = ccmpred.weighting.get_HHsuite_neff(msa_sampled)
 
     print("\nAlignment was sampled with mutation rate {0} and has Neff {1:.6g}".format(
             mutation_rate, neff))
-
-    return msa_sampled, neff
-
-def sample_to_pair_correlation(tree, target_neff, ncol, x, gibbs_steps, single_freq_observed, pair_freq_observed):
-    branch_lengths = tree.branch_lengths
-    nseq = tree.nseq
-
-    indices_upper_i, indices_upper_j = np.triu_indices(ncol, k=1)
-    single_freq_observed_flat = single_freq_observed.flatten().tolist()
-    pair_freq_observed_flat = pair_freq_observed[indices_upper_i, indices_upper_j, :, :].flatten().tolist()
-    cov_observed = [pair_freq_observed[i, j, a, b] - (single_freq_observed[i, a] * single_freq_observed[j, b])
-                    for i in range(ncol - 1) for j in range(i + 1, ncol) for a in range(20) for b in range(20)]
-
-    print("\nSample sequences to generate alignment with Pearson correlation coefficient > 0.9 "
-             "between observed and sampled pair frequencies...\n")
-
-    # sample a new start sequence
-    seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, gibbs_steps)
-    print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) : {1}".format(gibbs_steps, "".join(
-        [AMINO_ACIDS[c] for c in seq0[0]])))
-
-    mutation_rate = 1.0
-    pearson_corr_pair = 0.0
-    msa_sampled = np.empty((nseq, ncol), dtype="uint8")
-    neff = 0
-    while pearson_corr_pair < 0.9:
-
-        # how many substitutions per sequence will be performed
-        nmut = [0] * (len(branch_lengths) - 2)
-        for i, bl in enumerate(branch_lengths[2:]):
-            nmut[i] = bl * mutation_rate * ncol
-        print("avg number of amino acid substitutions (parent -> child): {0}".format(
-            np.round(np.mean(nmut), decimals=0)))
-
-        # get the average number of amino acid substitution from root --> leave
-        if tree.type == "binary" or tree.type == "star":
-            number_splits = 1
-            if tree.type == "binary":
-                number_splits = np.log2(nseq)
-            depth_per_clade = 1.0 / np.ceil(number_splits)
-            print("avg number of amino acid substitutions (root -> leave): {0}".format(
-                np.round(1 / depth_per_clade * np.mean(nmut), decimals=0)))
-
-        # sample sequences according to tree topology
-        msa_sampled = mutate_along_phylogeny(tree.tree, seq0[0], mutation_rate, x)
-
-        # usually the case for binary trees
-        if msa_sampled.shape[0] > nseq:
-            first_half = msa_sampled[:int(np.floor(nseq / 2))]
-            second_half = msa_sampled[-int(np.ceil(nseq / 2)):]
-            msa_sampled = np.array(list(first_half) + list(second_half))
-
-        # compute neff of sampled sequences
-        neff = ccmpred.weighting.get_HHsuite_neff(msa_sampled)
-        print("Alignment was sampled with mutation rate {0:.3g} and has Neff {1:.5g}\n".format(mutation_rate, neff))
-
-        # compute amino acid frequencies
-        weights = calculate_weights_simple(msa_sampled, cutoff=0.8, ignore_gaps=False)
-        pseudocounts = PseudoCounts(msa_sampled, weights)
-        pseudocounts.calculate_frequencies(
-            "uniform_pseudocounts",
-            1,
-            1,
-            remove_gaps=False
-        )
-        single_freqs_sampled = pseudocounts.degap(pseudocounts.freqs[0], False)
-        single_freqs_sampled_flat = single_freqs_sampled.flatten().tolist()
-
-        pair_freqs_sampled = pseudocounts.degap(pseudocounts.freqs[1], False)
-        pair_freq_sampled_flat = pair_freqs_sampled[indices_upper_i, indices_upper_j, :, :].flatten().tolist()
-
-        cov_sampled = [pair_freqs_sampled[i, j, a, b] - (single_freqs_sampled[i, a] * single_freqs_sampled[j, b])
-                       for i in range(ncol - 1) for j in range(i + 1, ncol) for a in range(20) for b in range(20)]
-
-        pearson_corr_single = np.corrcoef(single_freq_observed_flat, single_freqs_sampled_flat)[0, 1]
-        pearson_corr_pair = np.corrcoef(pair_freq_observed_flat, pair_freq_sampled_flat)[0, 1]
-        pearson_corr_cov = np.corrcoef(cov_observed, cov_sampled)[0, 1]
-
-        print("Neff difference is {0:.5g}%, correlation with observed single freq: {1:.5g} "
-              "and pair freq: {2:.5g} and covariances: {3:.5g}\n".format((target_neff - neff) / target_neff * 100,
-                                                                         pearson_corr_single, pearson_corr_pair,
-                                                                         pearson_corr_cov))
-        sys.stdout.flush()
-
-        #increase mutation rate
-        mutation_rate += 0.3
-
-        # prevent mutation rate from becoming too high
-        if mutation_rate > 10:
-            # sample a new start sequence and begin anew
-            seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, gibbs_steps)
-            print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) : {1}".format(gibbs_steps, "".join(
-                [AMINO_ACIDS[c] for c in seq0[0]])))
-            mutation_rate = 1
 
     return msa_sampled, neff
 
@@ -278,11 +194,9 @@ def sample_to_neff_increasingly(tree, target_neff, ncol, x, gibbs_steps):
         # sample sequences according to tree topology
         msa_sampled = mutate_along_phylogeny(tree.tree, seq0[0], mutation_rate, x)
 
-        # usually the case for binary trees
+        # randomly choose nseq sequences from sampled msa
         if msa_sampled.shape[0] > nseq:
-            first_half = msa_sampled[:int(np.floor(nseq / 2))]
-            second_half = msa_sampled[-int(np.ceil(nseq / 2)):]
-            msa_sampled = np.array(list(first_half) + list(second_half))
+            msa_sampled = msa_sampled[sorted(np.random.choice(msa_sampled.shape[0], size=nseq, replace=False))]
 
         # compute neff of sampled sequences
         neff = ccmpred.weighting.get_HHsuite_neff(msa_sampled)
@@ -301,73 +215,5 @@ def sample_to_neff_increasingly(tree, target_neff, ncol, x, gibbs_steps):
         #reset mutation rate if it becomes negative
         if mutation_rate < 0 or mutation_rate > 100:
             mutation_rate = 1
-
-    return msa_sampled, neff
-
-def sample_to_neff(tree, target_neff, ncol, x, gibbs_steps):
-
-    branch_lengths = tree.branch_lengths
-    nseq = tree.nseq
-
-    print("\nSample sequences to generate alignment with target Neff~{0:.6g}...\n".format(
-        target_neff))
-
-    mr_min = 0.0
-    mr_max = 20.0
-    mutation_rate = (mr_min + mr_max) / 2
-
-    # keep trying until we are within 1% of target neff
-    neff = -np.inf
-    msa_sampled = np.empty((nseq, ncol), dtype="uint8")
-    while np.abs(neff - target_neff) > 1e-2 * target_neff and mr_min < (0.999 * mr_max):
-
-        #sample a new start sequence
-        seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, gibbs_steps)
-        print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) : {1}".format(gibbs_steps, "".join(
-            [AMINO_ACIDS[c] for c in seq0[0]])))
-
-        # how many substitutions per sequence will be performed
-        nmut = [0] * (len(branch_lengths) - 2)
-        for i, bl in enumerate(branch_lengths[2:]):
-            nmut[i] = bl * mutation_rate * ncol
-        print("avg number of amino acid substitutions (parent -> child): {0}".format(
-            np.round(np.mean(nmut), decimals=0)))
-
-        # get the average number of amino acid substitution from root --> leave
-        if tree.type == "binary" or tree.type == "star":
-            number_splits = 1
-            if tree.type == "binary":
-                number_splits = np.log2(nseq)
-            depth_per_clade = 1.0 / np.ceil(number_splits)
-            print("avg number of amino acid substitutions (root -> leave): {0}".format(
-                np.round(1 / depth_per_clade * np.mean(nmut), decimals=0)))
-
-
-        #sample sequences according to tree topology
-        msa_sampled = mutate_along_phylogeny(tree.tree, seq0[0], mutation_rate, x)
-
-        # usually the case for binary trees
-        if msa_sampled.shape[0] > nseq:
-            first_half = msa_sampled[:int(np.floor(nseq / 2))]
-            second_half = msa_sampled[-int(np.ceil(nseq / 2)):]
-            msa_sampled = np.array(list(first_half) + list(second_half))
-
-        #compute neff of sampled sequences
-        neff = ccmpred.weighting.get_HHsuite_neff(msa_sampled)
-
-        print("Alignment was sampled with mutation rate {0:.3g} (mr_min={1:.3g}, mr_max={2:.3g}) and has Neff {3:.6g}\n".format(
-            mutation_rate, mr_min, mr_max, neff))
-        sys.stdout.flush()
-
-        if neff < target_neff:
-            # neff was too small, increase mutation rate
-            mr_min = mutation_rate
-
-        elif neff > target_neff:
-            # neff was too big, decrease mutation rate
-            mr_max = mutation_rate
-
-        # continue binary search
-        mutation_rate = (mr_min + mr_max) / 2
 
     return msa_sampled, neff
