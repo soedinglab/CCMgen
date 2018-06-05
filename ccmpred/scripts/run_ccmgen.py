@@ -17,7 +17,7 @@ EPILOG = """
 Generate a multiple sequence alignment of protein sequences generated from a Markov Random Field model.
 
 In a first step, coupling potentials will have to be learned from a source protein MSA using 
-e.g. CCMpred with the --write-msgpack command. 
+e.g. CCMpredPy with the -b command. 
 This can then be passed to the CCMgen call.
 
 """
@@ -92,16 +92,6 @@ def parse_args():
 
 
 
-    grp_constraints = parser.add_argument_group("Use with Contraints (couplings for non-contacts will be set to zero)")
-    grp_constraints.add_argument("--pdb-file", dest="pdbfile", help="Input PDB file")
-    grp_constraints.add_argument("--contact-threshold", dest="contact_threshold", type=int, default=8,
-                           help="Definition of residue pairs forming a contact wrt distance of their Cbeta atoms in "
-                                "angstrom. [default: %(default)s]")
-
-
-
-
-
 
     opt = parser.parse_args()
 
@@ -153,13 +143,6 @@ def main():
     ccm.intialise_potentials()
     x = ccmpred.parameter_handling.structured_to_linear(ccm.x_single, ccm.x_pair, nogapstate=True, padding=False)
     ncol = ccm.x_single.shape[0]
-
-
-    # read pdb file if CCMpred is a constrained run
-    if opt.pdbfile:
-        ccm.read_pdb(opt.contact_threshold)
-        print("Couplings for pairs with Cbeta distances > {0} will be set to zero!".format(opt.contact_threshold))
-        ccm.x_pair[ccm.non_contact_indices[0], ccm.non_contact_indices[1], :, :] = 0
 
 
     #if MCMC sampling is specified (requires alignment file)
