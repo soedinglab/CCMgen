@@ -8,7 +8,7 @@ array_1d_float = npct.ndpointer(dtype=np.dtype('float64'), ndim=1, flags='CONTIG
 array_2d_float = npct.ndpointer(dtype=np.dtype('float64'), ndim=2, flags='CONTIGUOUS')
 array_4d_float = npct.ndpointer(dtype=np.dtype('float64'), ndim=4, flags='CONTIGUOUS')
 
-libmsac = npct.load_library('libmsacounts', os.path.dirname(__file__))
+libmsac = npct.load_library('libmsacounts', os.path.join(os.path.dirname(__file__), '_build'))
 
 libmsac.msa_count_single.restype = None
 libmsac.msa_count_single.argtypes = [array_2d_float, array_2d_char, array_1d_float, ctypes.c_uint32, ctypes.c_uint32]
