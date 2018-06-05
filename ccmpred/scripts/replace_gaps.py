@@ -22,11 +22,11 @@ def main():
 
     msa_in_file, msa_out_file = args
 
-    msa = run_ccmpred.io.alignment.read_msa(msa_in_file, opt.msa_in_format)
+    msa = ccmpred.io.alignment.read_msa(msa_in_file, opt.msa_in_format)
     msa_nogaps = opt.replacement(msa)
 
     with open(msa_out_file, "w") as f:
-        run_ccmpred.io.alignment.write_msa_psicov(f, msa_nogaps)
+        ccmpred.io.alignment.write_msa_psicov(f, msa_nogaps)
 
 
 if __name__ == '__main__':
