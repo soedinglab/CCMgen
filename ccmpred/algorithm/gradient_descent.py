@@ -6,9 +6,10 @@ import ccmpred.monitor.progress as pr
 class gradientDescent():
     """Optimize objective function using gradient descent"""
 
-    def __init__(self, ccm, maxit=100, alpha0=5e-3,
-                 decay=True,  decay_start=1e-3, decay_rate=10, decay_type="lin",
-                 fix_v=False, epsilon=1e-5, convergence_prev=5, early_stopping=False):
+    def __init__(self, progress, neff, maxit=2000, alpha0=0,
+                 decay=True,  decay_start=1e-1, decay_rate=5e-6, decay_type="sig",
+                 fix_v=True, epsilon=1e-8, convergence_prev=5, early_stopping=True,
+                 non_contact_indices=None):
 
 
         self.maxit = maxit
@@ -16,7 +17,7 @@ class gradientDescent():
 
         #initial learning rate defined wrt to effective number of sequences
         if self.alpha0 == 0:
-                self.alpha0 = 5e-2 / np.sqrt(ccm.neff)
+                self.alpha0 = 5e-2 / np.sqrt(neff)
 
         #decay settings
         self.decay=decay
@@ -34,27 +35,25 @@ class gradientDescent():
         self.convergence_prev=convergence_prev
 
         #whether optimization is run with constraints (non-contacts are masked)
-        self.non_contact_indices = ccm.non_contact_indices
+        self.non_contact_indices = non_contact_indices
 
         #optimization progress logger
-        self.progress = ccm.progress
+        self.progress = progress
 
 
 
     def __repr__(self):
         rep_str="Gradient descent optimization (alpha0={0})\n".format( np.round(self.alpha0, decimals=8))
 
-        rep_str+="convergence criteria: maxit={0} early_stopping={1} epsilon={2} prev={3}\n".format(
+        rep_str+="\tconvergence criteria: maxit={0} early_stopping={1} epsilon={2} prev={3}\n".format(
             self.maxit, self.early_stopping, self.epsilon, self.convergence_prev)
 
         if self.decay:
-            rep_str+="\t\t\tdecay: decay={0} decay_rate={1} decay_start={2} \n".format(
-               self.decay, np.round(self.decay_rate, decimals=8), self.decay_start
+            rep_str+="\tdecay: decay_type={0} decay_rate={1} decay_start={2} \n".format(
+               self.decay_type, np.round(self.decay_rate, decimals=8), self.decay_start
             )
         else:
-            rep_str+="\t\t\tdecay: decay={0}\n".format(
-              self.decay
-            )
+            rep_str+="no decay\n"
 
         return rep_str
 

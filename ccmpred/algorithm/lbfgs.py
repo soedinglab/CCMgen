@@ -5,7 +5,7 @@ from scipy.optimize import minimize as min
 class LBFGS(object):
     """Optimize objective function usign lbfgs"""
 
-    def __init__(self, ccm, maxit=100, ftol=1e-4, max_linesearch=20, maxcor=5):
+    def __init__(self, progress, maxit=100, ftol=1e-4, max_linesearch=20, maxcor=5, non_contact_indices=None):
 
         self.max_linesearch=max_linesearch
         self.ftol = ftol
@@ -13,10 +13,10 @@ class LBFGS(object):
         self.maxcor = maxcor
 
         # whether optimization is run with constraints (non-contacts are masked)
-        self.non_contact_indices = ccm.non_contact_indices
+        self.non_contact_indices = non_contact_indices
 
         # optimization progress logger
-        self.progress = ccm.progress
+        self.progress = progress
 
         self.g_x = None
         self.objfun=None
@@ -24,9 +24,12 @@ class LBFGS(object):
 
 
     def __repr__(self):
-        return "LBFGS optimization  \n" \
-               "\tconvergence criteria: maxit={0} \n".format(
-             self.maxit)
+
+        repr_str = "LBFGS optimization (ftol={0}, maxcor={1}, max_ls={2})\n".format(
+            self.ftol,self.maxcor,self.max_linesearch)
+        repr_str += "\tconvergence criteria: maxit={0} \n".format(self.maxit)
+
+        return repr_str
 
     def lbfgs_f(self, x):
 
