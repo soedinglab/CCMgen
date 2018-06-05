@@ -17,6 +17,7 @@ from ccmpred.regularization import L1, L2
 import ccmpred.plotting
 import ccmpred.sampling
 import ccmpred.weighting
+import ccmpred.monitor.progress as pr
 
 class CCMpred():
     """
@@ -442,6 +443,22 @@ class CCMpred():
             self.single_potential_init  = self.reg_type
             self.pair_potential_init    = "zero"
 
+    def initiate_logging(self, plot_file=None):
+        # setup progress logging
+        self.progress = pr.Progress()
+
+        if plot_file is not None:
+
+            plot_title = "L={0} N={1} Neff={2} Diversity={3}<br>".format(
+                self.L, self.N, np.round(self.neff, decimals=3), np.round(self.diversity, decimals=3))
+            self.progress.set_plot_title(plot_title)
+
+            if plot_file.split(".")[-1] != "html":
+                plot_file += ".html"
+
+            print("Plot with optimization statistics will be written to {0}".format(plot_file))
+            self.progress.set_plot_file(plot_file)
+
     def minimize(self, obj_fun, alg, plotfile=None):
 
 
@@ -498,18 +515,20 @@ class CCMpred():
         if recenter_potentials:
             self.recenter_potentials()
 
-
-        mat_path, mat_name = os.path.split(self.mat_file)
-
         if frob:
+
+            print("\nCompute contact map using frobenius norm of couplings.\n")
+
             self.mats["frobenius"] = {
                 'mat':    io.contactmatrix.frobenius_score(self.x_pair),
-                'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + ".frobenius." + mat_name.split(".")[-1],
+                'mat_file': self.mat_file,
                 'score': "frobenius",
                 'correction': "no correction"
             }
 
-    def compute_correction(self, apc=False, entropy_correction=False, joint_entropy=False, sergeys_jec=False):
+    def compute_correction(self, apc_file=None, entropy_correction_file=None,
+                           joint_entropy_file=None, sergeys_jec_file=None):
+
         """
         Compute bias correction for raw contact maps
 
@@ -520,7 +539,6 @@ class CCMpred():
         :return:
         """
 
-        mat_path, mat_name = os.path.split(self.mat_file)
 
         #iterate over all raw contact matrices
         for score_mat in list(self.mats.keys()):
@@ -529,18 +547,17 @@ class CCMpred():
             score = mat_dict['score']
             score_matrix = mat_dict['mat']
 
-            if apc:
+            if apc_file is not None:
                 self.mats[score_mat + "-apc"]={
                     'mat': io.contactmatrix.apc(score_matrix),
-                    'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score + ".apc." + mat_name.split(".")[-1],
+                    'mat_file': apc_file,
                     'score': score,
                     'correction': "apc"
                     }
 
-            if entropy_correction and score == "frobenius":
+            if entropy_correction_file is not None and score == "frobenius":
                 nr_states = 20
                 log = np.log2
-
 
                 # use amino acid frequencies including gap states and with pseudo-counts
                 single_freq = self.pseudocounts.freqs[0]
@@ -553,9 +570,7 @@ class CCMpred():
 
                 self.mats[score_mat+"-ec."+ str(nr_states) + "." + str(log.__name__)] = {
                     'mat': mat_corrected,
-                    'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score +
-                                ".ec." + str(nr_states) + "." + str(log.__name__) + "." +
-                                mat_name.split(".")[-1],
+                    'mat_file': entropy_correction_file,
                     'score': score,
                     'correction': "entropy_correction",
                     'scaling_factor_eta': scaling_factor_eta,
@@ -563,7 +578,7 @@ class CCMpred():
                     'log': log.__name__
                 }
 
-            if joint_entropy and score == "frobenius":
+            if joint_entropy_file is not None and score == "frobenius":
                 nr_states = 21
                 log = np.log2
 
@@ -577,9 +592,7 @@ class CCMpred():
 
                 self.mats[score_mat + "-jec."+ str(nr_states) + "." + str(log.__name__)] = {
                     'mat': mat_corrected,
-                    'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score +
-                                ".jec." + str(nr_states) + "." + str(log.__name__) + "." +
-                                mat_name.split(".")[-1],
+                    'mat_file': joint_entropy_file,
                     'score': score,
                     'correction': "joint_entropy_correction",
                     'scaling_factor_eta': scaling_factor_eta,
@@ -587,7 +600,7 @@ class CCMpred():
                     'log': log.__name__
                 }
 
-            if sergeys_jec and score == "frobenius":
+            if sergeys_jec_file is not None and score == "frobenius":
                 nr_states = 21
                 log = np.log2
 
@@ -599,9 +612,7 @@ class CCMpred():
 
                 self.mats[score_mat + "-sjec."+ str(nr_states) + "." + str(log.__name__)] = {
                     'mat': mat_corrected,
-                    'mat_file': mat_path + "/" + ".".join(mat_name.split(".")[:-1]) + "." + score +
-                                ".sjec." + str(nr_states) + "." + str(log.__name__) + "." +
-                                mat_name.split(".")[-1],
+                    'mat_file': sergeys_jec_file,
                     'score': score,
                     'correction': "sergeys joint entropy correction",
                     'nr_states': nr_states,
@@ -614,6 +625,7 @@ class CCMpred():
         :return:
         """
 
+        print("\nWriting contact matrices to: ")
         for mat_name, mat_dict in self.mats.items():
 
             mat = mat_dict['mat']
@@ -623,6 +635,7 @@ class CCMpred():
 
             meta = self.create_meta_data(mat_name)
             io.contactmatrix.write_matrix(mat_dict['mat_file'], mat, meta)
+            print("\t" + mat_dict['mat_file'])
 
     def write_binary_raw(self, out_binary_raw_file):
         """
