@@ -44,40 +44,42 @@ def mutate_along_phylogeny(tree, seq0, mutation_rate, x):
 
     return msa_sampled
 
-def generate_mcmc_sample(x, msa, size=10000, burn_in=500, sample_type="original"):
+def generate_mcmc_sample(x, ncol, msa, size=10000, burn_in=500, sample_type="original"):
 
     print("Start sampling {0} sequences according to model starting with {1} sequences using burn-in={2}.".format(
         size, sample_type, burn_in))
     sys.stdout.flush()
 
-    N = msa.shape[0]
-    L = msa.shape[1]
+    if msa is not None:
+        N = msa.shape[0]
+    else:
+        N = 1000
 
     # sample at max 1000 sequences per iteration
     sample_size_per_it = np.min([N, 1000])
 
     ##repeat sampling until 10k sequences are obtained
     repeat = int(np.ceil(size / sample_size_per_it))
-    samples = np.empty([repeat * sample_size_per_it, L], dtype="uint8")
+    samples = np.empty([repeat * sample_size_per_it, ncol], dtype="uint8")
     for i in range(repeat):
 
-        if sample_type == "original":
+        if sample_type == "aln":
 
             #random selection of sequences from original MSA
-            sample_seq_id = np.random.choice(L, sample_size_per_it, replace=False)
+            sample_seq_id = np.random.choice(ncol, sample_size_per_it, replace=False)
             msa_sampled = msa[sample_seq_id]
 
         elif sample_type == "random":
 
             #generate random sequences of length L
             msa_sampled = np.ascontiguousarray(
-                [np.random.choice(20, L, replace=True) for _ in range(sample_size_per_it)], dtype="uint8")
+                [np.random.choice(20, ncol, replace=True) for _ in range(sample_size_per_it)], dtype="uint8")
 
         elif sample_type == "random-gapped":
 
             #generate random sequences of length L
             msa_sampled = np.ascontiguousarray(
-                [np.random.choice(20, L, replace=True) for _ in range(sample_size_per_it)], dtype="uint8")
+                [np.random.choice(20, ncol, replace=True) for _ in range(sample_size_per_it)], dtype="uint8")
 
             #find gaps in randomly selected original sequences
             sample_seq_id = np.random.choice(N, sample_size_per_it, replace=False)
@@ -103,12 +105,13 @@ def generate_mcmc_sample(x, msa, size=10000, burn_in=500, sample_type="original"
 
     return samples, neff
 
-def sample_with_mutation_rate(tree, seq0, x, mutation_rate):
+def sample_with_mutation_rate(tree, nseq, seq0, x, mutation_rate):
     """
 
     Parameters
     ----------
     tree: Tree object
+    nseq: int
     seq0: 2dim array
     x:
     mutation_rate: float
@@ -119,8 +122,6 @@ def sample_with_mutation_rate(tree, seq0, x, mutation_rate):
     """
 
     branch_lengths = tree.branch_lengths
-    nseq = tree.nseq
-
 
     #how many substitutions per sequence will be performed
     nmut = [0]*(len(branch_lengths)-2)
@@ -150,19 +151,17 @@ def sample_with_mutation_rate(tree, seq0, x, mutation_rate):
     # compute neff of sampled sequences
     neff = ccmpred.weighting.get_HHsuite_neff(msa_sampled)
 
-    print("\nAlignment was sampled with mutation rate {0} and has Neff {1:.6g}".format(
-            mutation_rate, neff))
+    print("\nAlignment with {0} sequences was sampled with mutation rate {1} and has Neff {2:.6g}".format(
+        nseq, mutation_rate, neff))
 
     return msa_sampled, neff
 
-def sample_to_neff_increasingly(tree, target_neff, ncol, x, gibbs_steps):
+def sample_to_neff_increasingly(tree, nseq, target_neff, ncol, x, gibbs_steps):
 
     branch_lengths = tree.branch_lengths
-    nseq = tree.nseq
 
-
-    print("\nSample sequences to generate alignment with target Neff~{0:.6g}...\n".format(
-        target_neff))
+    print("\nSample alignment of {0} protein sequences with target Neff~{1:.6g}...\n".format(
+        nseq, target_neff))
 
     # keep increasing MR until we are within 1% of target neff
     mutation_rate = 1.0
@@ -200,8 +199,8 @@ def sample_to_neff_increasingly(tree, target_neff, ncol, x, gibbs_steps):
 
         # compute neff of sampled sequences
         neff = ccmpred.weighting.get_HHsuite_neff(msa_sampled)
-        print("Alignment was sampled with mutation rate {0:.3g} and has Neff {1:.5g} (ΔNeff [%] = {2:.5g})\n".format(
-            mutation_rate, neff, (target_neff - neff)/target_neff*100))
+        print("Alignment with {0} sequences was sampled with mutation rate {1:.3g} and has Neff {2:.5g} (ΔNeff [%] = {3:.5g})\n".format(
+            nseq, mutation_rate, neff, (target_neff - neff)/target_neff*100))
         sys.stdout.flush()
 
         # inrease mutation rate
