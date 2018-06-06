@@ -30,7 +30,7 @@ The following Python packages are required
 ## Download
 
 ### Release Versions
-Please check out the [GitHub releases page for CCMgen](TODO TODO TODO) to download a stable CCMgen/CCMpredPy release. After you're done downloading and extracting, please follow the installation instructions below.
+Please check out the [GitHub releases page for CCMgen](https://github.com/soedinglab/CCMgen/releases/tag/v1.0.0-alpha) to download a stable CCMgen/CCMpredPy release. After you're done downloading and extracting, please follow the installation instructions below.
 
 ### Development Versions from Git
 
