@@ -47,7 +47,7 @@ def parse_args():
                              "[default: %(default)s == no removal of sequences]")
     grp_opt.add_argument("--aln-format", dest="aln_format", type=str, default="fasta",
                         help="Specify format for alignment files [default: %(default)s]")
-    grp_opt.add_argument("--num_threads", dest="num_threads", type=int, default=1,
+    grp_opt.add_argument("--num-threads", dest="num_threads", type=int, default=1,
                         help="Specify the number of threads. [default: %(default)s]")
 
 
