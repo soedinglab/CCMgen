@@ -33,7 +33,7 @@ def parse_args():
     parser.add_argument("alnfile", help="Input alignment file to use")
 
     grp_general = parser.add_argument_group("General Options")
-    grp_general.add_argument("-t", "--num_threads",          dest="num_threads", type=int, default=1,
+    grp_general.add_argument("--num-threads",          dest="num_threads", type=int, default=1,
                         help="Specify the number of threads. [default: %(default)s]")
     grp_general.add_argument("--aln-format",                 dest="aln_format", default="fasta",
                         help="File format for MSAs [default: \"%(default)s\"]")
@@ -42,19 +42,19 @@ def parse_args():
 
 
     grp_out = parser.add_argument_group("Output Options")
-    grp_out.add_argument("-m", "--mat-file", dest="matfile", type=str, default=None,
+    grp_out.add_argument("-m", "--mat-file", dest="matfile", type=str,
                          help="Write contact score matrix to file. [default: %(default)s]")
-    grp_out.add_argument("-b", "--write-binary-raw", dest="out_binary_raw_file", type=str, default=None,
+    grp_out.add_argument("-b", "--write-binary-raw", dest="out_binary_raw_file", type=str,
                          help="Write single and pairwise potentials as binary MessagePack file. [default: %(default)s]")
-    grp_out.add_argument("--plot-opt-progress", dest="plot_opt_progress", default=None, type=str,
-                         help="Path to plot file showing optimization progress. [default: %(default)s]")
+    grp_out.add_argument("--plot-opt-progress", dest="plot_opt_progress", type=str,
+                         help="Continously plot optimization progress as an interactive HTML. [default: %(default)s]")
 
 
     grp_in = parser.add_argument_group("Optional Input Options")
     grp_in.add_argument("-i", "--init-from-raw",        dest="initrawfile", default=None,
                         help="Init single and pair potentials from a binary raw file")
     grp_in.add_argument("--do-not-optimize",            dest="optimize", action="store_false", default=True,
-                        help="Do not optimize potentials. Only available when providing potentials via -i.")
+                        help="Do not optimize potentials. Requires providing initial model parameters with -i.")
 
 
 
@@ -71,25 +71,27 @@ def parse_args():
 
     grp_cd = parser.add_argument_group("(Persistent) Contrastive Divergence Options")
     grp_cd.add_argument("--ofn-cd",dest="objfun",action="store_const",const="cd",help="Use contrastive divergence (CD)")
-    grp_cd.add_argument("--nr-seq-samples", dest="nr_seq_sample", type=int, default=500, help="Number of parallel "
+    grp_cd.add_argument("--nr-markov-chains", dest="nr_seq_sample", type=int, default=500, help="Number of parallel "
                         "Markov chains used for sampling at each iteration. [default: %(default)s] ")
     grp_cd.add_argument("--gibbs_steps", dest="cd_gibbs_steps", type=int, default=1,
-                         help="Perform this many steps of Gibbs sampling per sequence. [default: %(default)s]")
+                         help="Number of Gibbs steps used to evolve each Markov chain "
+                              "in each iteration of the optimization.  [default: %(default)s]")
     grp_cd.add_argument("--persistent", dest="cd_persistent", action="store_true", default=False, help="Switch on "
                         "PERSISTENT CD once the learning rate is small enough (< alpha_0 / 10) [default: %(default)s]")
     grp_cd.add_argument("--alpha0", dest="alpha0", default=1e-3, type=float,
                         help="GD: Set initial learning rate. [default: %(default)s]")
-    grp_cd.add_argument("--decay", dest="decay", action="store_true", default=False,
-                        help="GD: Use decaying learnign rate. Start decay when convergence criteria < START_DECAY. "
+    grp_cd.add_argument("--no-decay", dest="decay", action="store_false", default=True,
+                        help="GD: Do not use decaying learning rate** (`--no-decay`): Do not use decaying learnign "
+                             "rates. Decay is started when convergence criteria falls below value of START_DECAY. "
                              "[default: %(default)s]")
     grp_cd.add_argument("--decay-start", dest="decay_start", default=1e-1, type=float,
-                        help="GD: Start decay when convergence criteria < START_DECAY. Only when --decay. "
+                        help="GD: Start decay when convergence criteria < START_DECAY."
                              "[default: %(default)s]")
     grp_cd.add_argument("--decay-rate", dest="decay_rate", default=5e-6, type=float,
-                        help="GD: Set rate of decay for learning rate. Only when --decay. [default: %(default)s]")
+                        help="GD: Set rate of decay for learning rate. [default: %(default)s]")
     grp_cd.add_argument("--decay-type", dest="decay_type", default="sig", type=str,
                         choices=['sig', 'sqrt', 'exp', 'lin'],
-                        help="GD: Decay type. Only when --decay. [default: %(default)s]")
+                        help="GD: Decay type. [default: %(default)s]")
 
 
     grp_con = parser.add_argument_group("Convergence Settings")
@@ -112,14 +114,6 @@ def parse_args():
                                 "angstrom. [default: %(default)s]")
 
 
-    grp_contact_score = parser.add_argument_group("Contact Score")
-    grp_contact_score.add_argument("--frobenius", dest="frob", action="store_true", default=True,
-                                   help="Map 20x20 dimensional (ignoring 21st gap state) coupling matrices to "
-                                        "contact score with Frobenius norm. [default: %(default)s]")
-    grp_contact_score.add_argument("--no-centering", dest="centering_potentials", action="store_false",
-                                   default=True,
-                                   help="Ensure sum(v_i)=0 and sum(wij)=0 by subtracting mean. [default: %(default)s]")
-
 
     grp_corr = parser.add_argument_group("Corrections applied to Contact Score")
     grp_corr.add_argument("--apc",                  dest="apc_file",  type=str, default=None,
@@ -128,20 +122,11 @@ def parse_args():
     grp_corr.add_argument("--entropy-correction",   dest="entropy_correction_file",  type=str, default=None,
                           help="Path to contact matrix file corrected with entropy correction. "
                                "[default: %(default)s]")
-    grp_corr.add_argument("--joint-entropy-correction", dest="joint_entropy_correction_file",  type=str, default=None,
-                          help="Path to contact matrix file corrected with joint entropy correction. "
-                               "[default: %(default)s]")
-    grp_corr.add_argument("--sergeys-joint-entropy-correction", dest="sergeys_joint_entropy_correction_file",
-                          type=str, default=None,
-                          help="Path to contact matrix file corrected with sergeys joint entropy correction. "
-                               "[default: %(default)s]")
 
 
     grp_wt = parser.add_argument_group("Sequence Weighting")
     grp_wt.add_argument("--wt-simple",          dest="weight", action="store_const", const="simple",
                         default="simple", help='Use simple weighting  [default: %(default)s]')
-    grp_wt.add_argument("--wt-henikoff",        dest="weight", action="store_const", const="henikoff",
-                        help='Use simple Henikoff weighting')
     grp_wt.add_argument("--wt-uniform",         dest="weight", action="store_const", const="uniform",
                         help='Use uniform weighting')
     grp_wt.add_argument("--wt-cutoff",          dest="wt_cutoff",       type=float, default=0.8,
@@ -155,12 +140,6 @@ def parse_args():
     grp_rg.add_argument("--reg-lambda-pair-factor",     dest="lambda_pair_factor",      type=float, default=0.2,
                         help='Regularization parameter for pair potentials (L2 regularization with '
                              'lambda_pair  = lambda_pair-factor * scaling) [default: %(default)s]')
-    grp_rg.add_argument("--reg-L2", dest="reg_type", action="store_const", const="L2",
-                        default="L2", help="Use L2 regularization [default: %(default)s]")
-    grp_rg.add_argument("--reg-noscaling", dest="scaling", action="store_const", const="1",
-                        help="lambda_pair = lambda_pair_factor")
-    grp_rg.add_argument("--reg-scale-by-L", dest="scaling", action="store_const", const="L",
-                        help="lambda_pair = lambda_pair_factor * (L-1)")
     grp_rg.add_argument("--v-center", dest="single_prior", action="store_const", const="v-center", default="v-center",
                         help="Use mu=v* in Gaussian prior for single emissions and initialization. [default: %(default)s]")
     grp_rg.add_argument("--v-zero", dest="single_prior", action="store_const", const="v-zero",
@@ -170,10 +149,10 @@ def parse_args():
 
     grp_gap = parser.add_argument_group("Gap Treatment")
     grp_gap.add_argument("--max-gap-pos",  dest="max_gap_pos",  default=100, type=int,
-                        help="Ignore alignment positions with >X percent gaps. "
+                        help="Ignore alignment positions with > MAX_GAP_POS percent gaps. "
                              "[default: %(default)s == no removal of positions]")
     grp_gap.add_argument("--max-gap-seq",  dest="max_gap_seq",  default=100, type=int,
-                        help="Remove sequences with >X percent gaps. [default: %(default)s == no removal of sequences]")
+                        help="Remove sequences with > MAX_GAP_SEQ percent gaps. [default: %(default)s == no removal of sequences]")
 
 
     grp_pc = parser.add_argument_group("Pseudocounts")
@@ -186,7 +165,7 @@ def parse_args():
                         const="constant_pseudocounts",   help="Use constant pseudocounts ")
     grp_pc.add_argument("--pc-none",        dest="pseudocounts", action="store_const",
                         const="no_pseudocounts", help="Use no pseudocounts")
-    grp_pc.add_argument("--pc-count",       dest="pseudocount_single",  default=1, type=int,
+    grp_pc.add_argument("--pc-count-single",       dest="pseudocount_single",  default=1, type=int,
                         help="Specify number of pseudocounts [default: %(default)s]")
     grp_pc.add_argument("--pc-pair-count",  dest="pseudocount_pair",    default=1, type=int,
                         help="Specify number of pseudocounts for pairwise frequencies [default: %(default)s]")
@@ -264,7 +243,7 @@ def main():
 
     # setup L2 regularization
     ccm.specify_regularization(opt.lambda_single, opt.lambda_pair_factor,
-                               reg_type=opt.reg_type, scaling=opt.scaling, single_prior=opt.single_prior)
+                               reg_type="L2", scaling="L", single_prior=opt.single_prior)
 
     # intialise single and pair potentials either:
     #   - according to regularization priors
@@ -292,9 +271,9 @@ def main():
     #specify meta data, and write (corrected) contact matrices to files
     if opt.matfile:
 
-        # Compute contact score (frobenius norm) by possibly recentering potentials
+        # Compute contact score (frobenius norm) by recentering potentials
         # TODO: other scores can be added ...
-        ccm.compute_contact_matrix(recenter_potentials=opt.centering_potentials, frob=opt.frob)
+        ccm.compute_contact_matrix(recenter_potentials=True, frob=True)
 
         # compute corrected contact maps (removing entropy/phylogenetic biases)
         # TODO: other corrections can be added ...
