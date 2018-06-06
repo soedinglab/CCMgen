@@ -403,10 +403,7 @@ class CCMpred():
 
         if reg_type == "L2":
             self.regularization = L2(lambda_single, lambda_pair_factor, multiplier, prior_v_mu)
-        else:
-            self.regularization = L1(lambda_single, lambda_pair_factor, multiplier, prior_v_mu)
 
-        print(self.regularization)
 
     def intialise_potentials(self):
 
