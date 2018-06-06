@@ -10,7 +10,6 @@ class CCMTree(object):
     def __init__(self):
         """Initialise all class attributes"""
 
-        self.nseq = None
         self.id0 = ["root"]
         self.ids = None
         self.branch_lengths = None
@@ -47,7 +46,6 @@ class CCMTree(object):
 
 
         self.determine_tree_properties()
-        self.nseq = self.n_leaves
 
 
     def specify_tree(self, nseq, tree_source):
@@ -66,14 +64,13 @@ class CCMTree(object):
 
         """
 
-        self.nseq = nseq
 
         if tree_source == "binary":
             self.type = "binary"
-            self.tree = create_binary_tree(self.nseq, root_name=self.id0[0])
+            self.tree = create_binary_tree(nseq, root_name=self.id0[0])
         elif tree_source == "star":
             self.type = "star"
-            self.tree = create_star_tree(self.nseq, root_name=self.id0[0])
+            self.tree = create_star_tree(nseq, root_name=self.id0[0])
 
         self.determine_tree_properties()
 
