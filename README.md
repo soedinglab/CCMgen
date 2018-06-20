@@ -7,6 +7,10 @@ While state-of-the-art pseudo-likelihood models have consistenly been found to w
 
 CCMgen is a tool for sampling protein-like sequences from a second-order Markov Randon Field (MRF) model, such as it can be learned with CCMpredPy. The residues of generated sequences will obey the selection pressures described by the MRF with pairwise statistical couplings between residue positions. Furthermore, CCMgen provides full control over the generation of the synthetic alignment by allowing to specify the evolutionary times and phylogeny along which the sequences are sampled.
 
+## Citation
+
+Please cite: Susann Vorberg,Stefan Seemayer and Johannes Soeding, Synthetic protein alignments by CCMgen quantify noise in residue-residue contact prediction, bioRxiv, doi: 10.1101/344333 (2018).
+
 ## License
 
 CCMgen and CCMpredPy are released under the [GNU AGPLv3](https://choosealicense.com/licenses/agpl-3.0/) license.
