@@ -9,7 +9,7 @@ CCMgen is a tool for sampling protein-like sequences from a second-order Markov 
 
 ## Citation
 
-Please cite: Susann Vorberg,Stefan Seemayer and Johannes Soeding, Synthetic protein alignments by CCMgen quantify noise in residue-residue contact prediction, bioRxiv, doi: 10.1101/344333 (2018).
+Susann Vorberg, Stefan Seemayer and Johannes Soeding, Synthetic protein alignments by CCMgen quantify noise in residue-residue contact prediction, bioRxiv, doi: [10.1101/344333](https://doi.org/10.1101/344333) (2018).
 
 ## License
 
