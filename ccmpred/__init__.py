@@ -480,7 +480,7 @@ class CCMpred():
             "cd": lambda opt: gd.gradientDescent(
                 self.progress, self.neff, maxit=opt.maxit, alpha0=opt.alpha0, decay=opt.decay, decay_start=opt.decay_start,
                 decay_rate=opt.decay_rate, decay_type=opt.decay_type, epsilon=opt.epsilon,
-                convergence_prev=opt.convergence_prev, early_stopping=opt.early_stopping,
+                convergence_prev=opt.convergence_prev, early_stopping=True,
                 non_contact_indices=self.non_contact_indices,
             )
         }
