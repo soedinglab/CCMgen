@@ -165,7 +165,7 @@ def parse_args():
                         const="constant_pseudocounts",   help="Use constant pseudocounts ")
     grp_pc.add_argument("--pc-none",        dest="pseudocounts", action="store_const",
                         const="no_pseudocounts", help="Use no pseudocounts")
-    grp_pc.add_argument("--pc-count-single",       dest="pseudocount_single",  default=1, type=int,
+    grp_pc.add_argument("--pc-single-count",       dest="pseudocount_single",  default=1, type=int,
                         help="Specify number of pseudocounts [default: %(default)s]")
     grp_pc.add_argument("--pc-pair-count",  dest="pseudocount_pair",    default=1, type=int,
                         help="Specify number of pseudocounts for pairwise frequencies [default: %(default)s]")
