@@ -88,10 +88,13 @@ def parse_args():
 
     grp_mcmc = parser.add_argument_group("MCMC Sampling Options")
     grp_mcmc_me = grp_mcmc.add_mutually_exclusive_group()
+    grp_mcmc_me.add_argument("--mcmc-sample-random-gapped",   dest="mcmc_sample_type", action="store_const", const="random-gapped",
+                          default="random-gapped",
+                          help="Sample sequences starting from random sequences. Gap structure of randomly selected "
+                               "input sequences will be copied. Gap positions are not sampled. "
+                               "(requires --alnfile option)[default]")
     grp_mcmc_me.add_argument("--mcmc-sample-random",   dest="mcmc_sample_type", action="store_const", const="random",
-                          default="random",
-                          help="Sample sequences starting from random sequences comprised of 20 amino acids. "
-                               "[default]")
+                          help="Sample sequences starting from random sequences comprised of 20 amino acids. ")
     grp_mcmc_me.add_argument("--mcmc-sample-aln",  dest="mcmc_sample_type", action="store_const", const="aln",
                           help="Sample sequences starting from original sequences (requires setting ALN_FILE).")
     grp_mcmc.add_argument("--mcmc-burn-in", dest="mcmc_burn_in", type=int, default=500,
@@ -118,8 +121,9 @@ def parse_args():
 
 
     if opt.mcmc:
-        if opt.mcmc_sample_type == "aln" and not opt.alnfile:
-            parser.error("Need an alignment file (--alnfile) for use with --mcmc-sample-aln !")
+        if (opt.mcmc_sample_type == "aln" or opt.mcmc_sample_type == "random-gapped") and not opt.alnfile:
+            parser.error("Need an alignment file (--alnfile) for use with "
+                         "--mcmc-sample-aln and  --mcmc-sample-random-gapped!")
 
     return opt
 
