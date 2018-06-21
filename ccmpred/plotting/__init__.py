@@ -228,169 +228,224 @@ def plot_contact_map_someScore_plotly(plot_matrix, title, seqsep, gaps_percentag
 def plot_empirical_vs_model_statistics(
         single_freq_observed, single_freq_sampled,
         pairwise_freq_observed, pairwise_freq_sampled,
-        title, plot_out, log=False):
+        plot_out):
 
     L = single_freq_observed.shape[0]
+    indices_upper_triangle_i, indices_upper_triangle_j = np.triu_indices(L, k=1)
 
-    ## first trace for single amino acid frequencies
+    x_single = single_freq_observed.flatten().tolist()
+    y_single = single_freq_sampled.flatten().tolist()
+    pair_freq_observed = pairwise_freq_observed[
+                         indices_upper_triangle_i,
+                         indices_upper_triangle_j, :, :].flatten().tolist()
+    pair_freq_sampled = pairwise_freq_sampled[
+                        indices_upper_triangle_i,
+                        indices_upper_triangle_j, :, :].flatten().tolist()
+    cov_observed = [pairwise_freq_observed[i, j, a, b] - (single_freq_observed[i, a] * single_freq_observed[j, b])
+                    for i in range(L - 1) for j in range(i + 1, L) for a in range(20) for b in range(20)]
+    cov_sampled = [pairwise_freq_sampled[i, j, a, b] - (single_freq_sampled[i, a] * single_freq_sampled[j, b])
+                   for i in range(L - 1) for j in range(i + 1, L) for a in range(20) for b in range(20)]
+
+
+    ## first trace: single amino acid frequencies
     trace_single_frequencies = go.Scattergl(
-        x=single_freq_observed.flatten().tolist(),
-        y=single_freq_sampled.flatten().tolist(),
+        x=x_single,
+        y=y_single,
         mode='markers',
         name='single frequencies',
         text=["position: {0}<br>amino acid: {1}".format(i+1,io.AMINO_ACIDS[a]) for i in range(L) for a in range(20)],
-        opacity=0.3,
-        showlegend=True
+        marker=dict(color='black'),
+        opacity=0.1,
+        showlegend=False
     )
-    pearson_corr_single = np.corrcoef(single_freq_observed.flatten().tolist(), single_freq_sampled.flatten().tolist())[0,1]
+    pearson_corr_single = np.corrcoef(x_single, y_single)[0,1]
 
-
-    ## second trace for single amino acid frequencies
-    indices_upper_triangle = np.triu_indices(L, k=1)
-    pair_freq_observed = pairwise_freq_observed[indices_upper_triangle[0], indices_upper_triangle[1], :, :].flatten().tolist()
-    pair_freq_sampled = pairwise_freq_sampled[indices_upper_triangle[0], indices_upper_triangle[1], :, :].flatten().tolist()
-    parir_freq_annotation = ["position: {0}-{1}<br>amino acid: {2}-{3}".format(i+1,j+1, io.AMINO_ACIDS[a], io.AMINO_ACIDS[b]) for i in range(L-1) for j in range(i+1, L) for a in range(20) for b in range(20)]
+    ## second trace: pairwise amino acid frequencies
+    parir_freq_annotation = ["position: {0}-{1}<br>amino acid: {2}-{3}".format(
+        i+1,
+        j+1,
+        io.AMINO_ACIDS[a],
+        io.AMINO_ACIDS[b]) for i in range(L-1) for j in range(i+1, L) for a in range(20) for b in range(20)]
     trace_pairwise_frequencies = go.Scattergl(
         x=pair_freq_observed,
         y=pair_freq_sampled,
         mode='markers',
         name='pairwise frequencies',
         text=parir_freq_annotation,
-        opacity=0.3,
-        showlegend=True
+        marker=dict(color='black'),
+        opacity=0.1,
+        showlegend=False
     )
     pearson_corr_pair = np.corrcoef(pair_freq_observed, pair_freq_sampled)[0, 1]
 
-    ## third trace for covariances
-    cov_observed = [pairwise_freq_observed[i,j,a,b] - (single_freq_observed[i,a] * single_freq_observed[j,b])   for i in range(L-1) for j in range(i+1, L) for a in range(20) for b in range(20)]
-    cov_sampled  = [pairwise_freq_sampled[i,j,a,b] - (single_freq_sampled[i,a] * single_freq_sampled[j,b])   for i in range(L-1) for j in range(i+1, L) for a in range(20) for b in range(20)]
+    ## third trace: covariances
     trace_cov = go.Scattergl(
         x=cov_observed,
         y=cov_sampled,
         mode='markers',
         name='covariances',
         text=parir_freq_annotation,
-        opacity=0.3,
-        showlegend=True
+        marker=dict(color='black'),
+        opacity=0.1,
+        showlegend=False
     )
     pearson_corr_cov = np.corrcoef(cov_observed, cov_sampled)[0, 1]
 
-    ## diagonal that represents perfect correlation
-    diagonal = go.Scattergl(
-        x=[0, 1],
-        y=[0, 1],
+
+    #define diagonals
+    diag_single = [np.min(x_single  + y_single), np.max(x_single  + y_single)]
+    diag_pair = [np.min(pair_freq_observed + pair_freq_sampled), np.max(pair_freq_observed  + pair_freq_sampled)]
+    diag_cov = [np.min(cov_observed + cov_sampled), np.max(cov_observed+ cov_sampled)]
+
+
+    diagonal_single = go.Scattergl(
+        x=diag_single,
+        y=diag_single,
         mode="lines",
         showlegend=False,
-        marker=dict(color='black')
+        marker=dict(color='rgb(153, 204, 255)')
+    )
+
+    diagonal_pair = go.Scattergl(
+        x=diag_pair,
+        y=diag_pair,
+        mode="lines",
+        showlegend=False,
+        marker=dict(color='rgb(153, 204, 255)')
     )
 
     diagonal_cov = go.Scattergl(
-        x=[np.min(cov_observed +cov_sampled) , np.max(cov_observed +cov_sampled)],
-        y=[np.min(cov_observed +cov_sampled) , np.max(cov_observed +cov_sampled)],
+        x=diag_cov,
+        y=diag_cov,
         mode="lines",
         showlegend=False,
-        marker=dict(color='black')
+        marker=dict(color='rgb(153, 204, 255)')
     )
 
+
+
     ## define subplots
-    fig = tools.make_subplots(rows=1, cols=3, print_grid=False)
+    fig = tools.make_subplots(
+        rows=1,
+        cols=3,
+        subplot_titles=["single site amino acid frequencies", "pairwise amino acid frequencies", "covariances"],
+        horizontal_spacing = 0.05,
+        print_grid=False
+    )
 
     ## add traces as subplots
     fig.append_trace(trace_single_frequencies, 1, 1)
-    fig.append_trace(diagonal, 1, 1)
+    fig.append_trace(diagonal_single, 1, 1)
     fig.append_trace(trace_pairwise_frequencies, 1, 2)
-    fig.append_trace(diagonal, 1, 2)
+    fig.append_trace(diagonal_pair, 1, 2)
     fig.append_trace(trace_cov, 1, 3)
     fig.append_trace(diagonal_cov, 1, 3)
 
-    fig['layout'].update(
-        font = dict(size=18),
-        hovermode = 'closest',
-        title = title,
-        width=1500,
-        height=500
+    #incresae size of subplot titles
+    fig['layout']['annotations'][0]['font']['size'] = 20
+    fig['layout']['annotations'][1]['font']['size'] = 20
+    fig['layout']['annotations'][2]['font']['size'] = 20
+
+    # # add text to plot: Pearson correlation coefficient
+    fig['layout']['annotations'].extend(
+        [
+            dict(
+                x=0.13,#0.02,
+                y=0.04,#0.95,
+                xanchor="left",
+                xref='paper',
+                yref='paper',
+                text='Pearson r = ' + str(np.round(pearson_corr_single, decimals=3)),
+                bgcolor = "white",
+                showarrow=False
+            ),
+            dict(
+                x=0.48,#0.37,
+                y=0.04,#0.95,
+                xanchor="left",
+                xref='paper',
+                yref='paper',
+                text='Pearson r = ' + str(np.round(pearson_corr_pair, decimals=3)),
+                bgcolor="white",
+                showarrow=False
+            ),
+            dict(
+                x=0.85,#0.71,
+                y=0.04,#0.95,
+                xanchor="left",
+                xref='paper',
+                yref='paper',
+                text='Pearson r = ' + str(np.round(pearson_corr_cov, decimals=3)),
+                bgcolor="white",
+                showarrow=False
+            )
+        ]
     )
 
-    fig['layout']['yaxis'].update(
-            title="single model frequencies",
+
+
+    #define layout
+    fig['layout'].update(
+        font = dict(size=20),
+        hovermode = 'closest',
+        width=1500,
+        height=500,
+        margin=dict(t=40)
+
+    )
+
+
+    #specify axis layout details
+    fig['layout']['yaxis1'].update(
+            title="statistics from MCMC sample",
             exponentformat="e",
             showexponent='All',
-            range=[0, 1],
-            domain=[0, 1]
+            scaleanchor="x1",
+            scaleratio=1
     )
     fig['layout']['yaxis2'].update(
-            title="pairwise model frequencies",
             exponentformat="e",
             showexponent='All',
-            range=[0, 1],
-            domain=[0, 1]
+            scaleanchor="x2",
+            scaleratio=1
     )
     fig['layout']['yaxis3'].update(
-            title="model covariances",
             exponentformat="e",
             showexponent='All',
-            domain=[0, 1]
+            scaleanchor="x3",
+            scaleratio=1
     )
-
-    fig['layout']['xaxis'].update(
-            title="single observed frequencies",
+    fig['layout']['xaxis1'].update(
             exponentformat="e",
             showexponent='All',
-            range=[0, 1],
-            domain=[0, 0.3],
-            anchor='y1'
+            scaleanchor="y1",
+            scaleratio=1,
+            showspikes=True
     )
     fig['layout']['xaxis2'].update(
-            title="pairwise observed frequencies",
+            title="statistics from natural sequences",
             exponentformat="e",
             showexponent='All',
-            range=[0, 1],
-            domain=[0.35, 0.65],
-            anchor='y2'
+            scaleanchor="y2",
+            scaleratio=1
     )
     fig['layout']['xaxis3'].update(
-            title="observed covariances",
             exponentformat="e",
             showexponent='All',
-            domain=[0.7, 1.0],
-            anchor='y3'
+            scaleanchor="y3",
+            scaleratio=1
     )
 
-
-    #Add text to plot: Pearson correlation coefficient
-    fig['layout']['annotations']=[
-        dict(
-            x=0.4,
-            y=0.9,
-            xref='x',
-            yref='y',
-            text='Pearson corr coeff = ' + str(np.round(pearson_corr_single, decimals=3)),
-            showarrow=False
-        ),
-        dict(
-            x=0.4,
-            y=0.9,
-            xref='x2',
-            yref='y2',
-            text='Pearson corr coeff = ' + str(np.round(pearson_corr_pair, decimals=3)),
-            showarrow=False
-        ),
-        dict(
-            x=np.min(cov_observed) + 0.4 * (np.max(cov_observed) - np.min(cov_observed)),
-            y=0.9,
-            xref='x3',
-            yref='y2',
-            text='Pearson corr coeff = ' + str(np.round(pearson_corr_cov, decimals=3)),
-            showarrow=False
-        )
-    ]
-
-    if log:
-        fig['layout']['xaxis']['type']='log'
-        fig['layout']['yaxis']['type']='log'
+    fig['layout']['xaxis1']['range'] = [0, 1]
+    fig['layout']['xaxis2']['range'] = [0, 1]
+    fig['layout']['yaxis1']['range'] = [0, 1]
+    fig['layout']['yaxis2']['range'] = [0, 1]
 
 
-    plotly_plot(fig, filename=plot_out, auto_open=False, link_text='')
+
+    plotly_plot(fig, filename=plot_out, auto_open=False, link_text='', image_filename=plot_out.replace("html", ""))
+
+
 
 def plot_alignment(aa_counts_single, title, plot_file, freq=True):
 
