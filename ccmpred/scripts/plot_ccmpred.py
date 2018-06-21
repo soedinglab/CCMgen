@@ -78,7 +78,7 @@ def parse_args():
     alnstats_in_req.add_argument("--aln-format", dest="aln_format", default="psicov",
                                help="File format for MSAs [default: \"%(default)s\"]")
     alnstats_in_req.add_argument('-s', '--sampled-alignment-file', dest='sample_aln_file', type=str, required=True,
-        help='path to sampled alignment' )
+                               help='path to sampled alignment' )
 
 
     args = parser.parse_args()
@@ -202,7 +202,6 @@ def plot_aminoacid_distribution(alignment_file, aln_format, plot_file):
 
 def plot_alignment_statistics(alignment_file, sample_aln_file, aln_format, plot_file):
 
-    protein = os.path.basename(alignment_file).split(".")[0]
 
     #read alignment
     try:
@@ -214,48 +213,33 @@ def plot_alignment_statistics(alignment_file, sample_aln_file, aln_format, plot_
     try:
         sampled_alignment = io.read_msa(sample_aln_file, aln_format)
     except OSError as e:
-        print("Problems reading alignment file {0}: {1}!".format(sampled_alignment, e))
+        print("Problems reading alignment file {0}: {1}!".format(sample_aln_file, e))
         sys.exit(0)
 
 
-    #get alignment statistics
-    N_o = alignment.shape[0]
-    N_s = sampled_alignment.shape[0]
-    L = alignment.shape[1]
-    div=np.round(np.sqrt(N_o)/L, decimals=3)
 
+    # compute sequence weights for observed sequences
+    weights = ccmpred.weighting.weights_simple(alignment, 0.8)
 
-    ### alignment
-
-    # compute sequence weights
-    weights = ccmpred.weighting.weights_simple(alignment, 0.8, False)
-    neff_weights_o = np.round(np.sum(weights), decimals=3)
-    neff_entropy_o = np.round(ccmpred.weighting.get_HHsuite_neff(alignment), decimals=3)
-
-    # compute frequencies
+    # compute observed amino acid frequencies
     pseudocounts = PseudoCounts(alignment, weights)
     pseudocounts.calculate_frequencies(
         'uniform_pseudocounts', 1, 1, remove_gaps=False
     )
-
-    # get original amino acid frequencies
     single_freq_observed, pairwise_freq_observed = pseudocounts.freqs
 
 
-    ### sampled alignment
 
-    # compute sequence weights
-    weights_sampled = ccmpred.weighting.weights_simple(sampled_alignment, 0.8, False)
-    neff_weights_s = np.round(np.sum(weights_sampled), decimals=3)
-    neff_entropy_s = np.round(ccmpred.weighting.get_HHsuite_neff(sampled_alignment), decimals=3)
 
-    # compute frequencies
+
+    # compute sequence weights for sampled sequences (usually all sampled sequences obtain weight = 1 )
+    weights_sampled = ccmpred.weighting.weights_simple(sampled_alignment, 0.8)
+
+    # compute sampled amino acid frequencies
     pseudocounts = PseudoCounts(sampled_alignment, weights_sampled)
     pseudocounts.calculate_frequencies(
         'uniform_pseudocounts', 1, 1, remove_gaps=False
     )
-
-    # get amino acid frequencies
     single_freq_sampled, pairwise_freq_sampled = pseudocounts.freqs
 
     # degap the frequencies (ignore gap frequencies)
@@ -264,19 +248,12 @@ def plot_alignment_statistics(alignment_file, sample_aln_file, aln_format, plot_
     pairwise_freq_observed = pseudocounts.degap(pairwise_freq_observed, False)
     pairwise_freq_sampled = pseudocounts.degap(pairwise_freq_sampled, False)
 
-    # Define plot title
-    title="Observed and model alignment statistics for {0}".format(protein)
-    title+="<br>original: N={0}, L={1}, div={2}, neff(weights)={3}, neff(entropy)={4}".format(
-        N_o,L,div,neff_weights_o, neff_entropy_o)
-    title+="<br>sampled: N={0}, L={1}, neff(weights)={2}, neff(entropy)={3}".format(
-        N_s,L,neff_weights_s, neff_entropy_s)
-
 
     # plot
     plot.plot_empirical_vs_model_statistics(
         single_freq_observed, single_freq_sampled,
         pairwise_freq_observed, pairwise_freq_sampled,
-        title, plot_file, log=False)
+        plot_file)
 
 
 
