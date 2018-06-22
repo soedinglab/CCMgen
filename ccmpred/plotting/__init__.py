@@ -25,7 +25,7 @@ def plot_percentage_gaps_per_position(single_freq, plot_file=None):
         go.Scatter(
             x=[x for x in range(1,L+1)],
             y=gaps,
-            name = "percentage of gaps",
+            name = "fraction gaps",
             mode="Lines",
             line=dict(width=3)
         )
@@ -35,7 +35,7 @@ def plot_percentage_gaps_per_position(single_freq, plot_file=None):
         go.Scatter(
             x=[x for x in range(1,L+1)],
             y=entropy_per_position,
-            name = "relative Entropy",
+            name = "entropy",
             mode="Lines",
             line=dict(width=3)
         )
@@ -62,16 +62,32 @@ def plot_contact_map_someScore_plotly(plot_matrix, title, seqsep, gaps_percentag
 
     data = []
 
+
+    hover_text = ["residue i: {0}<br>residue j: {1}<br>score: {2}".format(
+                plot_matrix.residue_i.tolist()[i],
+                plot_matrix.residue_j.tolist()[i],
+                np.round(plot_matrix.confidence.tolist()[i], decimals=3))
+                for i in range(len(plot_matrix.residue_i.tolist()))]
+
+    hover_text  += ["residue i: {0}<br>residue j: {1}<br>score: {2}".format(
+                plot_matrix.residue_j.tolist()[i],
+                plot_matrix.residue_i.tolist()[i],
+                np.round(plot_matrix.confidence.tolist()[i], decimals=3))
+                for i in range(len(plot_matrix.residue_i.tolist()))]
+
     # add predicted contact map
     data.append(
         go.Heatmap(
-            x=plot_matrix.residue_i.tolist(),
-            y=plot_matrix.residue_j.tolist(),
-            z=plot_matrix.confidence.tolist(),
+            x=plot_matrix.residue_i.tolist() + plot_matrix.residue_j.tolist(),
+            y=plot_matrix.residue_j.tolist() + plot_matrix.residue_i.tolist(),
+            z=plot_matrix.confidence.tolist() + plot_matrix.confidence.tolist(),
             name='predicted',
-            colorscale='Greys', reversescale=True,
+            hoverinfo="text",
+            text=hover_text,
+            colorscale='Greys',
+            reversescale=True,
             colorbar=go.ColorBar(
-                x=1.02,
+                x=1,
                 y=0.4,
                 yanchor='bottom',
                 len=0.4,
@@ -79,37 +95,90 @@ def plot_contact_map_someScore_plotly(plot_matrix, title, seqsep, gaps_percentag
             )
         )
     )
-    data.append(
-        go.Heatmap(
-            x=plot_matrix.residue_j.tolist(),
-            y=plot_matrix.residue_i.tolist(),
-            z=plot_matrix.confidence.tolist(),
-            name='predicted'
-        )
-    )
 
 
     # if distances and class are available
     if 'contact' in plot_matrix and 'distance' in plot_matrix:
 
+        # colorscale from red (small distance) to blue(large distance)
+        zmax = np.max(plot_matrix.distance)
+        percent_at_contact_thr = 8 / zmax
+        distance_colorscale = [[0, 'rgb(128, 0, 0)'], [percent_at_contact_thr, 'rgb(255, 255, 255)'],
+                               [1, 'rgb(22, 96, 167)']]
+
+        hover_text = ["residue i: {0}<br>residue j: {1}<br>score: {2}<br>distance: {3}".format(
+                plot_matrix.residue_j.tolist()[i],
+                plot_matrix.residue_i.tolist()[i],
+                np.round(plot_matrix.confidence.tolist()[i], decimals=3),
+                np.round(plot_matrix.distance.tolist()[i], decimals=3))
+                for i in range(len(plot_matrix.residue_i.tolist()))]
+
+
+        hover_text += ["residue i: {0}<br>residue j: {1}<br>score: {2}<br>distance: {3}".format(
+                plot_matrix.residue_i.tolist()[i],
+                plot_matrix.residue_j.tolist()[i],
+                np.round(plot_matrix.confidence.tolist()[i], decimals=3),
+                np.round(plot_matrix.distance.tolist()[i], decimals=3))
+                for i in range(len(plot_matrix.residue_i.tolist()))]
+
+
+        # define triangle on opposite site of Predictions
+        data.append(
+            go.Heatmap(
+                x=plot_matrix.residue_j.tolist(),
+                y=plot_matrix.residue_i.tolist(),
+                z=plot_matrix.distance.tolist(),
+                name='observed',
+                hoverinfo="text",
+                text=hover_text,
+                zmin=0,
+                zmax=zmax,
+                colorscale=distance_colorscale,
+                colorbar=go.ColorBar(
+                    x=1,
+                    y=0,
+                    yanchor='bottom',
+                    len=0.4,
+                    title="Distance [A]")
+            )
+        )
+
+
         # define true and false positives among the L/5 highest scores
         sub_L5_true = plot_matrix.query('distance > 0').head(int(L / 5)).query('contact > 0')
         sub_L5_false = plot_matrix.query('distance > 0').head(int(L / 5)).query('contact < 1')
 
+        tp_text = ["residue i: {0}<br>residue j: {1}<br>score: {2}<br>distance: {3}".format(
+                sub_L5_true.residue_i.tolist()[i],
+                sub_L5_true.residue_j.tolist()[i],
+                np.round(plot_matrix.confidence.tolist()[i], decimals=3),
+                np.round(plot_matrix.distance.tolist()[i], decimals=3))
+                for i in range(len(sub_L5_true.residue_i.tolist()))]
+
+        tp_text += ["residue i: {0}<br>residue j: {1}<br>score: {2}<br>distance: {3}".format(
+                sub_L5_true.residue_j.tolist()[i],
+                sub_L5_true.residue_i.tolist()[i],
+                np.round(plot_matrix.confidence.tolist()[i], decimals=3),
+                np.round(plot_matrix.distance.tolist()[i], decimals=3))
+                for i in range(len(sub_L5_true.residue_i.tolist()))]
+
         if len(sub_L5_true) > 0:
             # Mark TP and FP in the plot with little crosses
-            tp = go.Scatter(
-                x=sub_L5_true['residue_i'].tolist() + sub_L5_true['residue_j'].tolist(),
-                y=sub_L5_true['residue_j'].tolist() + sub_L5_true['residue_i'].tolist(),
-                mode='markers',
-                marker=dict(
-                    symbol=134,
-                    color="green",
-                    line=dict(width=2),
-                    size=12
-                ),  # size_tp, sizeref=np.max([size_tp + size_fp])/15, sizemode = 'diameter'),
-                name="TP (L/5)",
-                hoverinfo="none"
+            data.append(
+                go.Scatter(
+                    x=sub_L5_true['residue_i'].tolist() + sub_L5_true['residue_j'].tolist(),
+                    y=sub_L5_true['residue_j'].tolist() + sub_L5_true['residue_i'].tolist(),
+                    mode='markers',
+                    text=tp_text,
+                    hoverinfo="text",
+                    marker=dict(
+                        symbol=134,
+                        color="green",
+                        line=dict(width=2),
+                        size=12
+                    ),
+                    name="TP (L/5)"
+                )
             )
 
         # 'rgb(255,247,188)', 'rgb(254,196,79)'
@@ -120,66 +189,66 @@ def plot_contact_map_someScore_plotly(plot_matrix, title, seqsep, gaps_percentag
         green_yello_red_interpolated = cl.interp(green_yello_red, fp_distance_range)
         data_color = [green_yello_red_interpolated[int(x - max_tp)] for x in sub_L5_false['distance']]
 
+        fp_text = ["residue i: {0}<br>residue j: {1}<br>score: {2}<br>distance: {3}".format(
+                sub_L5_false.residue_i.tolist()[i],
+                sub_L5_false.residue_j.tolist()[i],
+                np.round(plot_matrix.confidence.tolist()[i], decimals=3),
+                np.round(plot_matrix.distance.tolist()[i], decimals=3))
+                for i in range(len(sub_L5_false.residue_i.tolist()))]
+
+        fp_text += ["residue i: {0}<br>residue j: {1}<br>score: {2}<br>distance: {3}".format(
+                sub_L5_false.residue_j.tolist()[i],
+                sub_L5_false.residue_i.tolist()[i],
+                np.round(plot_matrix.confidence.tolist()[i], decimals=3),
+                np.round(plot_matrix.distance.tolist()[i], decimals=3))
+                for i in range(len(sub_L5_false.residue_i.tolist()))]
+
+
         if len(sub_L5_false) > 0:
-            fp = go.Scatter(
-                x=sub_L5_false['residue_i'].tolist() + sub_L5_false['residue_j'].tolist(),
-                y=sub_L5_false['residue_j'].tolist() + sub_L5_false['residue_i'].tolist(),
-                mode='markers',
-                marker=dict(
-                    symbol=134,
-                    # color="red",
-                    color=data_color * 2,
-                    colorscale=green_yello_red_interpolated,
-                    line=dict(width=2),
-                    size=12
-                ),  # size_fp, sizeref=np.max([size_tp + size_fp])/15, sizemode = 'diameter'),
-                name="FP (L/5)",
-                hoverinfo="none"
+            data.append(
+                go.Scatter(
+                    x=sub_L5_false['residue_i'].tolist() + sub_L5_false['residue_j'].tolist(),
+                    y=sub_L5_false['residue_j'].tolist() + sub_L5_false['residue_i'].tolist(),
+                    mode='markers',
+                    text=fp_text,
+                    hoverinfo="text",
+                    marker=dict(
+                        symbol=134,
+                        color=data_color * 2,
+                        colorscale=green_yello_red_interpolated,
+                        line=dict(width=2),
+                        size=12
+                    ),
+                    name="FP (L/5)"
+
+                )
             )
 
-        # colorscale from red (small distance) to blue(large distance)
-        zmax = np.max(plot_matrix.distance)
-        percent_at_contact_thr = 8 / zmax
-        distance_colorscale = [[0, 'rgb(128, 0, 0)'], [percent_at_contact_thr, 'rgb(255, 255, 255)'],
-                               [1, 'rgb(22, 96, 167)']]
 
-        # define triangle on opposite site of Predictions
-        heatmap_observed = go.Heatmap(
-            x=plot_matrix.residue_j.tolist(),
-            y=plot_matrix.residue_i.tolist(),
-            z=plot_matrix.distance.tolist(),
-            name='observed',
-            zmin=0,
-            zmax=zmax,
-            colorscale=distance_colorscale,
-            # colorscale='Greys', reversescale=True,
-            # colorscale=distance_colors_interpol, reversescale=True,
-            colorbar=go.ColorBar(
-                x=1.02,
-                y=0,
-                yanchor='bottom',
-                len=0.4,
-                title="Distance [A]")
-        )
-
-        # put all plot elements in data list
-        data[1] = heatmap_observed
-
-        if len(sub_L5_true) > 0:
-            data.append(tp)
-        if len(sub_L5_false) > 0:
-            data.append(fp)
 
 
     # add diagonal and diagonals marking sequence separation
-    data.append(go.Scatter(x=[0, L], y=[0, L], mode='lines', line=dict(color=('rgb(0, 0, 0)'), width=4), hoverinfo=None,
-                           showlegend=False))
+    data.append(go.Scatter(
+        x=[0, L], y=[0, L],
+        mode='lines',
+        line=dict(color=('rgb(0, 0, 0)'), width=4),
+        hoverinfo=None,
+        showlegend=False)
+    )
     data.append(
-        go.Scatter(x=[0, L - seqsep + 1], y=[seqsep - 1, L], mode='lines', line=dict(color=('rgb(0, 0, 0)'), width=2),
-                   showlegend=False))
+        go.Scatter(
+            x=[0, L - seqsep + 1], y=[seqsep - 1, L],
+            mode='lines',
+            line=dict(color=('rgb(0, 0, 0)'), width=2),
+            showlegend=False)
+    )
     data.append(
-        go.Scatter(x=[seqsep - 1, L], y=[0, L - seqsep + 1], mode='lines', line=dict(color=('rgb(0, 0, 0)'), width=2),
-                   showlegend=False))
+        go.Scatter(
+            x=[seqsep - 1, L], y=[0, L - seqsep + 1],
+            mode='lines',
+            line=dict(color=('rgb(0, 0, 0)'), width=2),
+            showlegend=False)
+    )
 
 
     fig = tools.make_subplots(rows=2, cols=1, shared_xaxes=True, print_grid=False)
@@ -189,21 +258,21 @@ def plot_contact_map_someScore_plotly(plot_matrix, title, seqsep, gaps_percentag
         for trace in gaps_percentage_plot['data']:
             fig.append_trace(trace, 1, 1)
 
-
     for trace in data:
         fig.append_trace(trace, 2, 1)
 
     fig['layout']['title'] = title
     fig['layout']['width'] = 1000
-    fig['layout']['height'] = 850
-    fig['layout']['legend'] = {'x': 1.02, 'y': 1}  # places legend to the right of plot
+    fig['layout']['height'] = 1000
+    fig['layout']['legend'] = {'x': 1, 'y': 1}  # places legend to the right of plot
+    fig['layout']['hovermode'] = "closest"
 
-    fig['layout']['xaxis1']['title'] = 'j'
+    fig['layout']['xaxis1']['title'] = 'i'
     fig['layout']['xaxis1']['range'] = [0.5, L + 0.5]
     fig['layout']['xaxis1']['domain'] = [0.0, 1.0]
     fig['layout']['xaxis1']['zeroline'] = False
 
-    fig['layout']['yaxis2']['title'] = 'i'
+    fig['layout']['yaxis2']['title'] = 'j'
     fig['layout']['yaxis2']['range'] = [0.5, L + 0.5]
     fig['layout']['yaxis2']['domain'] = [0.0, 1.0]
     fig['layout']['yaxis2']['scaleanchor'] = "x"
@@ -215,7 +284,7 @@ def plot_contact_map_someScore_plotly(plot_matrix, title, seqsep, gaps_percentag
     #percentage gaps and entropy plot
     if gaps_percentage_plot is not None:
         fig['layout']['yaxis2']['domain'] = [0.0, 0.9]
-        fig['layout']['xaxis1']['domain'] = [0.0, 0.9]
+        #fig['layout']['xaxis1']['domain'] = [0.0, 0.9]
         fig['layout']['yaxis1']['domain'] = [0.9, 1.0]
 
 

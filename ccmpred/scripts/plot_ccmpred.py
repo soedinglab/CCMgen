@@ -42,9 +42,10 @@ def parse_args():
     mutual_excl.add_argument('--braw-file', dest='braw_file', type=str,help='path to binary raw coupling file')
 
     cmap_in = parser_cmap.add_argument_group('Optional Inputs')
-    cmap_in.add_argument('-p', '--pdb-file', dest='pdb_file', type=str,
+    cmap_in.add_argument('-p', '--pdb-file', dest='pdb_file', type=str, default=None,
                         help=' PDB file (renumbered starting from 1) for distance matrix.')
-    cmap_in.add_argument('-a', '--alignment-file', dest='aln_file', type=str, help='path to alignment file')
+    cmap_in.add_argument('-a', '--alignment-file', dest='aln_file', type=str, default=None,
+                         help='path to alignment file')
     cmap_in.add_argument("--aln-format", dest="aln_format", default="fasta",
                                    help="File format for MSAs [default: \"%(default)s\"]")
 
@@ -101,12 +102,16 @@ def plot_contact_map(alignment_file, aln_format, braw_file, mat_file, pdb_file, 
     protein = None
 
 
+    if entropy_correction and (alignment_file is None or braw_file is None):
+        print("Entropy correction requires specification of alignment file and binary raw couplign file!")
+        sys.exit(1)
+
     if alignment_file is not None:
         protein = os.path.basename(alignment_file).split(".")[0]
         alignment = io.read_msa(alignment_file, aln_format)
 
         # compute sequence weights
-        weights = ccmpred.weighting.weights_simple(alignment, 0.8, False)
+        weights = ccmpred.weighting.weights_simple(alignment, 0.8)
 
         # compute frequencies
         pseudocounts = PseudoCounts(alignment, weights)
@@ -149,18 +154,17 @@ def plot_contact_map(alignment_file, aln_format, braw_file, mat_file, pdb_file, 
             mat = io_cm.apc(mat)
 
     L = len(mat)
-    indices_upper_tri = np.triu_indices(L, seqsep)
+    indices_upper_tri_i, indices_upper_tri_j = np.triu_indices(L, seqsep)
 
     plot_matrix = pd.DataFrame()
-    plot_matrix['residue_i'] = indices_upper_tri[0] + 1
-    plot_matrix['residue_j'] = indices_upper_tri[1] + 1
-    plot_matrix['confidence'] = mat[indices_upper_tri]
+    plot_matrix['residue_i'] = indices_upper_tri_i + 1
+    plot_matrix['residue_j'] = indices_upper_tri_j + 1
+    plot_matrix['confidence'] = mat[indices_upper_tri_i, indices_upper_tri_j]
 
     if pdb_file is not None:
-
         # compute distance map from pdb file
         observed_distances = io.distance_map(pdb_file, L)
-        plot_matrix['distance'] = observed_distances[indices_upper_tri]
+        plot_matrix['distance'] = observed_distances[indices_upper_tri_i, indices_upper_tri_j]
         plot_matrix['contact'] = ((plot_matrix.distance < contact_threshold) * 1).tolist()
 
 
