@@ -61,16 +61,18 @@ def distance_map(pdb_file, L=None, distance_definition="Cb"):
     model = structure[0]
     chain = model.get_list()[0]
 
-    # due to missing residues in the pdb file
-    # protein length L can be > than len(chain.get_list())
-    L_chain = chain.get_list()[-1].id[1]
-    if L is None or L < L_chain:
+    # due to missing residues in the pdb file (or additionally solved??)
+    # protein length L can differ from len(chain.get_list())
+    if L is None:
         L = chain.get_list()[-1].id[1]
 
     distance_map = np.full((L, L), np.NaN)
-    for residue_one in chain.get_list():
-        for residue_two in chain.get_list():
-            distance_map[residue_one.id[1] - 1, residue_two.id[1] - 1] = calc_residue_dist(residue_one, residue_two, distance_definition)
 
+    residues = chain.get_list()
+    for i in range(np.min([L, len(chain.get_list())])):
+        for j in range(np.min([L, len(chain.get_list())])):
+            residue_one = residues[i]
+            residue_two = residues[j]
+            distance_map[residue_one.id[1] - 1, residue_two.id[1] - 1] = calc_residue_dist(residue_one, residue_two, distance_definition)
 
     return distance_map
