@@ -133,11 +133,15 @@ class CCMpred():
 
         meta['workflow'][0]['msafile'] = {}
         meta['workflow'][0]['msafile']['neff'] = self.neff
+        meta['workflow'][0]['msafile']['diversity'] = self.diversity
         meta['workflow'][0]['msafile']['nrow'] = self.N
         meta['workflow'][0]['msafile']['ncol'] = self.L
         meta['workflow'][0]['msafile']['file'] = self.alignment_file
         meta['workflow'][0]['msafile']['max_gap_pos'] = self.max_gap_pos
         meta['workflow'][0]['msafile']['max_gap_seq'] = self.max_gap_seq
+
+        if self.max_gap_pos < 100:
+            meta['workflow'][0]['msafile']['gapped_positions'] = self.gapped_positions.tolist()
 
         meta['workflow'][0]['pseudocounts'] = {}
         meta['workflow'][0]['pseudocounts']['pseudocount_type'] = self.pseudocounts.pseudocount_type
