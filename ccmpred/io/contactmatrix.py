@@ -99,7 +99,6 @@ def write_matrix(matfile, mat, meta):
     if matfile.endswith(".gz"):
         with gzip.open(matfile, 'wb') as f:
             np.savetxt(f, mat)
-            #f.write("#>META> ".encode("utf-8") + json.dumps(meta).encode("utf-8") + "\n".encode("utf-8"))
             f.write("#>META> " + json.dumps(meta) + "\n")
         f.close()
     else:
@@ -133,3 +132,21 @@ def read_matrix(matfile):
         print(str(matfile) + " does not contain META info. (Line must start with #META!)")
 
     return mat, meta
+
+def find_dict_key(key, dictionary):
+    for k, v in dictionary.items():
+        if k == key:
+            return v
+        if isinstance(v, dict):
+            res = find_dict_key(key, v)
+            if res is not None:
+                return res
+        if isinstance(v, list):
+            for d in v:
+                if isinstance(d, list) or isinstance(d, dict):
+                    res = find_dict_key(key, d)
+                    if res is not None:
+                        return res
+
+
+    return None
