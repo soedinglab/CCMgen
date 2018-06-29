@@ -78,7 +78,7 @@ def parse_args():
 
     grp_s0 = parser.add_argument_group("Initial Sequence Options")
     grp_s0_me = grp_s0.add_mutually_exclusive_group()
-    grp_s0_me.add_argument("--seq0-mrf",   dest="seq0_mrf", metavar="NMUT", type=int, default=500,
+    grp_s0_me.add_argument("--seq0-mrf",   dest="seq0_mrf", metavar="NMUT", type=int, default=10,
                         help="Start out with an all-alanine sequence and use the MRF model to evolve "
                              "the sequence for NMUT Gibbs steps. [default: NMUT=%(default)s]")
     grp_s0_me.add_argument("--seq0-file",  dest="seq0_file",   metavar="SEQ_FILE", type=str,
