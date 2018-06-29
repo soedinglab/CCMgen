@@ -50,7 +50,6 @@ def read_msa_psicov(f, return_indices=True, return_identifiers=False):
         return msa
 
 
-
 def write_msa(f, msa, ids, format, is_indices=True, descriptions=None):
 
     if format == 'psicov':
@@ -58,14 +57,12 @@ def write_msa(f, msa, ids, format, is_indices=True, descriptions=None):
     else:
         write_msa_biopython(f, msa, ids, format, is_indices=is_indices, descriptions=descriptions)
 
-
 def write_msa_psicov(f, msa, is_indices=True):
 
     if is_indices:
         msa = ccmpred.counts.char_msa(msa)
 
     f.write("\n".join(["".join(chr(cell) for cell in row) for row in msa]))
-
 
 def write_msa_biopython(f, msa, ids, format, is_indices=True, descriptions=None):
     import Bio.SeqIO
