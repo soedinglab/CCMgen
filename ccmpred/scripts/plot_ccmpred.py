@@ -15,6 +15,7 @@ from ccmpred.pseudocounts import PseudoCounts
 import ccmpred.io as io
 import ccmpred.io.contactmatrix as io_cm
 import ccmpred.plotting as plot
+import ccmpred.gaps as gaps
 import pandas as pd
 import numpy as np
 
@@ -80,6 +81,11 @@ def parse_args():
                                help="File format for MSAs [default: \"%(default)s\"]")
     alnstats_in_req.add_argument('-s', '--sampled-alignment-file', dest='sample_aln_file', type=str, required=True,
                                help='path to sampled alignment' )
+
+    parser_aln_stats.add_argument("--max-gap-pos", dest="max_gap_pos", default=100, type=int,
+                                  help="Ignore alignment positions with > MAX_GAP_POS percent gaps. "
+                                       "[default: %(default)s == no removal of positions]")
+
 
 
     args = parser.parse_args()
@@ -204,7 +210,7 @@ def plot_aminoacid_distribution(alignment_file, aln_format, plot_file):
             protein, N, L, np.round(diversity, decimals=3)), plot_file
     )
 
-def plot_alignment_statistics(alignment_file, sample_aln_file, aln_format, plot_file):
+def plot_alignment_statistics(alignment_file, sample_aln_file, aln_format, max_gap_pos, plot_file):
 
 
     #read alignment
@@ -221,6 +227,11 @@ def plot_alignment_statistics(alignment_file, sample_aln_file, aln_format, plot_
         sys.exit(0)
 
 
+    #Remove positions with > MAX_GAP_POS % gaps
+    if max_gap_pos < 100:
+        alignment, gapped_positions = gaps.remove_gapped_positions(alignment, max_gap_pos)
+        non_gapped_positions = [i for i in range(sampled_alignment.shape[1]) if i not in gapped_positions]
+        sampled_alignment = np.ascontiguousarray(sampled_alignment[:, non_gapped_positions])
 
     # compute sequence weights for observed sequences
     weights = ccmpred.weighting.weights_simple(alignment, 0.8)
@@ -231,9 +242,6 @@ def plot_alignment_statistics(alignment_file, sample_aln_file, aln_format, plot_
         'uniform_pseudocounts', 1, 1, remove_gaps=False
     )
     single_freq_observed, pairwise_freq_observed = pseudocounts.freqs
-
-
-
 
 
     # compute sequence weights for sampled sequences (usually all sampled sequences obtain weight = 1 )
@@ -251,7 +259,6 @@ def plot_alignment_statistics(alignment_file, sample_aln_file, aln_format, plot_
     single_freq_sampled = pseudocounts.degap(single_freq_sampled, False)
     pairwise_freq_observed = pseudocounts.degap(pairwise_freq_observed, False)
     pairwise_freq_sampled = pseudocounts.degap(pairwise_freq_sampled, False)
-
 
     # plot
     plot.plot_empirical_vs_model_statistics(
@@ -287,7 +294,7 @@ def main():
         print("Write plot for alignment statistics to {0}".format(args.plot_file))
 
         plot_alignment_statistics(
-            args.aln_file, args.sample_aln_file, args.aln_format,
+            args.aln_file, args.sample_aln_file, args.aln_format, args.max_gap_pos,
             args.plot_file
         )
 
