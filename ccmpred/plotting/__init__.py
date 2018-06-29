@@ -514,8 +514,6 @@ def plot_empirical_vs_model_statistics(
 
     plotly_plot(fig, filename=plot_out, auto_open=False, link_text='', image_filename=plot_out.replace("html", ""))
 
-
-
 def plot_alignment(aa_counts_single, title, plot_file, freq=True):
 
     Neff = np.sum(aa_counts_single[0,:])
