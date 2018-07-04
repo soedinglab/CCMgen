@@ -12,7 +12,7 @@ setup(
     author_email="Susann.Vorberg@gmail.com",
     url="https://github.com/soedinglab/ccmgen",
     packages=find_packages(),
-    install_requires=['msgpack-python', 'numpy', 'plotly', 'scipy', 'pandas', 'biopython', 'colorlover'],
+    install_requires=['msgpack-python', 'numpy', 'plotly==3.0.0rc10', 'scipy', 'pandas', 'biopython', 'colorlover'],
     ext_modules=[
         ext(
             'ccmpred.objfun.pll.cext.libpll',
