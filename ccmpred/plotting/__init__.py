@@ -25,8 +25,8 @@ def plot_percentage_gaps_per_position(single_freq, plot_file=None):
         go.Scatter(
             x=[x for x in range(1,L+1)],
             y=gaps,
-            name = "fraction gaps",
-            mode="Lines",
+            name="fraction gaps",
+            mode="lines",
             line=dict(width=3)
         )
     )
@@ -35,8 +35,8 @@ def plot_percentage_gaps_per_position(single_freq, plot_file=None):
         go.Scatter(
             x=[x for x in range(1,L+1)],
             y=entropy_per_position,
-            name = "entropy",
-            mode="Lines",
+            name="entropy",
+            mode="lines",
             line=dict(width=3)
         )
     )
@@ -86,12 +86,12 @@ def plot_contact_map_someScore_plotly(plot_matrix, title, seqsep, gaps_percentag
             text=hover_text,
             colorscale='Greys',
             reversescale=True,
-            colorbar=go.ColorBar(
-                x=1,
-                y=0.4,
-                yanchor='bottom',
-                len=0.4,
-                title="Score"
+            colorbar=dict(
+                x = 1,
+                y = 0.4,
+                yanchor = 'bottom',
+                len = 0.4,
+                title = "Score"
             )
         )
     )
@@ -103,24 +103,24 @@ def plot_contact_map_someScore_plotly(plot_matrix, title, seqsep, gaps_percentag
         # colorscale from red (small distance) to blue(large distance)
         zmax = np.max(plot_matrix.distance)
         percent_at_contact_thr = 8 / zmax
-        distance_colorscale = [[0, 'rgb(128, 0, 0)'], [percent_at_contact_thr, 'rgb(255, 255, 255)'],
+        distance_colorscale = [[0, 'rgb(128, 0, 0)'],
+                               [percent_at_contact_thr, 'rgb(255, 255, 255)'],
                                [1, 'rgb(22, 96, 167)']]
 
+
         hover_text = ["residue i: {0}<br>residue j: {1}<br>score: {2}<br>distance: {3}".format(
-                plot_matrix.residue_j.tolist()[i],
                 plot_matrix.residue_i.tolist()[i],
+                plot_matrix.residue_j.tolist()[i],
                 np.round(plot_matrix.confidence.tolist()[i], decimals=3),
                 np.round(plot_matrix.distance.tolist()[i], decimals=3))
                 for i in range(len(plot_matrix.residue_i.tolist()))]
-
 
         hover_text += ["residue i: {0}<br>residue j: {1}<br>score: {2}<br>distance: {3}".format(
-                plot_matrix.residue_i.tolist()[i],
                 plot_matrix.residue_j.tolist()[i],
+                plot_matrix.residue_i.tolist()[i],
                 np.round(plot_matrix.confidence.tolist()[i], decimals=3),
                 np.round(plot_matrix.distance.tolist()[i], decimals=3))
                 for i in range(len(plot_matrix.residue_i.tolist()))]
-
 
         # define triangle on opposite site of Predictions
         data.append(
@@ -134,7 +134,7 @@ def plot_contact_map_someScore_plotly(plot_matrix, title, seqsep, gaps_percentag
                 zmin=0,
                 zmax=zmax,
                 colorscale=distance_colorscale,
-                colorbar=go.ColorBar(
+                colorbar=dict(
                     x=1,
                     y=0,
                     yanchor='bottom',
@@ -151,15 +151,15 @@ def plot_contact_map_someScore_plotly(plot_matrix, title, seqsep, gaps_percentag
         tp_text = ["residue i: {0}<br>residue j: {1}<br>score: {2}<br>distance: {3}".format(
                 sub_L5_true.residue_i.tolist()[i],
                 sub_L5_true.residue_j.tolist()[i],
-                np.round(plot_matrix.confidence.tolist()[i], decimals=3),
-                np.round(plot_matrix.distance.tolist()[i], decimals=3))
+                np.round(sub_L5_true.confidence.tolist()[i], decimals=3),
+                np.round(sub_L5_true.distance.tolist()[i], decimals=3))
                 for i in range(len(sub_L5_true.residue_i.tolist()))]
 
         tp_text += ["residue i: {0}<br>residue j: {1}<br>score: {2}<br>distance: {3}".format(
                 sub_L5_true.residue_j.tolist()[i],
                 sub_L5_true.residue_i.tolist()[i],
-                np.round(plot_matrix.confidence.tolist()[i], decimals=3),
-                np.round(plot_matrix.distance.tolist()[i], decimals=3))
+                np.round(sub_L5_true.confidence.tolist()[i], decimals=3),
+                np.round(sub_L5_true.distance.tolist()[i], decimals=3))
                 for i in range(len(sub_L5_true.residue_i.tolist()))]
 
         if len(sub_L5_true) > 0:
@@ -181,28 +181,19 @@ def plot_contact_map_someScore_plotly(plot_matrix, title, seqsep, gaps_percentag
                 )
             )
 
-        # 'rgb(255,247,188)', 'rgb(254,196,79)'
-        green_yello_red = ['rgb(254,196,79)', 'rgb(222,45,38)']
-        max_tp = 8
-        max_fp = np.max(plot_matrix[plot_matrix.contact < 1]['distance'])
-        fp_distance_range = int(np.ceil((max_fp - max_tp) / 10.0) * 10)
-        green_yello_red_interpolated = cl.interp(green_yello_red, fp_distance_range)
-        data_color = [green_yello_red_interpolated[int(x - max_tp)] for x in sub_L5_false['distance']]
-
         fp_text = ["residue i: {0}<br>residue j: {1}<br>score: {2}<br>distance: {3}".format(
                 sub_L5_false.residue_i.tolist()[i],
                 sub_L5_false.residue_j.tolist()[i],
-                np.round(plot_matrix.confidence.tolist()[i], decimals=3),
-                np.round(plot_matrix.distance.tolist()[i], decimals=3))
+                np.round(sub_L5_false.confidence.tolist()[i], decimals=3),
+                np.round(sub_L5_false.distance.tolist()[i], decimals=3))
                 for i in range(len(sub_L5_false.residue_i.tolist()))]
 
         fp_text += ["residue i: {0}<br>residue j: {1}<br>score: {2}<br>distance: {3}".format(
                 sub_L5_false.residue_j.tolist()[i],
                 sub_L5_false.residue_i.tolist()[i],
-                np.round(plot_matrix.confidence.tolist()[i], decimals=3),
-                np.round(plot_matrix.distance.tolist()[i], decimals=3))
+                np.round(sub_L5_false.confidence.tolist()[i], decimals=3),
+                np.round(sub_L5_false.distance.tolist()[i], decimals=3))
                 for i in range(len(sub_L5_false.residue_i.tolist()))]
-
 
         if len(sub_L5_false) > 0:
             data.append(
@@ -214,8 +205,7 @@ def plot_contact_map_someScore_plotly(plot_matrix, title, seqsep, gaps_percentag
                     hoverinfo="text",
                     marker=dict(
                         symbol=134,
-                        color=data_color * 2,
-                        colorscale=green_yello_red_interpolated,
+                        color="red",
                         line=dict(width=2),
                         size=12
                     ),
@@ -290,7 +280,7 @@ def plot_contact_map_someScore_plotly(plot_matrix, title, seqsep, gaps_percentag
 
 
     if plot_file:
-        plotly_plot(fig, filename=plot_file, auto_open=False)
+        plotly_plot(fig, filename=plot_file, auto_open=False, show_link=False)
     else:
         return fig
 
@@ -468,25 +458,25 @@ def plot_empirical_vs_model_statistics(
     fig['layout']['yaxis1'].update(
             title="statistics from MCMC sample",
             exponentformat="e",
-            showexponent='All',
+            showexponent='all',
             scaleanchor="x1",
             scaleratio=1
     )
     fig['layout']['yaxis2'].update(
             exponentformat="e",
-            showexponent='All',
+            showexponent='all',
             scaleanchor="x2",
             scaleratio=1
     )
     fig['layout']['yaxis3'].update(
             exponentformat="e",
-            showexponent='All',
+            showexponent='all',
             scaleanchor="x3",
             scaleratio=1
     )
     fig['layout']['xaxis1'].update(
             exponentformat="e",
-            showexponent='All',
+            showexponent='all',
             scaleanchor="y1",
             scaleratio=1,
             showspikes=True
@@ -494,13 +484,13 @@ def plot_empirical_vs_model_statistics(
     fig['layout']['xaxis2'].update(
             title="statistics from natural sequences",
             exponentformat="e",
-            showexponent='All',
+            showexponent='all',
             scaleanchor="y2",
             scaleratio=1
     )
     fig['layout']['xaxis3'].update(
             exponentformat="e",
-            showexponent='All',
+            showexponent='all',
             scaleanchor="y3",
             scaleratio=1
     )
@@ -512,7 +502,7 @@ def plot_empirical_vs_model_statistics(
 
 
 
-    plotly_plot(fig, filename=plot_out, auto_open=False, link_text='', image_filename=plot_out.replace("html", ""))
+    plotly_plot(fig, filename=plot_out, auto_open=False, show_link=False, image_filename=plot_out.replace("html", ""))
 
 def plot_alignment(aa_counts_single, title, plot_file, freq=True):
 
