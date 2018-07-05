@@ -105,9 +105,6 @@ def parse_args():
 
     opt = parser.parse_args()
 
-    print(opt.neff)
-    print(opt.alnfile)
-
     if not opt.mcmc:
 
         if not opt.tree_source and not opt.tree_file:
@@ -194,13 +191,13 @@ def main():
             if opt.seq0_mrf:
 
                 seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, opt.seq0_mrf)
-                print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) : {1}".format(
+                print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) :\n{1}".format(
                     opt.seq0_mrf, "".join([ccmpred.io.alignment.AMINO_ACIDS[c] for c in seq0[0]])))
 
             elif opt.seq0_file:
 
                 seq0 = ccmpred.io.alignment.read_msa(opt.seq0_file, opt.aln_format)
-                print("Ancestor sequence: {0}".format("".join([ccmpred.io.alignment.AMINO_ACIDS[c] for c in seq0[0]])))
+                print("Ancestor sequence:\n{0}".format("".join([ccmpred.io.alignment.AMINO_ACIDS[c] for c in seq0[0]])))
                 if seq0[0].shape[1] != ncol:
                     print("Length of ancestor sequence must match dimension of MRF model!")
                     exit(0)
