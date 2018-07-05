@@ -171,7 +171,7 @@ def sample_to_neff_increasingly(tree, nseq, target_neff, ncol, x, gibbs_steps):
 
         # sample a new start sequence
         seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, gibbs_steps)
-        print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) : {1}".format(gibbs_steps, "".join(
+        print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) :\n{1}".format(gibbs_steps, "".join(
             [AMINO_ACIDS[c] for c in seq0[0]])))
 
         # how many substitutions per sequence will be performed
