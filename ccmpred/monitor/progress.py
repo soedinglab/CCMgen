@@ -89,12 +89,12 @@ class Progress():
                     xaxis1=dict(
                         title="iteration",
                         exponentformat="e",
-                        showexponent='All'
+                        showexponent='all'
                     ),
                     yaxis1=dict(
                         title="metric",
                         exponentformat="e",
-                        showexponent='All'
+                        showexponent='all'
                     ),
                     font=dict(size=18),
                     titlefont=dict(size=14)
