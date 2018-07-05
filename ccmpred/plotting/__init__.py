@@ -4,7 +4,6 @@ from plotly import tools
 import ccmpred.io as io
 import numpy as np
 import scipy.stats
-import colorlover as cl
 
 
 def plot_percentage_gaps_per_position(single_freq, plot_file=None):
@@ -400,48 +399,55 @@ def plot_empirical_vs_model_statistics(
     fig.append_trace(trace_cov, 1, 3)
     fig.append_trace(diagonal_cov, 1, 3)
 
-    #incresae size of subplot titles
-    fig['layout']['annotations'][0]['font']['size'] = 20
-    fig['layout']['annotations'][1]['font']['size'] = 20
-    fig['layout']['annotations'][2]['font']['size'] = 20
 
-    # # add text to plot: Pearson correlation coefficient
-    fig['layout']['annotations'].extend(
-        [
-            dict(
-                x=0.13,#0.02,
-                y=0.04,#0.95,
-                xanchor="left",
-                xref='paper',
-                yref='paper',
-                text='Pearson r = ' + str(np.round(pearson_corr_single, decimals=3)),
-                bgcolor = "white",
-                showarrow=False
-            ),
-            dict(
-                x=0.48,#0.37,
-                y=0.04,#0.95,
-                xanchor="left",
-                xref='paper',
-                yref='paper',
-                text='Pearson r = ' + str(np.round(pearson_corr_pair, decimals=3)),
-                bgcolor="white",
-                showarrow=False
-            ),
-            dict(
-                x=0.85,#0.71,
-                y=0.04,#0.95,
-                xanchor="left",
-                xref='paper',
-                yref='paper',
-                text='Pearson r = ' + str(np.round(pearson_corr_cov, decimals=3)),
-                bgcolor="white",
-                showarrow=False
-            )
-        ]
+
+    #incresae size of subplot titles
+    fig.layout.annotations[0].font.size = 20
+    fig.layout.annotations[1].font.size = 20
+    fig.layout.annotations[2].font.size = 20
+
+
+    # add text to plot: Pearson correlation coefficient
+    annotation_single = go.layout.Annotation(
+        dict(
+            x=0.13,#0.02,
+            y=0.04,#0.95,
+            xanchor="left",
+            xref='paper',
+            yref='paper',
+            text='Pearson r = ' + str(np.round(pearson_corr_single, decimals=3)),
+            bgcolor = "white",
+            showarrow=False
+        )
     )
 
+    annotation_pair = go.layout.Annotation(
+        dict(
+            x=0.48,#0.37,
+            y=0.04,#0.95,
+            xanchor="left",
+            xref='paper',
+            yref='paper',
+            text='Pearson r = ' + str(np.round(pearson_corr_pair, decimals=3)),
+            bgcolor="white",
+            showarrow=False
+        )
+    )
 
+    annotation_cov = go.layout.Annotation(
+        dict(
+            x=0.85,#0.71,
+            y=0.04,#0.95,
+            xanchor="left",
+            xref='paper',
+            yref='paper',
+            text='Pearson r = ' + str(np.round(pearson_corr_cov, decimals=3)),
+            bgcolor="white",
+            showarrow=False
+        )
+    )
+
+    fig.layout.annotations += (annotation_single, annotation_pair, annotation_cov)
 
     #define layout
     fig['layout'].update(
@@ -534,7 +540,8 @@ def plot_alignment(aa_counts_single, title, plot_file, freq=True):
         yaxis=dict(
             title="Amino Acid Distribution",
             exponentformat='e',
-            showexponent='All'),
+            showexponent='All'
+        ),
         font=dict(size=18)
     )
 
