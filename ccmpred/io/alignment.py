@@ -78,7 +78,8 @@ def write_msa_biopython(f, msa, ids, format, is_indices=True, descriptions=None)
     msa = ["".join(chr(c) for c in row) for row in msa]
 
     records = [
-        SeqRecord(Seq(seq, Bio.Alphabet.IUPAC.protein), id=id, description=desc)
+        SeqRecord(Seq(seq), id=id, description=desc,
+                  annotations={"molecule_type": "protein"})
         for seq, id, desc in zip(msa, ids, descriptions)
     ]
 
