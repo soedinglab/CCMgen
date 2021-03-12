@@ -1,4 +1,5 @@
 # CCMgen and CCMpredPy
+[![Build Status](https://dev.azure.com/christianroth0419/christianroth/_apis/build/status/soedinglab.CCMgen?branchName=master)](https://dev.azure.com/christianroth0419/christianroth/_build/latest?definitionId=4&branchName=master) [![Generic badge](https://img.shields.io/badge/DOI-10.1371/journal.pcbi.1006526-blue.svg)](https://doi.org/10.1371/journal.pcbi.1006526)
 
 This repository provides a Python toolkit for learning second-order Markov Random Field (MRF) models from multiple sequence alignments of a protein families and using these models for generating realistic synthetic protein sequences. 
 
@@ -8,8 +9,7 @@ While state-of-the-art pseudo-likelihood models have consistenly been found to w
 CCMgen is a tool for sampling protein-like sequences from a second-order Markov Randon Field (MRF) model, such as it can be learned with CCMpredPy. The residues of generated sequences will obey the selection pressures described by the MRF with pairwise statistical couplings between residue positions. Furthermore, CCMgen provides full control over the generation of the synthetic alignment by allowing to specify the evolutionary times and phylogeny along which the sequences are sampled.
 
 ## Citation
-
-Susann Vorberg, Stefan Seemayer and Johannes Soeding, Synthetic protein alignments by CCMgen quantify noise in residue-residue contact prediction, bioRxiv, doi: [10.1101/344333](https://doi.org/10.1101/344333) (2018).
+Vorberg S, Seemayer S, Söding J. Synthetic protein alignments by CCMgen quantify noise in residue-residue contact prediction. PLoS computational biology. 2018 Nov 5;14(11):e1006526.
 
 ## License
 
