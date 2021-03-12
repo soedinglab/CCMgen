@@ -1,0 +1,71 @@
+trigger:
+  - master
+pr:
+  - master
+
+jobs:
+- job:
+  displayName: ubuntu-16.04
+  pool:
+    vmImage: 'ubuntu-16.04'
+  strategy:
+    matrix:
+      Python36_bp_170:
+        python.version: '3.6'
+        biopython.version: '1.70'
+      Python36:
+        python.version: '3.6'
+        biopython.version: '*'
+      Python39:
+        python.version: '3.9'
+        biopython.version: '*'
+       
+  steps:
+  - bash: echo "##vso[task.prependpath]$CONDA/bin"
+    displayName: Add conda to PATH
+
+  - bash: conda create --yes --quiet --name env
+    displayName: Create Anaconda environment
+
+  - bash: |
+      source activate env
+      conda install --yes --quiet --name env -c conda-forge python=$PYTHON_VERSION biopython=$BIOPYTHON_VERSION pip numpy c-compiler openmp
+      pip install .
+    displayName: Install CCMgen
+  - bash: |
+      source activate env
+      bash ci_support/run_tests.sh && test -f sequences.msa
+    displayName: Run tests
+
+- job:
+  displayName: macOS 10.14
+  pool:
+    vmImage: 'macOS-10.14'
+  strategy:
+    matrix:
+      Python36_bp_170:
+        python.version: '3.6'
+        biopython.version: '1.70'
+      Python36:
+        python.version: '3.6'
+        biopython.version: '*'
+      Python39:
+        python.version: '3.9'
+        biopython.version: '*'
+       
+  steps:
+  - bash: echo "##vso[task.prependpath]$CONDA/bin"
+    displayName: Add conda to PATH
+
+  - bash: conda create --yes --quiet --name env
+    displayName: Create Anaconda environment
+
+  - bash: |
+      source activate env
+      conda install --yes --quiet --name env -c conda-forge python=$PYTHON_VERSION biopython=$BIOPYTHON_VERSION pip numpy c-compiler openmp
+      pip install .
+    displayName: Install CCMgen
+  - bash: |
+      source activate env
+      bash ci_support/run_tests.sh && test -f sequences.msa
+    displayName: Run tests
