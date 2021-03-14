@@ -4,9 +4,12 @@ import numpy as np
 def matrianglify(data, size=20):
     """ Make a symmetric size * size matrix out of an array of triangle array data"""
     mat = np.zeros((size, size))
-    mat[np.tril_indices(size)] = data
-    mat[np.triu_indices(size)] = data
-
+    for i in range(size):
+        for j in range(size):
+            ind=int(i*(i+1)//2+j)
+            if (ind<len(data)):
+                mat[i][j] = data[ind]
+                mat[j][i] = data[ind]
     return mat
 
 
