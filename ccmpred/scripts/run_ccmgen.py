@@ -198,7 +198,7 @@ def main():
 
                 seq0 = ccmpred.io.alignment.read_msa(opt.seq0_file, opt.aln_format)
                 print("Ancestor sequence:\n{0}".format("".join([ccmpred.io.alignment.AMINO_ACIDS[c] for c in seq0[0]])))
-                if seq0[0].shape[1] != ncol:
+                if seq0[0].shape[0] != ncol:
                     print("Length of ancestor sequence must match dimension of MRF model!")
                     exit(0)
 
