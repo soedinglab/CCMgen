@@ -156,7 +156,7 @@ def sample_with_mutation_rate(tree, nseq, seq0, x, mutation_rate):
 
     return msa_sampled, neff
 
-def sample_to_neff_increasingly(tree, nseq, target_neff, ncol, x, gibbs_steps):
+def sample_to_neff_increasingly(tree, nseq, target_neff, ncol, x, gibbs_steps, seq0 = None):
 
     branch_lengths = tree.branch_lengths
 
@@ -168,11 +168,15 @@ def sample_to_neff_increasingly(tree, nseq, target_neff, ncol, x, gibbs_steps):
     neff = -np.inf
     msa_sampled = np.empty((nseq, ncol), dtype="uint8")
     while np.abs(target_neff - neff) > 1e-2 * target_neff:
-
-        # sample a new start sequence
-        seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, gibbs_steps)
-        print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) :\n{1}".format(gibbs_steps, "".join(
-            [AMINO_ACIDS[c] for c in seq0[0]])))
+        
+        if seq0 is None:
+            # sample a new start sequence
+            seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, gibbs_steps)
+            print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) :\n{1}".format(gibbs_steps, "".join(
+                [AMINO_ACIDS[c] for c in seq0[0]])))
+        else:
+            # start from the specified sequence
+            seq0 = seq0
 
         # how many substitutions per sequence will be performed
         nmut = [0] * (len(branch_lengths) - 2)
