@@ -188,7 +188,7 @@ def main():
         if opt.mutation_rate:
 
             seq0 = np.zeros((1, ncol), dtype="uint8")
-            if opt.seq0_mrf:
+            if opt.seq0_mrf and not opt.seq0_file:
 
                 seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, opt.seq0_mrf)
                 print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) :\n{1}".format(
