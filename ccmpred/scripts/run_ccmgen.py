@@ -212,9 +212,19 @@ def main():
                 neff = ccm.neff_entropy
             else:
                 neff = opt.neff
-
-            msa_sampled, neff = ccmpred.sampling.sample_to_neff_increasingly(
-                tree, nseq, neff, ncol, x, opt.seq0_mrf)
+            
+            if opt.seq0_file:
+                
+                seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, opt.seq0_mrf)
+                print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) :\n{1}".format(
+                    opt.seq0_mrf, "".join([ccmpred.io.alignment.AMINO_ACIDS[c] for c in seq0[0]])))
+                msa_sampled, neff = ccmpred.sampling.sample_to_neff_increasingly(
+                tree, nseq, neff, ncol, x, opt.seq0_mrf, seq0=seq0)
+                
+            else:
+                
+                msa_sampled, neff = ccmpred.sampling.sample_to_neff_increasingly(
+                    tree, nseq, neff, ncol, x, opt.seq0_mrf)
 
 
 
