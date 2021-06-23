@@ -7,6 +7,7 @@ import sys
 
 def write_new_tree_for_ccmgen(file_coupling : str, file_name : str):
     
+    print("Enter")
     raw = ccmpred.raw.parse_msgpack(file_coupling)
     Field = raw.x_single
     size_prot = Field.shape[0]
