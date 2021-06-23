@@ -10,3 +10,5 @@ python3 random_start_sequence.py $coupling $seq0_file
 
 ccmgen --tree-newick ci_support/phylo.newick --seq0-file $seq0_file  --mutation-rate 1 --num-threads 1 ci_support/mrf_params.braw.gz sequences.msa
 ccmgen --tree-newick ci_support/phylo.newick --seq0-file $seq0_file  --mutation-rate-neff --num-threads 1 ci_support/mrf_params.braw.gz sequences.msa
+
+## test azure pip line
