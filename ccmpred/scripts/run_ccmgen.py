@@ -137,8 +137,8 @@ def read_root_sequence(seq0_file, aln_format, print_sequence=True):
         print("You passed a fasta file with more than one sequence as a root sequences! We took the first sequence.")
         print_sequence = True
 
-     if print_sequence:
-          print("Ancestor sequence:\n{0}".format("".join([ccmpred.io.alignment.AMINO_ACIDS[c] for c in seq0[0]])))
+    if print_sequence:
+        print("Ancestor sequence:\n{0}".format("".join([ccmpred.io.alignment.AMINO_ACIDS[c] for c in seq0[0]])))
 
     return seq0
 
