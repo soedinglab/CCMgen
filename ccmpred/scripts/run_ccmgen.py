@@ -125,6 +125,23 @@ def parse_args():
     return opt
 
 
+def read_root_sequence(seq0_file, aln_format, print_sequence=True):
+    seq0 = ccmpred.io.alignment.read_msa(seq0_file, aln_format)
+    seq_N, seq_L = seq0.shape
+    
+    if seq_L != n_col:
+        print("Length of ancestor sequence must match dimension of MRF model!")
+        exit(0)
+   
+    if seq_N>1:
+        print("You passed a fasta file with more than one sequence as a root sequences! We took the first sequence.")
+        print_sequence = True
+
+    if print_sequence:
+        print("Ancestor sequence:\n{0}".format("".join([ccmpred.io.alignment.AMINO_ACIDS[c] for c in seq0[0]])))
+
+    return seq0
+
 def main():
 
     # read command line options
@@ -186,51 +203,34 @@ def main():
 
         # sample alignment with specified mutation rate
         if opt.mutation_rate:
-
             seq0 = np.zeros((1, ncol), dtype="uint8")
+            
             if opt.seq0_mrf and not opt.seq0_file:
-
                 seq0 = ccmpred.trees.get_seq0_mrf(x, ncol, opt.seq0_mrf)
                 print("Ancestor sequence (polyA --> {0} gibbs steps --> seq0) :\n{1}".format(
                     opt.seq0_mrf, "".join([ccmpred.io.alignment.AMINO_ACIDS[c] for c in seq0[0]])))
 
             elif opt.seq0_file:
-
-                seq0 = ccmpred.io.alignment.read_msa(opt.seq0_file, opt.aln_format)
-                print("Ancestor sequence:\n{0}".format("".join([ccmpred.io.alignment.AMINO_ACIDS[c] for c in seq0[0]])))
-                if seq0[0].shape[0] != ncol:
-                    print("Length of ancestor sequence must match dimension of MRF model!")
-                    exit(0)
+                seq0 = read_root_sequence(opt.seq0_file, opt.aln_format)
 
             msa_sampled, neff = ccmpred.sampling.sample_with_mutation_rate(
                 tree, nseq, seq0, x, opt.mutation_rate)
 
         # sample an alignment that has approximately the specified Neff
-        else:
-
+        else:            
+            seq0 = None
+            
             if opt.alnfile:
                 neff = ccm.neff_entropy
             else:
                 neff = opt.neff
             
-            if opt.seq0_file:
-                
-                seq0 = ccmpred.io.alignment.read_msa(opt.seq0_file, opt.aln_format)
-                print("Ancestor sequence:\n{0}".format("".join([ccmpred.io.alignment.AMINO_ACIDS[c] for c in seq0[0]])))
-                if seq0[0].shape[0] != ncol:
-                    print("Length of ancestor sequence must match dimension of MRF model!")
-                    exit(0)
+            if opt.seq0_file:              
+                seq0 = read_root_sequence(opt.seq0_file, opt.aln_format)
                     
-                msa_sampled, neff = ccmpred.sampling.sample_to_neff_increasingly(
-                tree, nseq, neff, ncol, x, opt.seq0_mrf, seq0=seq0)
+            msa_sampled, neff = ccmpred.sampling.sample_to_neff_increasingly(
+            tree, nseq, neff, ncol, x, opt.seq0_mrf, root_seq=seq0)
                 
-            else:
-                
-                msa_sampled, neff = ccmpred.sampling.sample_to_neff_increasingly(
-                    tree, nseq, neff, ncol, x, opt.seq0_mrf)
-
-
-
 
 
     # if gappy positions have been removed
@@ -246,6 +246,6 @@ def main():
         descs=["synthetic sequence generated with CCMgen" for _ in range(msa_sampled.shape[0])]
         ccmpred.io.alignment.write_msa(f, msa_sampled, ids, is_indices=True, format=opt.aln_format, descriptions=descs)
 
-
+        
 if __name__ == '__main__':
     main()
