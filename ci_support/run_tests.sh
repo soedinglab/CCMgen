@@ -3,8 +3,8 @@ ccmgen --tree-newick ci_support/phylo.newick --aln-format psicov --mutation-rate
 ccmgen --tree-newick ci_support/phylo.newick --aln-format fasta --mutation-rate 1 --num-threads 1 ci_support/mrf_params.braw.gz sequences.msa
 
 ## New test
-coupling = ${coupling:/ci_support/mrf_params.braw.gz}
-seq0_file= ${seq0_file:/ci_support/seq0_file.fasta}
+coupling = ${ci_support/mrf_params.braw.gz}
+seq0_file= ${ci_support/seq0_file.fasta}
 
 python3 random_start_sequence.py $coupling $seq0_file
 
