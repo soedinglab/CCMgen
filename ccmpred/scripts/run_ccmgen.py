@@ -143,7 +143,7 @@ def main():
         if print_sequence:
             print("Ancestor sequence:\n{0}".format("".join([ccmpred.io.alignment.AMINO_ACIDS[c] for c in seq0[0]])))
 
-    return seq0
+        return seq0
 
     # read command line options
     opt = parse_args()
