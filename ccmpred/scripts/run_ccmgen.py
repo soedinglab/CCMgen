@@ -125,24 +125,25 @@ def parse_args():
     return opt
 
 
-def read_root_sequence(seq0_file, aln_format, print_sequence=True):
-    seq0 = ccmpred.io.alignment.read_msa(seq0_file, aln_format)
-    seq_N, seq_L = seq0.shape
-    
-    if seq_L != n_col:
-        print("Length of ancestor sequence must match dimension of MRF model!")
-        exit(0)
-   
-    if seq_N>1:
-        print("You passed a fasta file with more than one sequence as a root sequences! We took the first sequence.")
-        print_sequence = True
-
-    if print_sequence:
-        print("Ancestor sequence:\n{0}".format("".join([ccmpred.io.alignment.AMINO_ACIDS[c] for c in seq0[0]])))
-
-    return seq0
 
 def main():
+    
+    def read_root_sequence(seq0_file, aln_format, print_sequence=True):
+        seq0 = ccmpred.io.alignment.read_msa(seq0_file, aln_format)
+        seq_N, seq_L = seq0.shape
+
+        if seq_L != ncol:
+            print("Length of ancestor sequence must match dimension of MRF model!")
+            exit(0)
+
+        if seq_N>1:
+            print("You passed a fasta file with more than one sequence as a root sequences! We took the first sequence.")
+            print_sequence = True
+
+        if print_sequence:
+            print("Ancestor sequence:\n{0}".format("".join([ccmpred.io.alignment.AMINO_ACIDS[c] for c in seq0[0]])))
+
+    return seq0
 
     # read command line options
     opt = parse_args()
