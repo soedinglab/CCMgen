@@ -156,7 +156,7 @@ def sample_with_mutation_rate(tree, nseq, seq0, x, mutation_rate):
 
     return msa_sampled, neff
 
-def sample_to_neff_increasingly(tree, nseq, target_neff, ncol, x, gibbs_steps, root_seq = None):
+def sample_to_neff_increasingly(tree, nseq, target_neff, ncol, x, gibbs_steps, root_seq=None):
 
     branch_lengths = tree.branch_lengths
 
